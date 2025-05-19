@@ -5,153 +5,239 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { 
+  Users, 
+  Activity, 
+  Calendar, 
+  Clock, 
+  DollarSign, 
+  TrendingUp, 
+  UserCheck, 
+  UserX,
+  AlertCircle,
+  CheckCircle2,
+  Clock4
+} from "lucide-react"
 
 export default function AdminDashboard() {
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Clinic Overview */}
-        <Card className="bg-blue-50">
-          <CardHeader>
-            <CardTitle>Clinic overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col">
-              <div className="text-center mb-2">Total number of registered patients</div>
-              <div className="flex justify-between items-end">
-                <div className="flex flex-col items-center">
-                  <div className="h-32 w-20 bg-green-500 relative">
-                    <div className="absolute -top-6 left-0 right-0 text-center text-xs">
-                      <div>20</div>
-                      <div>Male: 12</div>
-                      <div>Female: 8</div>
-                    </div>
-                  </div>
-                  <div className="text-xs mt-1">Yesterday</div>
+      <div className="p-6 space-y-6">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total Patients</p>
+                  <h3 className="text-2xl font-bold mt-1">1,234</h3>
+                  <p className="text-xs text-green-500 mt-1">↑ 12% from last month</p>
                 </div>
-
-                <div className="flex flex-col items-center">
-                  <div className="h-40 w-20 bg-red-500 relative">
-                    <div className="absolute -top-6 left-0 right-0 text-center text-xs">
-                      <div>46</div>
-                      <div>Male: 20</div>
-                      <div>Female: 26</div>
-                    </div>
-                  </div>
-                  <div className="text-xs mt-1">Today</div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <div className="h-36 w-20 bg-blue-500 relative">
-                    <div className="absolute -top-6 left-0 right-0 text-center text-xs">
-                      <div>22</div>
-                      <div>Male: 10</div>
-                      <div>Female: 12</div>
-                    </div>
-                  </div>
-                  <div className="text-xs mt-1">Tomorrow</div>
+                <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Active Therapists */}
-        <Card className="bg-blue-50">
-          <CardHeader>
-            <CardTitle>Number of active therapists</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="w-32 h-32 rounded-full border-8 border-green-500 border-r-red-500"></div>
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Active Therapists</p>
+                  <h3 className="text-2xl font-bold mt-1">12</h3>
+                  <p className="text-xs text-green-500 mt-1">↑ 2 new this week</p>
+                </div>
+                <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <UserCheck className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Today's Appointments</p>
+                  <h3 className="text-2xl font-bold mt-1">46</h3>
+                  <p className="text-xs text-blue-500 mt-1">8 pending</p>
+                </div>
+                <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Monthly Revenue</p>
+                  <h3 className="text-2xl font-bold mt-1">$24,500</h3>
+                  <p className="text-xs text-green-500 mt-1">↑ 8% from last month</p>
+                </div>
+                <div className="h-12 w-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Patient Status and Appointments */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="bg-white shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-semibold">Patient Status</CardTitle>
+              <Button variant="ghost" size="sm">View All</Button>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <span>Active</span>
-                  <span className="bg-green-500 text-white px-4 py-1 rounded-md">2</span>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Active Patients</p>
+                      <p className="text-sm text-gray-500">Currently in treatment</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-semibold">156</span>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span>Deactive</span>
-                  <span className="bg-red-500 text-white px-4 py-1 rounded-md">4</span>
+
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Clock4 className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Pending Follow-ups</p>
+                      <p className="text-sm text-gray-500">Scheduled for next week</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-semibold">23</span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Critical Cases</p>
+                      <p className="text-sm text-gray-500">Requires immediate attention</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-semibold">5</span>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Appointments Today */}
-        <Card className="bg-blue-50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Appointments Today</CardTitle>
-            <div className="bg-gray-200 p-4 rounded-md">
-              <div className="text-3xl font-bold text-center">46</div>
-              <div className="text-sm text-center">patients</div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Details</h3>
-                <div className="w-64">
+          <Card className="bg-white shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-semibold">Today's Appointments</CardTitle>
+              <Button variant="ghost" size="sm">View All</Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                   <Input
-                    placeholder="Search by patient name"
-                    className="bg-blue-900 text-white placeholder:text-gray-300"
+                    placeholder="Search appointments..."
+                    className="max-w-sm"
                   />
                 </div>
-              </div>
-
-              <Table>
-                <TableHeader className="bg-blue-900 text-white">
-                  <TableRow>
-                    <TableHead className="text-white">Patient Name</TableHead>
-                    <TableHead className="text-white">Assigned Doctor</TableHead>
-                    <TableHead className="text-white">Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[1, 2, 3].map((i) => (
-                    <TableRow key={i} className="bg-gray-200">
-                      <TableCell>Mr. Rohan Mondal</TableCell>
-                      <TableCell>Dr. Mainak Sur</TableCell>
-                      <TableCell>4.00 pm</TableCell>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Patient</TableHead>
+                      <TableHead>Therapist</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="font-medium">John Doe</TableCell>
+                      <TableCell>Dr. Sarah Smith</TableCell>
+                      <TableCell>09:00 AM</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                          Confirmed
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Jane Smith</TableCell>
+                      <TableCell>Dr. Mike Johnson</TableCell>
+                      <TableCell>10:30 AM</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs">
+                          Pending
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Robert Brown</TableCell>
+                      <TableCell>Dr. Emily Davis</TableCell>
+                      <TableCell>02:00 PM</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                          In Progress
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Upcoming Sessions */}
-        <Card className="bg-blue-50">
-          <CardHeader>
-            <CardTitle>Upcoming Sessions</CardTitle>
-          </CardHeader>
-          <CardContent>{/* Content will be added here */}</CardContent>
-        </Card>
-
-        {/* Pending Invoices */}
-        <Card className="bg-blue-50">
-          <CardHeader>
-            <CardTitle>Pending Invoices</CardTitle>
+        {/* Therapist Status */}
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg font-semibold">Therapist Status</CardTitle>
+            <Button variant="ghost" size="sm">View All</Button>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="w-32 h-32 rounded-full border-8 border-red-500 border-b-green-500"></div>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <span>Settled payments</span>
-                  <div className="w-16 h-6 bg-green-500"></div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span>Unsettled payments</span>
-                  <div className="w-16 h-6 bg-red-500"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Active</p>
+                    <p className="text-2xl font-bold mt-1">8</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" className="rounded-full">
-                Details
-              </Button>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">On Break</p>
+                    <p className="text-2xl font-bold mt-1">2</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <UserX className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Off Duty</p>
+                    <p className="text-2xl font-bold mt-1">2</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
