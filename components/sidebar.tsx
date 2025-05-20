@@ -12,6 +12,7 @@ import {
   Bell,
   BarChart2,
   Layers,
+  UserCog,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -43,8 +44,8 @@ export function Sidebar({ userRole = "receptionist", collapsed }: SidebarProps) 
       roles: ["receptionist", "admin"],
     },
     {
-      title: "Client Management",
-      icon: <Users className="h-6 w-6" />,
+      title: "Patients",
+      icon: <Users className="mr-3 h-5 w-5" />,    
       href: "/patients",
       roles: ["receptionist", "admin"],
     },
@@ -57,14 +58,20 @@ export function Sidebar({ userRole = "receptionist", collapsed }: SidebarProps) 
       roles: ["content-manager", "admin"],
     },
     {
-      title: "Notifications",
+      title: "Announcement",
       icon: <Bell className="h-6 w-6" />,
-      href: "/notifications",
+      href: "/announcement",
       roles: ["content-manager", "admin"],
     },
     {
-      title: "Content Analytics",
-      icon: <BarChart2 className="h-6 w-6" />,
+      title: "Employees",
+      icon: <UserCog className="mr-3 h-5 w-5" />,
+      href: "/employees",
+      roles: ["admin"],
+    },
+    {
+      title: "Reports",
+      icon: <FileText className="mr-3 h-5 w-5" />,
       href: "/analytics",
       roles: [ "admin"],
     },

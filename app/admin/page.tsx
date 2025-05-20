@@ -92,8 +92,8 @@ export default function AdminDashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">Patient Status</CardTitle>
               <Button variant="ghost" size="sm">View All</Button>
-            </CardHeader>
-            <CardContent>
+          </CardHeader>
+          <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
@@ -132,17 +132,17 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <span className="text-lg font-semibold">5</span>
-                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
           <Card className="bg-white shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">Today's Appointments</CardTitle>
               <Button variant="ghost" size="sm">View All</Button>
-            </CardHeader>
-            <CardContent>
+          </CardHeader>
+          <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Input
@@ -150,16 +150,16 @@ export default function AdminDashboard() {
                     className="max-w-sm"
                   />
                 </div>
-                <Table>
+              <Table>
                   <TableHeader>
-                    <TableRow>
+                  <TableRow>
                       <TableHead>Patient</TableHead>
                       <TableHead>Therapist</TableHead>
                       <TableHead>Time</TableHead>
                       <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                     <TableRow>
                       <TableCell className="font-medium">John Doe</TableCell>
                       <TableCell>Dr. Sarah Smith</TableCell>
@@ -190,11 +190,11 @@ export default function AdminDashboard() {
                         </span>
                       </TableCell>
                     </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
         </div>
 
         {/* Therapist Status */}

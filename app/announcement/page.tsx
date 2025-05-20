@@ -36,9 +36,7 @@ export default function NotificationsDashboard() {
   const [notificationsCurrentPage, setNotificationsCurrentPage] = useState(1);
   const [notificationsItemsPerPage, setNotificationsItemsPerPage] = useState(5);
 
-  // Sample data for charts
-
-  // Sample data for blogs and notifications
+ 
 
   const notificationSampleData = Array.from({ length: 15 }, (_, i) => ({
     id: i + 1,

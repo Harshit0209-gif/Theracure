@@ -2,7 +2,7 @@
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { StatsSection } from "@/components/stats/stats-section"
 import { InvoicesSection } from "@/components/invoices/invoices-section"
-import { ClientManagementSection } from "@/components/clients/client-management-section"
+import { ClientManagementSection } from "@/components/patient/patient-management-section"
 import { useAuth } from "@/contexts/auth-context"
 
 

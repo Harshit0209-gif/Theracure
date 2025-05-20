@@ -46,7 +46,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       "content-manager": [
         "/content",
         "/blogs",
-        "/notifications"
+        "/announcement"
       ],
       "receptionist": [
         "/receptionist",
@@ -61,7 +61,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         "/patients",
         "/invoices",
         "/blogs",
-        "/notifications"
+        "/announcement",
+        "/employees"
       ]
     }
 
