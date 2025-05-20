@@ -5,7 +5,7 @@ A comprehensive dashboard for physiotherapy clinic management, featuring role-ba
 ## Features
 
 - 🔐 Role-based authentication
-- 👥 Multiple user roles (Admin, Receptionist, Content Manager)
+- 👥 Multiple user roles (Admin, Therapist, Receptionist, Content Manager)
 - 📊 Dashboard analytics
 - 📅 Appointment management
 - 💰 Invoice tracking
