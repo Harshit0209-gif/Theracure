@@ -174,10 +174,87 @@ export function InvoicesSection() {
               <Download className="h-4 w-4" />
               Export
             </Button>
+            
+            <Dialog>
+          <DialogTrigger asChild>
             <Button size="sm" className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white">
               <Plus className="h-4 w-4" />
               New Invoice
             </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Create New Invoice</DialogTitle>
+              <DialogDescription>Create a new invoice for a patient. Fill in all the required details.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="patient" className="text-right">
+                  Patient
+                </Label>
+                <Select>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select patient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="john">John Smith</SelectItem>
+                    <SelectItem value="emily">Emily Davis</SelectItem>
+                    <SelectItem value="robert">Robert Wilson</SelectItem>
+                    <SelectItem value="maria">Maria Garcia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="treatment" className="text-right">
+                  Treatment
+                </Label>
+                <Select>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select treatment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual Therapy</SelectItem>
+                    <SelectItem value="exercise">Exercise Therapy</SelectItem>
+                    <SelectItem value="electro">Electrotherapy</SelectItem>
+                    <SelectItem value="hydro">Hydrotherapy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date" className="text-right">
+                  Date
+                </Label>
+                <Input id="date" type="date" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount" className="text-right">
+                  Amount
+                </Label>
+                <Input id="amount" type="number" placeholder="0.00" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea id="description" placeholder="Invoice description" className="col-span-3" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                className="bg-teal-500 hover:bg-teal-600"
+                onClick={() => {
+                  toast({
+                    title: "Invoice created",
+                    description: "New invoice has been created successfully",
+                  })
+                }}
+              >
+                Create Invoice
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
           </div>
         </div>
 
@@ -220,7 +297,7 @@ export function InvoicesSection() {
           </Card>
         </div>
 
-        <div className="bg-blue-200 rounded-lg overflow-hidden mb-6">
+        <div className="bg-white rounded-b-lg overflow-hidden mb-6">
           <Table>
             <TableHeader>
               <TableRow className="bg-indigo-700">
@@ -301,19 +378,19 @@ export function InvoicesSection() {
             </TableBody>
           </Table>
           {/* Numbered Pagination Controls */}
-          <div className="flex justify-between items-center p-4 bg-blue-100 border-t border-blue-300">
+          <div className="flex justify-between items-center p-4 bg-white border-t">
             <span className="text-sm text-gray-700">
               Page {page} of {totalPages}
             </span>
             <div className="flex gap-2 items-center">
               <Button
-                size="icon"
+                size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />Previous
               </Button>
               {/* Page Numbers */}
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
@@ -332,95 +409,19 @@ export function InvoicesSection() {
                 </Button>
               ))}
               <Button
-                size="icon"
+                size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                <ChevronRight className="h-4 w-4" />
+                Next<ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
 
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="mb-6 bg-indigo-600 hover:bg-indigo-700 text-white">Create New Invoice</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Create New Invoice</DialogTitle>
-              <DialogDescription>Create a new invoice for a patient. Fill in all the required details.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="patient" className="text-right">
-                  Patient
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select patient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="john">John Smith</SelectItem>
-                    <SelectItem value="emily">Emily Davis</SelectItem>
-                    <SelectItem value="robert">Robert Wilson</SelectItem>
-                    <SelectItem value="maria">Maria Garcia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="treatment" className="text-right">
-                  Treatment
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select treatment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manual">Manual Therapy</SelectItem>
-                    <SelectItem value="exercise">Exercise Therapy</SelectItem>
-                    <SelectItem value="electro">Electrotherapy</SelectItem>
-                    <SelectItem value="hydro">Hydrotherapy</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date" className="text-right">
-                  Date
-                </Label>
-                <Input id="date" type="date" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">
-                  Amount
-                </Label>
-                <Input id="amount" type="number" placeholder="0.00" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="text-right">
-                  Description
-                </Label>
-                <Textarea id="description" placeholder="Invoice description" className="col-span-3" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="submit"
-                className="bg-teal-500 hover:bg-teal-600"
-                onClick={() => {
-                  toast({
-                    title: "Invoice created",
-                    description: "New invoice has been created successfully",
-                  })
-                }}
-              >
-                Create Invoice
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        
       </div>
     </>
   )

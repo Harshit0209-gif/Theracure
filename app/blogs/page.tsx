@@ -40,7 +40,7 @@ export default function AdminDashboard() {
 
     return (
       <DashboardLayout>
-        <div className="flex min-h-screen flex-col bg-gray-100">
+        <div className="flex min-h-screen flex-col">
       <div className="flex flex-1">
 
         {/* Main Content */}
@@ -88,12 +88,12 @@ export default function AdminDashboard() {
 
               {/* Manage Existing Blogs Section */}
               <div className="bg-gray-200 rounded-lg p-6 mb-8">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Manage Existing Blogs</h2>
-                <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Manage Existing Blogs</h2>
                   <div className="flex items-center justify-between space-x-2">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input placeholder="Search blogs by title or date" className="pl-10 bg-white" />
+                      <Input placeholder="Search blogs by title or date" className="bg-white pl-10 border border-indigo-300 rounded-lg text-sm placeholder:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" />
                     </div>
                     <div className="flex items-center space-x-2">
                       <Label htmlFor="blogs-per-page" className="text-sm whitespace-nowrap">
@@ -117,6 +117,8 @@ export default function AdminDashboard() {
                       </Select>
                     </div>
                   </div>
+                </div>
+                <div className="space-y-4">
 
                   <div className="bg-white rounded-md">
                     <Table>
@@ -196,6 +198,7 @@ export default function AdminDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
                           onClick={() => setBlogsCurrentPage((prev) => Math.max(prev - 1, 1))}
                           disabled={blogsCurrentPage === 1}
                         >
@@ -218,6 +221,7 @@ export default function AdminDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
                           onClick={() => setBlogsCurrentPage((prev) => Math.min(prev + 1, totalBlogsPages))}
                           disabled={blogsCurrentPage === totalBlogsPages}
                         >

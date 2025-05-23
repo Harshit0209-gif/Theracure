@@ -57,7 +57,7 @@ export function PatientManagementSection() {
         </div>
       </div>
 
-      <div className="bg-blue-200 rounded-lg overflow-hidden">
+      <div className="bg-white rounded-b-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-indigo-700">
@@ -83,21 +83,22 @@ export function PatientManagementSection() {
           </TableBody>
         </Table>
         {/* Pagination Controls */}
-        <div className="flex justify-between items-center p-4 bg-blue-100 border-t border-blue-300">
+        <div className="flex justify-between items-center p-4 bg-white border-t">
           <span className="text-sm text-gray-700">
             Page {page} of {totalPages}
           </span>
-          <div className="flex gap-2 items-center">
+          <div className="flex items-center space-x-2">
             <Button
-              size="icon"
+              size="sm"
               variant="outline"
               className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />Previous
             </Button>
             {/* Page Numbers */}
+            <div className="flex items-center space-x-1">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
               <Button
                 key={pg}
@@ -105,22 +106,23 @@ export function PatientManagementSection() {
                 variant={pg === page ? "default" : "outline"}
                 className={
                   pg === page
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600"
-                    : "border-indigo-600 text-indigo-700 hover:bg-indigo-50"
+                    ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 w-8 h-8 p-0"
+                    : " text-indigo-700 hover:bg-indigo-50 w-8 h-8 p-0"
                 }
                 onClick={() => setPage(pg)}
               >
                 {pg}
               </Button>
             ))}
+            </div>
             <Button
-              size="icon"
+              size="sm"
               variant="outline"
               className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
               disabled={page === totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             >
-              <ChevronRight className="h-4 w-4" />
+              Next<ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

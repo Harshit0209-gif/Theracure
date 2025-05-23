@@ -154,7 +154,7 @@ export default function Clients() {
 
   return (
     <DashboardLayout>
-      <div className="bg-gray-200 rounded-lg p-6 mb-8">
+      <div className="mb-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-800">Employee Management</h2>
           <div className="flex gap-2">
@@ -162,10 +162,104 @@ export default function Clients() {
               <Filter className="h-4 w-4" />
               Filter
             </Button>
-            <Button size="sm" className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white">
+            {/* <Button size="sm" className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Plus className="h-4 w-4" />
+              Add Employee
+            </Button> */}
+            <Dialog>
+          <DialogTrigger asChild>
+           <Button size="sm" className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white">
               <Plus className="h-4 w-4" />
               Add Employee
             </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Add New Employee</DialogTitle>
+              <DialogDescription>Add a new employee to the system. Fill in all the required details.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Full Name
+                </Label>
+                <Input id="name" placeholder="Dr. John Smith" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="role" className="text-right">
+                  Role
+                </Label>
+                <Select>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="senior">Senior Physiotherapist</SelectItem>
+                    <SelectItem value="physio">Physiotherapist</SelectItem>
+                    <SelectItem value="junior">Junior Physiotherapist</SelectItem>
+                    <SelectItem value="admin">Administrative Staff</SelectItem>
+                    <SelectItem value="reception">Receptionist</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="specialty" className="text-right">
+                  Specialty
+                </Label>
+                <Select>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select specialty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sports">Sports Injuries</SelectItem>
+                    <SelectItem value="ortho">Orthopedic Rehabilitation</SelectItem>
+                    <SelectItem value="neuro">Neurological Rehabilitation</SelectItem>
+                    <SelectItem value="geriatric">Geriatric Care</SelectItem>
+                    <SelectItem value="pediatric">Pediatric Therapy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
+                <Input id="email" type="email" placeholder="john.smith@physioplus.com" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="phone" className="text-right">
+                  Phone
+                </Label>
+                <Input id="phone" type="tel" placeholder="555-123-4567" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="startDate" className="text-right">
+                  Start Date
+                </Label>
+                <Input id="startDate" type="date" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="bio" className="text-right">
+                  Bio
+                </Label>
+                <Textarea id="bio" placeholder="Brief professional bio" className="col-span-3" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                onClick={() => {
+                  toast({
+                    title: "Employee added",
+                    description: "New employee has been added successfully",
+                  })
+                }}
+              >
+                Add Employee
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
           </div>
         </div>
 
@@ -208,11 +302,9 @@ export default function Clients() {
           </Card>
         </div>
 
-        <div className="bg-blue-200 rounded-lg overflow-hidden mb-6">
-          <CardHeader className="p-4 pb-0">
-            <CardTitle className="text-base font-medium">Employee Directory</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
+        <div className="bg-gray-200 rounded-lg overflow-hidden mb-6 border">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between mb-3 pb-0">
+            <h2 className="text-xl font-semibold text-gray-800 w-fit">Employee Directory</h2>
             <div className="flex flex-col md:flex-row justify-between mb-4 gap-4">
               <div className="relative w-full md:w-[400px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-indigo-400" />
@@ -235,8 +327,10 @@ export default function Clients() {
                 </SelectContent>
               </Select>
             </div>
+          </CardHeader>
+          <CardContent className="p-4 ">
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto bg-white rounded-b-lg">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-indigo-700">
@@ -303,23 +397,23 @@ export default function Clients() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
             {/* Pagination Controls */}
-            <div className="flex justify-between items-center p-4 bg-blue-100 border-t border-blue-300">
+            <div className="flex justify-between items-center p-4 bg-white border-t ">
               <span className="text-sm text-gray-700">
                 Page {page} of {totalPages}
               </span>
               <div className="flex gap-2 items-center">
                 <Button
-                  size="icon"
+                  size="sm"
                   variant="outline"
-                  className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
+                  className="bborder-indigo-600 text-indigo-700 hover:bg-indigo-50"
                   disabled={page === 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" />Previous
                 </Button>
                 {/* Page Numbers */}
+                <div className="flex items-center space-x-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
                   <Button
                     key={pg}
@@ -335,21 +429,23 @@ export default function Clients() {
                     {pg}
                   </Button>
                 ))}
+                </div>
                 <Button
-                  size="icon"
+                  size="sm"
                   variant="outline"
                   className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  Next<ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
+            </div>
             </div>
           </CardContent>
         </div>
 
-        <Dialog>
+        {/* <Dialog>
           <DialogTrigger asChild>
             <Button className="mb-6 bg-indigo-600 hover:bg-indigo-700 text-white">Add New Employee</Button>
           </DialogTrigger>
@@ -439,7 +535,7 @@ export default function Clients() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog> */}
       </div>
     </DashboardLayout>
   )
