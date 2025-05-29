@@ -13,6 +13,7 @@ import {
 	BarChart2,
 	Layers,
 	UserCog,
+	Handshake,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,6 +39,12 @@ export function Sidebar({
 			title: "Appointments",
 			icon: <Calendar className="h-6 w-6" />,
 			href: "/appointments",
+			roles: ["receptionist", "admin"],
+		},
+		{
+			title: "consultations",
+			icon: <Handshake className="h-6 w-6" />,
+			href: "/consultations",
 			roles: ["receptionist", "admin"],
 		},
 		{
@@ -73,7 +80,7 @@ export function Sidebar({
 			roles: ["admin"],
 		},
 		{
-			title: "Reports",
+			title: "Analytics",
 			icon: <FileText className="h-5 w-5" />,
 			href: "/analytics",
 			roles: ["admin"],

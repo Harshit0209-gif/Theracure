@@ -72,7 +72,7 @@ const statusColor: Record<string, string> = {
 	Done: "text-indigo-700 font-semibold",
 };
 
-const Appointment = () => {
+const Consultation = () => {
 	const [search, setSearch] = useState("");
 	const [page, setPage] = useState(1);
 	const pageSize = 3;
@@ -88,7 +88,7 @@ const Appointment = () => {
 				<div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
 					<div className="flex flex-row items-center gap-4">
 						<h1 className="text-2xl font-bold text-gray-800">
-							Appointment Management
+							Consultation Management
 						</h1>
 						{/* <div className="text-lg text-gray-600 font-medium">Today's Appointment</div> */}
 						<div className="flex items-center gap-1 bg-white rounded-lg px-2 py-2 shadow w-fit justify-start">
@@ -132,40 +132,6 @@ const Appointment = () => {
 
 				<div className="bg-white rounded-b-lg overflow-hidden mb-6">
 					<div className="overflow-x-auto">
-						{/* <table className="w-full rounded-lg">
-							<thead>
-								<tr className="bg-indigo-700">
-									<th className="px-4 py-2 text-left text-white font-semibold">
-										Patient Name
-									</th>
-									<th className="px-4 py-2 text-left text-white font-semibold">
-										Assigned Doctor
-									</th>
-									<th className="px-4 py-2 text-left text-white font-semibold">
-										Activity
-									</th>
-									<th className="px-4 py-2 text-left text-white font-semibold">
-										Time
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								{paginated.map((a) => (
-									<tr key={a.id} className="bg-white border-b last:border-b-0">
-										<td className="px-4 py-2">{a.patient}</td>
-										<td className="px-4 py-2">{a.doctor}</td>
-										<td
-											className={`px-4 py-2 ${
-												statusColor[a.status as keyof typeof statusColor]
-											}`}>
-											{a.status}
-										</td>
-										<td className="px-4 py-2 font-semibold">{a.time}</td>
-									</tr>
-								))}
-							</tbody>
-						</table> */}
-
 						<Table>
 							<TableHeader>
 								<TableRow className="bg-indigo-700">
@@ -250,4 +216,4 @@ const Appointment = () => {
 	);
 };
 
-export default Appointment;
+export default Consultation;
