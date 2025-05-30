@@ -154,13 +154,6 @@ const AppointmentPage = () => {
           onAppointmentCreated={handleAppointmentUpdated}
         />
 
-        {/* Manage Appointments Dialog */}
-        <ManageAppointmentsDialog
-          open={manageDialogOpen}
-          onOpenChange={setManageDialogOpen}
-          onAppointmentUpdated={handleAppointmentUpdated}
-        />
-
         {/* Calendar View Dialog */}
         <CalendarViewDialog
           open={calendarDialogOpen}
