@@ -1,0 +1,204 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums
+enum UserRole {
+  admin
+  therapist
+  receptionist
+  user
+}
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+}
+
+enum AssignmentStatus {
+  confirmed
+  cancelled
+  completed
+  no_show
+}
+
+enum SessionStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
+  no_show
+}
+
+enum AppointmentStatus {
+  confirmed
+  completed
+  cancelled
+  rescheduled
+}
+
+// Models
+model User {
+  id            String      @id @default(uuid()) @map("user_id")
+  name          String
+  email         String      @unique
+  passwordHash  String      @map("password_hash")
+  role          UserRole
+  phone         String?
+  status        UserStatus  @default(active)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  assignmentsCreated TherapistAssignment[] @relation("CreatedBy")
+  therapistAssignments TherapistAssignment[] @relation("TherapistAssignments")
+  therapistTimeSlots TherapistTimeSlot[] @relation("TherapistTimeSlots")
+  therapist          Therapist?
+
+  @@map("users")
+}
+
+model Patient {
+  id             String   @id @default(dbgenerated("generate_patient_id()")) @db.VarChar(20) @map("patient_id")
+  patientName     String    @map("patient_name")
+  age             Int
+  gender          String
+  address         String?
+  phone           String?
+  email           String?
+  referenceDoctor String?   @map("reference_doctor")
+  createdById     String    @map("created_by")
+  medicalHistory  String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  therapistAssignments TherapistAssignment[] @relation("PatientAssignments")
+  prescriptions   Prescription[] @relation("PatientPrescriptions")
+  therapySessions TherapySession[] @relation("PatientTherapySessions")
+
+  @@map("patients")
+}
+
+model Therapist {
+  id              String    @id @map("therapist_id")
+  specialization  String?
+  availableSlots  Json?     @map("available_slots")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user            User      @relation(fields: [id], references: [id], onDelete: Cascade)
+  timeSlots       TherapistTimeSlot[] @relation("TherapistTimeSlots")
+  assignments     TherapistAssignment[] @relation("TherapistAssignments")
+  prescriptions   Prescription[] @relation("TherapistPrescriptions")
+  therapySessions TherapySession[] @relation("TherapistTherapySessions")
+
+  @@map("therapists")
+}
+
+model TherapistTimeSlot {
+  id            String    @id @default(uuid()) @map("slot_id")
+  therapistId   String    @map("therapist_id")
+  weekDay       Int       @map("week_day") // 0-6 (Sunday-Saturday)
+  startTime     String    @map("start_time") // store time in "HH:mm" format
+  endTime       String    @map("end_time")   // store time in "HH:mm" format
+  isAvailable   Boolean   @default(true) @map("is_available")
+  isRecurring   Boolean   @default(true) @map("is_recurring")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  therapist     User      @relation("TherapistTimeSlots", fields: [therapistId], references: [id], onDelete: Cascade, map: "therapist_time_slots_user_fkey")
+  therapistInfo Therapist @relation("TherapistTimeSlots", fields: [therapistId], references: [id], map: "therapist_time_slots_therapist_fkey")
+
+  @@map("therapist_time_slots")
+  @@index([therapistId, weekDay])
+}
+
+
+model TherapistAssignment {
+  id                    String            @id @default(uuid()) @map("assignment_id")
+  patientId             String            @map("patient_id") @db.VarChar(20)
+  therapistId           String            @map("therapist_id")
+  appointmentStartTime  DateTime          @map("appointment_start_time")
+  appointmentEndTime    DateTime          @map("appointment_end_time")
+  therapyType           String            @map("therapy_type")
+  assignedDate          DateTime          @map("assigned_date") @db.Date
+  status                AppointmentStatus @default(confirmed)
+  notes                 String?           @db.Text
+  createdById           String            @map("created_by")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  patient               Patient           @relation("PatientAssignments", fields: [patientId], references: [id], onDelete: Cascade)
+  therapist             User              @relation("TherapistAssignments", fields: [therapistId], references: [id], onDelete: Restrict, map: "therapist_assignments_user_fkey")
+  therapistInfo         Therapist         @relation("TherapistAssignments", fields: [therapistId], references: [id], map: "therapist_assignments_therapist_fkey")
+  createdBy             User              @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  therapySessions       TherapySession[]  @relation("AssignmentTherapySessions")
+
+  @@map("therapist_assignments")
+  @@index([therapistId, appointmentStartTime])
+  @@index([patientId, appointmentStartTime])
+  @@index([appointmentStartTime])
+  @@index([status])
+}
+
+model Prescription {
+  id                String         @id @default(uuid()) @map("prescription_id")
+  sessionId         String         @map("session_id")
+  patientId         String         @map("patient_id") @db.VarChar(20)
+  therapistId       String         @map("therapist_id")
+  prescriptionText  String         @map("prescription_text") @db.Text
+  exercises         Json?          @map("exercises")
+  medications       Json?          @map("medications")
+  restrictions      String?        @map("restrictions") @db.Text
+  followUpDate      DateTime?      @map("follow_up_date") @db.Date
+  pdfUrl            String?        @map("pdf_url")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  session           TherapySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  patient           Patient        @relation("PatientPrescriptions", fields: [patientId], references: [id])
+  therapist         Therapist      @relation("TherapistPrescriptions", fields: [therapistId], references: [id])
+
+  @@map("prescriptions")
+  @@index([sessionId])
+  @@index([patientId])
+  @@index([therapistId])
+}
+
+model TherapySession {
+  id              String    @id @default(uuid()) @map("session_id")
+  assignmentId    String    @map("assignment_id")
+  patientId       String    @map("patient_id") @db.VarChar(20)
+  therapistId     String    @map("therapist_id")
+  sessionNotes    String?   @map("session_notes") @db.Text
+  treatmentPlan   String?   @map("treatment_plan") @db.Text
+  nextSteps       String?   @map("next_steps") @db.Text
+  sessionDate     DateTime  @map("session_date")
+  duration        Int?      @map("duration_minutes")
+  completed       Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  assignment      TherapistAssignment @relation("AssignmentTherapySessions", fields: [assignmentId], references: [id], onDelete: Cascade)
+  prescriptions   Prescription[]
+  patient         Patient            @relation("PatientTherapySessions", fields: [patientId], references: [id])
+  therapist       Therapist          @relation("TherapistTherapySessions", fields: [therapistId], references: [id])
+
+  @@map("therapy_sessions")
+  @@index([assignmentId])
+  @@index([sessionDate])
+  @@index([patientId])
+  @@index([therapistId])
+}
