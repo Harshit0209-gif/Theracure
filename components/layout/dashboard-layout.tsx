@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/auth-context"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  userRole?: "receptionist" | "admin" | "content-manager"
+  userRole?: "receptionist" | "admin" | "content-manager" | "therapist"
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {

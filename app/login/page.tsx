@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth, type UserRole } from "@/contexts/auth-context"
@@ -12,7 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Eye, EyeOff } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [role, setRole] = useState<UserRole>("receptionist")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
 
@@ -29,9 +30,34 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, role }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to login")
+      }
+
+      // Call the login function from auth context
       await login(email, password, role)
+      
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      })
     } catch (err) {
-      setError("Invalid credentials. Please try again.")
+      setError(err instanceof Error ? err.message : "Invalid credentials. Please try again.")
+      toast({
+        title: "Login failed",
+        description: err instanceof Error ? err.message : "Invalid credentials. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -75,19 +101,39 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="pr-10 focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        )}
+                        <span className="sr-only">
+                          {showPassword ? "Hide password" : "Show password"}
+                        </span>
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -115,11 +161,28 @@ export default function LoginPage() {
                           Administrator
                         </Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="therapist" id="therapist" />
+                        <Label htmlFor="therapist" className="cursor-pointer">
+                          Therapist
+                        </Label>
+                      </div>
                     </RadioGroup>
                   </div>
 
-                  <Button type="submit" className="w-full bg-indigo-700 hover:bg-indigo-800" disabled={isLoading}>
-                    {isLoading ? "Logging in..." : "Login"}
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Logging in...
+                      </div>
+                    ) : (
+                      "Login"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
@@ -132,27 +195,75 @@ export default function LoginPage() {
 
                   <div className="space-y-3">
                     <Button
-                      className="w-full bg-indigo-700 hover:bg-indigo-800"
-                      onClick={() => login("receptionist@example.com", "password", "receptionist")}
+                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
+                      onClick={async () => {
+                        try {
+                          await login("receptionist@example.com", "password123", "receptionist")
+                        } catch (error) {
+                          toast({
+                            title: "Login failed",
+                            description: error instanceof Error ? error.message : "Invalid credentials",
+                            variant: "destructive",
+                          })
+                        }
+                      }}
                       disabled={isLoading}
                     >
                       Login as Receptionist
                     </Button>
 
                     <Button
-                      className="w-full bg-indigo-700 hover:bg-indigo-800"
-                      onClick={() => login("content@example.com", "password", "content-manager")}
+                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
+                      onClick={async () => {
+                        try {
+                          await login("content@example.com", "password123", "content-manager")
+                        } catch (error) {
+                          toast({
+                            title: "Login failed",
+                            description: error instanceof Error ? error.message : "Invalid credentials",
+                            variant: "destructive",
+                          })
+                        }
+                      }}
                       disabled={isLoading}
                     >
                       Login as Content Manager
                     </Button>
 
                     <Button
-                      className="w-full bg-indigo-700 hover:bg-indigo-800"
-                      onClick={() => login("admin@example.com", "password", "admin")}
+                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
+                      onClick={async () => {
+                        try {
+                          await login("admin@example.com", "password123", "admin")
+                        } catch (error) {
+                          toast({
+                            title: "Login failed",
+                            description: error instanceof Error ? error.message : "Invalid credentials",
+                            variant: "destructive",
+                          })
+                        }
+                      }}
                       disabled={isLoading}
                     >
                       Login as Administrator
+                    </Button>
+
+                    <Button
+                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
+                      onClick={async () => {
+                        try {
+                          await login("therapist@example.com", "password123", "therapist")
+                        } catch (error) {
+                          toast({
+                            title: "Login failed",
+                            description: error instanceof Error ? error.message : "Invalid credentials",
+                            variant: "destructive",
+                          })
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      Login as Therapist
                     </Button>
                   </div>
                 </div>
