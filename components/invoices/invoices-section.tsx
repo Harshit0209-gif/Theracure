@@ -1903,21 +1903,24 @@ export function InvoicesSection() {
 					.no-print {
 						display: none !important;
 					}
+					.pdf-logo img {
+						width: 107px;
+						height: 47px;
+						display: block;
+					}
 					@page {
-						margin: 0.5in;
+						margin: 0.1in;
 						size: A4;
 					}
 				}
 			`}</style>
 
 			{/* Clean Print Content */}
-			{selectedServices.length > 0 && (
+			{/* {selectedServices.length > 0 && (
 				<div className="print-area hidden print:block">
 					<div className="max-w-4xl mx-auto bg-white p-8">
-						{/* Header Section - Clinic Details */}
 						<div className="mb-6">
 							<div className="flex items-start justify-between">
-								{/* Left: Logo and Clinic Info */}
 								<div className="flex items-start space-x-4">
 									<img
 										src="/logo.png"
@@ -1944,7 +1947,7 @@ export function InvoicesSection() {
 									</div>
 								</div>
 
-								{/* Right: Invoice Info */}
+								
 								<div className="text-right">
 									<h2 className="text-3xl font-bold text-gray-800 mb-2">
 										INVOICE
@@ -1971,14 +1974,14 @@ export function InvoicesSection() {
 								</div>
 							</div>
 
-							{/* Border Line */}
+							
 							<div className="mt-6 border-b-2 border-gray-300"></div>
 						</div>
 
-						{/* Patient Details Section */}
+						
 						<div className="mb-6">
 							<div className="grid grid-cols-2 gap-8">
-								{/* Bill To */}
+								
 								<div>
 									<h3 className="text-lg font-bold text-gray-800 mb-3 border-b border-gray-200 pb-1">
 										BILL TO:
@@ -2004,7 +2007,7 @@ export function InvoicesSection() {
 									</div>
 								</div>
 
-								{/* Payment Info */}
+								
 								<div>
 									<h3 className="text-lg font-bold text-gray-800 mb-3 border-b border-gray-200 pb-1">
 										PAYMENT DETAILS:
@@ -2029,7 +2032,7 @@ export function InvoicesSection() {
 							</div>
 						</div>
 
-						{/* Services Table */}
+						
 						<div className="mb-6">
 							<h3 className="text-lg font-bold text-gray-800 mb-3">
 								SERVICES PROVIDED:
@@ -2086,7 +2089,7 @@ export function InvoicesSection() {
 							</table>
 						</div>
 
-						{/* Payment Summary */}
+						
 						<div className="flex justify-end mb-6">
 							<div className="w-80">
 								<table className="w-full">
@@ -2143,7 +2146,7 @@ export function InvoicesSection() {
 							</div>
 						</div>
 
-						{/* Notes Section */}
+						
 						{invoiceDetails.notes && (
 							<div className="mb-6">
 								<h3 className="text-lg font-bold text-gray-800 mb-2">NOTES:</h3>
@@ -2153,7 +2156,7 @@ export function InvoicesSection() {
 							</div>
 						)}
 
-						{/* Footer */}
+						
 						<div className="mt-8 pt-6 border-t border-gray-300">
 							<div className="text-center">
 								<p className="text-lg font-semibold text-gray-800 mb-2">
@@ -2172,6 +2175,215 @@ export function InvoicesSection() {
 									</p>
 								</div>
 							</div>
+						</div>
+					</div>
+				</div>
+			)} */}
+
+			{selectedServices.length > 0 && (
+				<div className="print-area">
+					<div className="max-w-2xl mx-auto bg-white p-8 font-sans">
+						{/* Header Section */}
+						<div className="text-center mb-8">
+							{/* Logo */}
+							<div className="mb-4">
+								<div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-2">
+									<span className="text-orange-600 font-bold text-xl pdf-logo">
+										<img
+											src="/apple-touch-icon.png"
+											alt="Thera-Cure Logo"
+											className=""
+										/>
+									</span>
+								</div>
+							</div>
+
+							{/* Address */}
+							<div className="text-md text-gray-600 mb-3">
+								<p>
+									361/A, Basudevpur Road, Ground Floor, Nilanjana Apartment
+									Shyamnagar, West Bengal, 743127, India
+								</p>
+							</div>
+
+							{/* Contact Info */}
+							<div className="flex justify-center mb-6">
+								<div className="text-md text-gray-600">
+									<span>Phone: (033) 3564 7255</span>
+									<span className="mx-4">Email: contacts@mstheracure.com</span>
+								</div>
+							</div>
+						</div>
+
+						{/* Invoice Info Row */}
+						<div className="flex justify-between items-start pt-6 mt-6 border-t border-gray-200">
+							<div>
+								<p className="text-md text-gray-600">
+									Invoice No.:{" "}
+									<span className="font-semibold">
+										{invoiceDetails.invoiceId}
+									</span>
+								</p>
+							</div>
+							<div className="text-right">
+								<p className="text-sm text-gray-600">
+									Date:{" "}
+									<span className="font-semibold">
+										{new Date(invoiceDetails.date).toLocaleDateString("en-IN")}
+									</span>
+								</p>
+							</div>
+						</div>
+
+						{/* Bill To and Payment Details */}
+						<div className="grid grid-cols-2 gap-6 mb-6 pt-6 mt-6 border-t border-gray-200">
+							{/* Bill To */}
+							<div className="bg-gray-50 p-4  rounded-[14px] border border-gray-200">
+								<h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
+									Bill to:
+								</h3>
+								<div className="text-sm space-y-1">
+									<p>
+										<span className="text-gray-600">Patient Id:</span>{" "}
+										<span className="font-medium">{patientInfo.id}</span>
+									</p>
+									<p>
+										<span className="text-gray-600">Phone:</span>{" "}
+										<span className="font-medium">{patientInfo.phone}</span>
+									</p>
+									<p>
+										<span className="text-gray-600">Address:</span>{" "}
+										<span className="font-medium">{patientInfo.address}</span>
+									</p>
+									<p>
+										<span className="text-gray-600">Emails:</span>{" "}
+										<span className="font-medium">{patientInfo.email}</span>
+									</p>
+								</div>
+							</div>
+
+							{/* Payment Details */}
+							<div className="bg-gray-50 p-4 rounded-[14px] border border-gray-200">
+								<h3 className="text-sm font-semibold text-gray-700 mb-3  border-b border-gray-200 pb-1">
+									Payment Details:
+								</h3>
+								<div className="text-sm space-y-1 mb-4">
+									<p>
+										<span className="text-gray-600">Date:</span>{" "}
+										<span className="font-medium">
+											{new Date(paymentDetails.paymentDate).toLocaleDateString(
+												"en-IN"
+											)}
+										</span>
+									</p>
+									<p>
+										<span className="text-gray-600">Method:</span>{" "}
+										<span className="font-medium capitalize">
+											{paymentDetails.paymentMethod}
+										</span>
+									</p>
+									<p>
+										<span className="text-gray-600">Offer Applied:</span>{" "}
+										<span className="font-medium">{paymentDetails.offer}%</span>
+									</p>
+								</div>
+								<div className="space-y-2">
+									<div className="flex justify-between">
+										<span className="text-gray-600">Total Amount:</span>
+										<span className="font-semibold">₹{calculateTotal()}</span>
+									</div>
+									<div className="flex justify-between">
+										<span className="text-gray-600">Offer Amount:</span>
+										<span className="font-semibold">₹{calculateOffer()}</span>
+									</div>
+									<div className="flex justify-between">
+										<span className="text-gray-600">Amount Paid:</span>
+										<span className="font-semibold">
+											₹{paymentDetails.amountPaid}
+										</span>
+									</div>
+									<div className="flex justify-between">
+										<span className="text-gray-600">Balance Due:</span>
+										<span className="font-semibold">
+											₹{Math.abs(calculateBalance())}
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Pricing Breakdown */}
+						<div className="mb-8">
+							<h3 className="text-sm font-semibold text-gray-700 mb-3">
+								Pricing Breakdown:
+							</h3>
+
+							{/* Table Header */}
+							<div className="bg-gray-100 p-3 rounded-t border">
+								<div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
+									<div>Service Description</div>
+									<div className="text-center">Qty.</div>
+									<div className="text-center">Rate (₹/hr)</div>
+									<div className="text-center">Amount (₹)</div>
+								</div>
+							</div>
+
+							{/* Table Content */}
+							{selectedServices.map((service, index) => (
+								<div
+									key={service.id}
+									className="border-l border-r border-b p-3">
+									<div className="grid grid-cols-4 gap-4 text-sm">
+										<div>
+											<p className="font-semibold text-gray-800">
+												{service.name}
+											</p>
+											<p className="text-xs text-gray-600 mt-1">
+												{service.description}
+											</p>
+										</div>
+										<div className="text-center font-medium">
+											{service.quantity}
+										</div>
+										<div className="text-center font-medium">
+											{service.price}
+										</div>
+										<div className="text-center font-medium">
+											{service.price * service.quantity}
+										</div>
+									</div>
+								</div>
+							))}
+
+							{/* Subtotal Row */}
+							<div className="bg-gray-50 p-3 rounded-b border-l border-r border-b">
+								<div className="grid grid-cols-4 gap-4">
+									<div className="col-span-3"></div>
+									<div className="text-left pr-5 ">
+										<span className="text-sm font-semibold">
+											Total: &nbsp;&nbsp;&nbsp; ₹{calculateSubtotal()}
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Footer */}
+						<div className="text-center bg-gray-100 p-6 rounded border-t border-gray-300">
+							<h3 className="text-lg font-bold text-gray-800 mb-2">
+								Thank you for choosing Thera-Cure!
+							</h3>
+							<p className="text-sm text-gray-600 mb-2">
+								Your health and recovery are our priority.
+							</p>
+							<p className="text-xs text-gray-500">
+								For any queries regarding this invoice, please contact us at the
+								above details.
+							</p>
+							<p className="text-xs text-gray-500 mt-2">
+								Generated On: {new Date().toLocaleDateString("en-IN")}{" "}
+								{new Date().toLocaleTimeString("en-IN")}
+							</p>
 						</div>
 					</div>
 				</div>
