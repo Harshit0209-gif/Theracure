@@ -14,6 +14,7 @@ import {
 	Layers,
 	UserCog,
 	Handshake,
+	TrendingUp,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -42,10 +43,10 @@ export function Sidebar({
 			roles: ["receptionist", "admin", "therapist"],
 		},
 		{
-			title: "Consultaions",
+			title: "Consultation",
 			icon: <Handshake className="h-6 w-6" />,
-			href: "/consultations",
-			roles: ["receptionist", "admin", "therapist"],
+			href: "/consultation",
+			roles: ["receptionist", "admin"],
 		},
 		{
 			title: "Invoices",
@@ -55,13 +56,13 @@ export function Sidebar({
 		},
 		{
 			title: "Patients",
-			icon: <Users className="h-5 w-5" />,
+			icon: <Users className="mr-3 h-5 w-5" />,
 			href: "/patients",
 			roles: ["receptionist", "admin", "therapist"],
 		},
 		{
 			title: "Prescriptions",
-			icon: <FileText className="h-5 w-5" />,
+			icon: <FileText className="mr-3 h-5 w-5" />,
 			href: "/prescriptions",
 			roles: ["therapist"],
 		},
@@ -81,18 +82,17 @@ export function Sidebar({
 		},
 		{
 			title: "Employees",
-			icon: <UserCog className="h-5 w-5" />,
+			icon: <UserCog className="mr-3 h-5 w-5" />,
 			href: "/employees",
 			roles: ["admin"],
 		},
 		{
 			title: "Analytics",
-			icon: <FileText className="h-5 w-5" />,
+			icon: <TrendingUp className="mr-3 h-5 w-5" />,
 			href: "/analytics",
 			roles: ["admin"],
 		},
 
-		// Common Items
 		{
 			title: "Settings",
 			icon: <Settings className="h-6 w-6" />,
