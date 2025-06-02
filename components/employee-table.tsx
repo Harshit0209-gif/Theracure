@@ -314,14 +314,6 @@ export function EmployeeTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleViewProfile(user)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -345,15 +337,6 @@ export function EmployeeTable({
                             >
                               <UserIcon className="mr-2 h-4 w-4" />
                               View Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewSchedule(user);
-                              }}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              View Schedule
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
@@ -464,24 +447,6 @@ export function EmployeeTable({
             <DialogTitle>Employee Profile</DialogTitle>
           </DialogHeader>
           {selectedUser && <EmployeeProfileCard user={selectedUser} />}
-        </DialogContent>
-      </Dialog>
-
-      {/* Schedule Dialog */}
-      <Dialog
-        open={scheduleDialogOpen}
-        onOpenChange={setScheduleDialogOpen}
-        modal={false}
-      >
-        <DialogContent
-          className="max-w-4xl max-h-[90vh] overflow-y-auto"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={() => setScheduleDialogOpen(false)}
-        >
-          <DialogHeader>
-            <DialogTitle>Session Schedule</DialogTitle>
-          </DialogHeader>
-          {selectedUser && <EmployeeScheduleCard user={selectedUser} />}
         </DialogContent>
       </Dialog>
 

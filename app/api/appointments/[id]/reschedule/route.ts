@@ -3,11 +3,14 @@ import { Prisma } from "@prisma/client";
 import { getDay } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
     const body = await req.json();
-    console.log("reschedule api calling body:", body)
+    console.log("reschedule api calling body:", body);
     const { appointmentStartTime, appointmentEndTime, reason } = body;
 
     // Validate input
@@ -48,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // 1. Find therapist
     const therapistAssignment = await prisma.therapistAssignment.findUnique({
       where: { id },
-      select: { therapistId: true }
+      select: { therapistId: true },
     });
 
     if (!therapistAssignment?.therapistId) {
@@ -57,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         { status: 404 }
       );
     }
-    console.log("therapist fetch from db",weekDay, therapistAssignment)
+    console.log("therapist fetch from db", weekDay, therapistAssignment);
 
     // 2. Check if therapist has availability for this weekday
     const therapistAvailability = await prisma.therapistTimeSlot.findFirst({
@@ -66,12 +69,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         weekDay,
         isAvailable: true,
         startTime: { lte: startTime.toTimeString().slice(0, 5) },
-        endTime: { gte: endTime.toTimeString().slice(0, 5) }
-      }
+        endTime: { gte: endTime.toTimeString().slice(0, 5) },
+      },
     });
 
-    console.log("therapist avialable: ", weekDay, therapistAvailability)
-
+    console.log("therapist avialable: ", weekDay, therapistAvailability);
 
     if (!therapistAvailability) {
       return NextResponse.json(
@@ -84,28 +86,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const existingAppointments = await prisma.therapistAssignment.findMany({
       where: {
         therapistId: therapistAssignment.therapistId,
-        status: { in: ['confirmed'] },
-        id: { not: id }, 
+        status: { in: ["confirmed"] },
+        id: { not: id },
         OR: [
           {
             AND: [
               { appointmentStartTime: { lte: startTime } },
-              { appointmentEndTime: { gt: startTime } }
-            ]
+              { appointmentEndTime: { gt: startTime } },
+            ],
           },
           {
             AND: [
               { appointmentStartTime: { lt: endTime } },
-              { appointmentEndTime: { gte: endTime } }
-            ]
-          }
-        ]
-      }
+              { appointmentEndTime: { gte: endTime } },
+            ],
+          },
+        ],
+      },
     });
 
     if (existingAppointments.length > 0) {
       return NextResponse.json(
-        { success: false, message: "Time slot conflicts with existing appointments" },
+        {
+          success: false,
+          message: "Time slot conflicts with existing appointments",
+        },
         { status: 400 }
       );
     }
@@ -122,26 +127,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         patient: {
           select: {
             id: true,
-            patientName: true
-          }
+            patientName: true,
+          },
         },
         therapist: {
           select: {
             id: true,
             name: true,
             email: true,
-            phone: true
-          }
-        }
-      }
+            phone: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
       message: "Rescheduled Successfully",
-      data: appointment
+      data: appointment,
     });
-
   } catch (error) {
     console.error("Error rescheduling appointment:", error);
     return NextResponse.json(

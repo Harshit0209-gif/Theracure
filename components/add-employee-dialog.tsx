@@ -22,7 +22,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Eye, EyeOff, Filter } from "lucide-react";
+import { Plus, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 type FormData = z.infer<typeof createUserSchema>;
@@ -113,11 +113,6 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
 
 	return (
 		<div className="flex gap-2">
-			{/* <Button variant="outline" size="sm" className="flex items-center gap-1 border-indigo-600 text-indigo-700 hover:bg-indigo-50">
-        <Filter className="h-4 w-4" />
-        Filter
-      </Button> */}
-
 			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 				<DialogTrigger asChild>
 					<Button
