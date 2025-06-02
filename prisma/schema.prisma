@@ -229,7 +229,7 @@ model Invoice {
   // Metadata
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  createdBy       String?  
+  createdBy       String  
 
   // Relations
   patient         Patient  @relation(fields: [patientId], references: [id])

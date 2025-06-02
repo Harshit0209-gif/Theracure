@@ -17,6 +17,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Footer } from "@/components/layout/footer";
 import { useAuth } from "@/contexts/auth-context";
 import { ChevronDown, User, HelpCircle, Moon } from "lucide-react";
+import { Toaster } from "@/components/ui/toaster";
 
 // Add this function to capitalize first letter
 const capitalizeFirstLetter = (str: string) => {
@@ -38,6 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-100">
+      <Toaster />
       <div className="flex flex-1">
         {/* Sidebar */}
         <div

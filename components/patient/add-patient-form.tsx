@@ -1,21 +1,27 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useForm, Controller } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useAuth } from "@/contexts/auth-context"
-import { patientSchema, type PatientFormData } from "@/lib/validations/patient"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
-import { DialogFooter } from "../ui/dialog"
+import { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/contexts/auth-context";
+import { patientSchema, type PatientFormData } from "@/lib/validations/patient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "@/components/ui/use-toast";
+import { DialogFooter } from "../ui/dialog";
 
 export function AddPatientForm() {
-  const [isLoading, setIsLoading] = useState(false)
-  const { user } = useAuth()
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const {
     register,
@@ -25,58 +31,57 @@ export function AddPatientForm() {
     reset,
   } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
-  })
+  });
 
   const onSubmit = async (data: PatientFormData) => {
-
-    
-    console.log("user ",user)
+    console.log("user ", user);
     if (!user) {
       toast({
         title: "Error",
         description: "You must be logged in to add a patient",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     const payload = {
       ...data,
-      createdById:  user.email, 
-    }
+      createdById: user.email,
+    };
 
-    console.log("onSubmit called with payload: ", payload)
+    console.log("onSubmit called with payload: ", payload);
 
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       const response = await fetch("/api/patients", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to add patient")
+        const error = await response.json();
+        throw new Error(error.message || "Failed to add patient");
       }
 
       toast({
         title: "Success",
         description: "Patient added successfully",
-      })
-      reset()
+      });
+      reset();
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add patient",
+        description:
+          error instanceof Error ? error.message : "Failed to add patient",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -129,19 +134,53 @@ export function AddPatientForm() {
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="age">Age</Label>
-        <Input
-          id="age"
-          type="number"
-          min="0"
-          max="120"
-          {...register("age", { valueAsNumber: true })}
-          placeholder="Enter age"
-        />
-        {errors.age && (
-          <p className="text-sm text-red-500">{errors.age.message}</p>
-        )}
+      {/* Age, Height, Weight in a grid */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="age">Age</Label>
+          <Input
+            id="age"
+            type="number"
+            min="0"
+            max="120"
+            {...register("age", { valueAsNumber: true })}
+            placeholder="Enter age"
+          />
+          {errors.age && (
+            <p className="text-sm text-red-500">{errors.age.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="height">Height (cm)</Label>
+          <Input
+            id="height"
+            type="number"
+            min="50"
+            max="250"
+            {...register("height", { valueAsNumber: true })}
+            placeholder="Height in cm"
+          />
+          {errors.height && (
+            <p className="text-sm text-red-500">{errors.height.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="weight">Weight (kg)</Label>
+          <Input
+            id="weight"
+            type="number"
+            min="1"
+            max="300"
+            step="0.1"
+            {...register("weight", { valueAsNumber: true })}
+            placeholder="Weight in kg"
+          />
+          {errors.weight && (
+            <p className="text-sm text-red-500">{errors.weight.message}</p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -175,16 +214,17 @@ export function AddPatientForm() {
           placeholder="Enter medical history"
         />
         {errors.medicalHistory && (
-          <p className="text-sm text-red-500">{errors.medicalHistory.message}</p>
+          <p className="text-sm text-red-500">
+            {errors.medicalHistory.message}
+          </p>
         )}
       </div>
 
       <DialogFooter>
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Adding..." : "Add Patient"}
-      </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Adding..." : "Add Patient"}
+        </Button>
       </DialogFooter>
-     
     </form>
-  )
-} 
+  );
+}

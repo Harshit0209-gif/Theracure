@@ -186,7 +186,7 @@ export function AddAssessmentDialog({
         patientId: patientInfo.id,
       };
 
-      const response = await fetch("/api/assessments", {
+      const response = await fetch("/api/prescriptions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
