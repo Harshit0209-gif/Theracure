@@ -61,6 +61,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         "/employees",
         "/consultation",
         "/analytics",
+        "/services",
+        "/prescriptions",
       ],
       therapist: ["/therapist", "/patients", "/prescriptions"],
     };

@@ -42,6 +42,23 @@ enum AppointmentStatus {
   cancelled
   rescheduled
 }
+enum InvoiceStatus {
+  DUE
+  PAID
+  CANCELLED
+}
+
+enum ConsultationStatus {
+  NOT_ASSIGN
+  ASSIGNED
+  COMPLETED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
 
 // Models
 model User {
@@ -60,6 +77,7 @@ model User {
   therapistAssignments TherapistAssignment[] @relation("TherapistAssignments")
   therapistTimeSlots TherapistTimeSlot[] @relation("TherapistTimeSlots")
   therapist          Therapist?
+ 
 
   @@map("users")
 }
@@ -68,6 +86,8 @@ model Patient {
   id             String   @id @default(dbgenerated("generate_patient_id()")) @db.VarChar(20) @map("patient_id")
   patientName     String    @map("patient_name")
   age             Int
+  height          String?
+  weight          String?
   gender          String
   address         String?
   phone           String?
@@ -82,9 +102,27 @@ model Patient {
   therapistAssignments TherapistAssignment[] @relation("PatientAssignments")
   prescriptions   Prescription[] @relation("PatientPrescriptions")
   therapySessions TherapySession[] @relation("PatientTherapySessions")
+  invoices          Invoice[]
+ 
 
   @@map("patients")
 }
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  category    String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("services")
+}
+
+
+
 
 model Therapist {
   id              String    @id @map("therapist_id")
@@ -169,11 +207,39 @@ model Prescription {
   session           TherapySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   patient           Patient        @relation("PatientPrescriptions", fields: [patientId], references: [id])
   therapist         Therapist      @relation("TherapistPrescriptions", fields: [therapistId], references: [id])
+  
 
   @@map("prescriptions")
   @@index([sessionId])
   @@index([patientId])
   @@index([therapistId])
+}
+
+model Invoice {
+  id              String    @id @default(cuid()) @map("invoice_id")
+  patientId       String    @map("patient_id")
+  patientName     String    @map("patient_name")
+  date            DateTime  
+  totalAmount     Float     @map("total_amount")
+  amountPaid      Float    @default(0) @map("amount_paid")
+  status          InvoiceStatus @default(DUE) 
+  paymentMethod   String?   @map("payment_method")
+  notes           String?
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?  
+
+  // Relations
+  patient         Patient  @relation(fields: [patientId], references: [id])
+
+
+  @@index([patientId])
+  @@index([id])
+  @@index([status])
+  @@index([date])
+  @@map("invoices")
 }
 
 model TherapySession {
@@ -201,4 +267,25 @@ model TherapySession {
   @@index([sessionDate])
   @@index([patientId])
   @@index([therapistId])
+}
+
+
+model Consultation {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  mobileNumber    String    @map("mobile_number")
+  consultationDate DateTime  @map("appointment_date")
+  consultationTime String    @map("appointment_time")
+  message         String?   @db.Text
+  status          ConsultationStatus @default(NOT_ASSIGN)
+  consultationWith String?  @map("consulation_with")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+
+  @@index([id])
+  @@index([consultationDate])
+  @@index([status])
+  @@map("consultations")
 }

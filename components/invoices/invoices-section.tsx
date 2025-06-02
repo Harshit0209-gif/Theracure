@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Plus,
   CreditCard,
@@ -28,6 +28,11 @@ import {
   Mail,
   Search,
   XCircle,
+  HandMetal,
+  Zap,
+  Dumbbell,
+  Thermometer,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,7 +81,7 @@ const existingInvoices = [
   {
     id: "TC-2024-001",
     patient: "Rohan Mondal",
-    patientId: "PT-0258",
+    id: "PT-0258",
     date: "26 Jan 2024",
     amount: "₹1,500",
     status: "Paid",
@@ -89,7 +94,7 @@ const existingInvoices = [
   {
     id: "TC-2024-002",
     patient: "Priya Sharma",
-    patientId: "PT-0259",
+    id: "PT-0259",
     date: "25 Jan 2024",
     amount: "₹2,400",
     status: "Pending",
@@ -102,7 +107,7 @@ const existingInvoices = [
   {
     id: "TC-2024-003",
     patient: "Amit Kumar",
-    patientId: "PT-0260",
+    id: "PT-0260",
     date: "24 Jan 2024",
     amount: "₹1,200",
     status: "Paid",
@@ -114,11 +119,25 @@ const existingInvoices = [
   },
 ];
 
+interface Service {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  quantity: number;
+}
+
 export function InvoicesSection() {
   const { toast } = useToast();
   const [isSearching, setIsSearching] = useState(false);
   const [patientFound, setPatientFound] = useState(false);
   const [patientData, setPatientData] = useState(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [isServicesLoading, setIsServicesLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 5;
   const totalPages = Math.ceil(existingInvoices.length / pageSize);
@@ -128,14 +147,16 @@ export function InvoicesSection() {
   );
 
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
 
   const [patientInfo, setPatientInfo] = useState({
     name: "",
-    patientId: "",
+    id: "",
     phone: "",
     address: "",
     email: "",
+    gender: "",
+    age: "",
   });
 
   const [invoiceDetails, setInvoiceDetails] = useState({
@@ -148,151 +169,95 @@ export function InvoicesSection() {
 
   const [paymentDetails, setPaymentDetails] = useState({
     amountPaid: 0,
+    offer: 0,
     paymentMethod: "cash",
     paymentDate: new Date().toISOString().split("T")[0],
   });
 
-  const fetchPatientDetails = async (patientId: string) => {
+  const fetchServices = useCallback(async () => {
+    setIsServicesLoading(true);
     try {
+      const response = await fetch("/api/services");
+      const data = await response.json();
+      setServices(data.data);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+    } finally {
+      setIsServicesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isInvoiceDialogOpen) {
+      fetchServices();
+    }
+  }, [isInvoiceDialogOpen, fetchServices]);
+
+  const fetchPatientDetails = useCallback(
+    async (id: string) => {
       setIsSearching(true);
 
-      const response = await fetch(`/api/patients/${patientId}`);
-      const data = await response.json();
+      try {
+        const response = await fetch(`/api/patients/${id}`);
+        const data = await response.json();
 
-      if (response.ok && data.success) {
-        setPatientFound(true);
-        setPatientData(data.patient);
-      } else {
+        if (response.ok && data.success) {
+          setPatientFound(true);
+          setPatientInfo(data.patient);
+          console.log("patientInfo", data.patient);
+        } else {
+          setPatientFound(false);
+          setPatientInfo((prev) => ({
+            ...prev,
+            name: "",
+            phone: "",
+            address: "",
+            email: "",
+            gender: "",
+            age: "",
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching patient details:", error);
         setPatientFound(false);
-        setPatientData(null);
+        toast({
+          title: "Error",
+          description: "Failed to fetch patient details. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSearching(false);
       }
-    } catch (error) {
-      console.error("Error fetching patient details:", error);
-      setPatientFound(false);
-      setPatientData(null);
-      toast({
-        title: "Error",
-        description: "Failed to fetch patient details. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const debouncedSearch = useCallback(
-    debounce((patientId) => {
-      if (patientId.length >= 6) {
-        // Minimum length of 6 characters
-        fetchPatientDetails(patientId);
-      } else {
-        setPatientFound(null);
-        setPatientData(null);
-      }
-    }, 500),
-    []
+    },
+    [toast]
   );
 
-  const handlePatientIdChange = (e: any) => {
-    const value = e.target.value;
-    setPatientInfo({ ...patientInfo, patientId: value });
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((id: string) => {
+        if (id.length >= 6) {
+          fetchPatientDetails(id);
+        } else {
+          setPatientFound(false);
+          setPatientInfo((prev) => ({
+            ...prev,
+            name: "",
+            phone: "",
+            address: "",
+            email: "",
+            gender: "",
+            age: "",
+          }));
+        }
+      }, 500),
+    [fetchPatientDetails]
+  );
 
-    // Trigger search when input length is sufficient
+  const handleidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPatientInfo((prev) => ({ ...prev, id: value }));
     debouncedSearch(value);
   };
-
-  // Predefined services with updated pricing and types
-  const availableServices = [
-    // Consultation Services
-    {
-      id: 1,
-      name: "Consultation at Clinic",
-      price: 500,
-      category: "Consultation",
-      description: "Initial consultation at clinic premises",
-    },
-    {
-      id: 2,
-      name: "Consultation at Home",
-      price: 800,
-      category: "Consultation",
-      description: "Home visit consultation service",
-    },
-    {
-      id: 3,
-      name: "Follow-up Consultation",
-      price: 300,
-      category: "Consultation",
-      description: "Follow-up consultation session",
-    },
-
-    // Physical Therapy Services
-    {
-      id: 4,
-      name: "Manual Therapy",
-      price: 500,
-      category: "Physical Therapy",
-      description: "Hands-on treatment techniques",
-    },
-    {
-      id: 5,
-      name: "Exercise Therapy",
-      price: 350,
-      category: "Physical Therapy",
-      description: "Therapeutic exercises and rehabilitation",
-    },
-    {
-      id: 6,
-      name: "Electrotherapy",
-      price: 400,
-      category: "Physical Therapy",
-      description: "Electrical stimulation therapy",
-    },
-    {
-      id: 7,
-      name: "Hydrotherapy",
-      price: 600,
-      category: "Physical Therapy",
-      description: "Water-based therapy sessions",
-    },
-    {
-      id: 8,
-      name: "Heat Therapy",
-      price: 300,
-      category: "Physical Therapy",
-      description: "Thermotherapy treatment",
-    },
-    {
-      id: 9,
-      name: "Cryotherapy",
-      price: 350,
-      category: "Physical Therapy",
-      description: "Cold therapy treatment",
-    },
-
-    // Combo Treatments
-    {
-      id: 10,
-      name: "Manual + Exercise Combo",
-      price: 750,
-      category: "COMBO TREATMENT",
-      description: "Combined manual and exercise therapy",
-    },
-    {
-      id: 11,
-      name: "Electro + Manual Combo",
-      price: 800,
-      category: "COMBO TREATMENT",
-      description: "Combined electrotherapy and manual therapy",
-    },
-    {
-      id: 12,
-      name: "Complete Therapy Package",
-      price: 1200,
-      category: "COMBO TREATMENT",
-      description: "Comprehensive therapy package",
-    },
-  ];
 
   // Generate invoice ID
   const generateInvoiceId = () => {
@@ -305,7 +270,7 @@ export function InvoicesSection() {
     return `TC-${year}${month}-${random}`;
   };
 
-  const addService = (service) => {
+  const addService = (service: Service) => {
     const existingService = selectedServices.find((s) => s.id === service.id);
     if (existingService) {
       setSelectedServices(
@@ -318,7 +283,7 @@ export function InvoicesSection() {
     }
   };
 
-  const updateServiceQuantity = (serviceId, quantity) => {
+  const updateServiceQuantity = (serviceId: number, quantity: number) => {
     if (quantity <= 0) {
       removeService(serviceId);
     } else {
@@ -330,8 +295,8 @@ export function InvoicesSection() {
     }
   };
 
-  const removeService = (serviceId) => {
-    setSelectedServices(selectedServices.filter((s) => s.id !== serviceId));
+  const removeService = (serviceId: number) => {
+    setSelectedServices(selectedServices?.filter((s) => s.id !== serviceId));
   };
 
   // Calculation functions
@@ -340,7 +305,8 @@ export function InvoicesSection() {
       (sum, service) => sum + service.price * service.quantity,
       0
     );
-  const calculateOffer = () => Math.round(calculateSubtotal() * 0.18); //GST
+  const calculateOffer = () =>
+    Math.round(calculateSubtotal() * paymentDetails.offer * 0.01);
   const calculateTotal = () => calculateSubtotal() - calculateOffer();
   const calculateBalance = () => calculateTotal() - paymentDetails.amountPaid;
 
@@ -358,7 +324,7 @@ export function InvoicesSection() {
     setSelectedServices([]);
     setPatientInfo({
       name: "",
-      patientId: "",
+      id: "",
       phone: "",
       address: "",
       email: "",
@@ -378,7 +344,7 @@ export function InvoicesSection() {
   };
 
   const handleSaveInvoice = () => {
-    if (!patientInfo.patientId || selectedServices.length === 0) {
+    if (!patientInfo.id || selectedServices.length === 0) {
       toast({
         title: "Validation Error",
         description: "Please enter patient ID and select at least one service.",
@@ -395,7 +361,7 @@ export function InvoicesSection() {
   };
 
   const handlePrintInvoice = () => {
-    if (!patientInfo.patientId || selectedServices.length === 0) {
+    if (!patientInfo.id || selectedServices.length === 0) {
       toast({
         title: "Cannot Print",
         description:
@@ -413,10 +379,6 @@ export function InvoicesSection() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            {/* Company Logo */}
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">TC</span>
-            </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-800">
                 TheraCure Billing System
@@ -427,14 +389,6 @@ export function InvoicesSection() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1 border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-            >
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -494,18 +448,13 @@ export function InvoicesSection() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div>
-                          <Label htmlFor="patientId">Patient ID *</Label>
+                          <Label htmlFor="id">Patient ID *</Label>
                           <div className="relative mt-1">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                              id="patientId"
-                              value={patientInfo.patientId}
-                              onChange={(e) =>
-                                setPatientInfo({
-                                  ...patientInfo,
-                                  patientId: e.target.value,
-                                })
-                              }
+                              id="id"
+                              value={patientInfo.id}
+                              onChange={handleidChange}
                               placeholder="e.g., PT-0258"
                               className="pl-10"
                             />
@@ -516,10 +465,10 @@ export function InvoicesSection() {
                         </div>
 
                         {/* Mock Patient Display - Shows found/not found states */}
-                        {patientInfo.patientId && (
+                        {patientInfo.id && (
                           <>
                             {/* Patient Found State */}
-                            {patientInfo.patientId.startsWith("PT-") ? (
+                            {patientFound ? (
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2 mb-1">
                                   <CheckCircle className="h-4 w-4 text-blue-600" />
@@ -534,7 +483,7 @@ export function InvoicesSection() {
                                   <div className="relative mt-0.5">
                                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
-                                      value="Rohan Mondal"
+                                      value={patientInfo.name}
                                       readOnly
                                       className="pl-10 bg-gray-50 h-9 text-sm"
                                     />
@@ -547,7 +496,7 @@ export function InvoicesSection() {
                                   <div className="relative mt-0.5">
                                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
-                                      value="rohan.mondal@gmail.com"
+                                      value={patientInfo.email}
                                       readOnly
                                       className="pl-10 bg-gray-50 h-9 text-sm"
                                     />
@@ -560,7 +509,7 @@ export function InvoicesSection() {
                                   <div className="relative mt-0.5">
                                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
-                                      value="9800095652"
+                                      value={patientInfo.phone}
                                       readOnly
                                       className="pl-10 bg-gray-50 h-9 text-sm"
                                     />
@@ -573,7 +522,7 @@ export function InvoicesSection() {
                                   <div className="relative mt-0.5">
                                     <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
-                                      value="Male"
+                                      value={patientInfo.gender}
                                       readOnly
                                       className="pl-10 bg-gray-50 h-9 text-sm"
                                     />
@@ -586,22 +535,7 @@ export function InvoicesSection() {
                                   <div className="relative mt-0.5">
                                     <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
-                                      value="123 Park Street, Kolkata"
-                                      readOnly
-                                      className="pl-10 bg-gray-50 h-9 text-sm"
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Assigned Therapist */}
-                                <div>
-                                  <Label className="text-xs">
-                                    Assigned Therapist
-                                  </Label>
-                                  <div className="relative mt-0.5">
-                                    <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <Input
-                                      value="Dr. Mainak Sur (PT)"
+                                      value={patientInfo.address}
                                       readOnly
                                       className="pl-10 bg-gray-50 h-9 text-sm"
                                     />
@@ -618,8 +552,7 @@ export function InvoicesSection() {
                                       Patient Not Found
                                     </p>
                                     <p className="text-sm text-red-600 mt-1">
-                                      No patient found with ID:{" "}
-                                      {patientInfo.patientId}
+                                      No patient found with ID: {patientInfo.id}
                                     </p>
                                   </div>
                                 </div>
@@ -696,11 +629,25 @@ export function InvoicesSection() {
                           <Input
                             id="amountPaid"
                             type="number"
-                            value={paymentDetails.amountPaid}
                             onChange={(e) =>
                               setPaymentDetails({
                                 ...paymentDetails,
                                 amountPaid: Number(e.target.value),
+                              })
+                            }
+                            placeholder="0"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="amountPaid">Offer Apply (%)</Label>
+                          <Input
+                            id="offer"
+                            type="number"
+                            onChange={(e) =>
+                              setPaymentDetails({
+                                ...paymentDetails,
+                                offer: Number(e.target.value),
                               })
                             }
                             placeholder="0"
@@ -729,483 +676,949 @@ export function InvoicesSection() {
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* Physical Therapy Services */}
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-700">
-                            <Activity className="h-4 w-4" />
-                            <h3 className="font-semibold">Physical Therapy</h3>
-                            <Badge
-                              variant="secondary"
-                              className="ml-auto text-xs"
-                            >
-                              {
-                                availableServices.filter(
-                                  (s) => s.category === "Physical Therapy"
-                                ).length
-                              }{" "}
-                              services
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-3 gap-3">
-                            {availableServices
-                              .filter(
-                                (service) =>
-                                  service.category === "Physical Therapy"
-                              )
-                              .map((service) => {
-                                const isSelected = selectedServices.some(
-                                  (s) => s.id === service.id
-                                );
-                                const quantity =
-                                  selectedServices.find(
+                    {isServicesLoading ? (
+                      <CardContent>
+                        <div className="flex justify-center items-center h-full">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </div>
+                      </CardContent>
+                    ) : (
+                      <CardContent>
+                        <div className="space-y-6">
+                          {/* Manual Therapy Services */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-700">
+                              <HandMetal className="h-4 w-4" />
+                              <h3 className="font-semibold">Manual Therapy</h3>
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs"
+                              >
+                                {
+                                  services?.filter(
+                                    (s) => s.category === "manual-therapy"
+                                  ).length
+                                }{" "}
+                                services
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {services
+                                ?.filter(
+                                  (service) =>
+                                    service.category === "manual-therapy"
+                                )
+                                .map((service) => {
+                                  const isSelected = selectedServices.some(
                                     (s) => s.id === service.id
-                                  )?.quantity || 0;
+                                  );
+                                  const quantity =
+                                    selectedServices.find(
+                                      (s) => s.id === service.id
+                                    )?.quantity || 0;
 
-                                return (
-                                  <div
-                                    key={service.id}
-                                    className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
-                                      isSelected
-                                        ? "border-indigo-500 bg-indigo-50 shadow-md"
-                                        : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
-                                    }`}
-                                    onClick={() =>
-                                      isSelected
-                                        ? removeService(service.id)
-                                        : addService(service)
-                                    }
-                                  >
-                                    {/* Checkbox */}
-                                    <div className="absolute top-2 right-2">
-                                      <div
-                                        className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                          isSelected
-                                            ? "bg-indigo-600 border-indigo-600"
-                                            : "border-gray-300"
-                                        }`}
-                                      >
-                                        {isSelected && (
-                                          <Check className="h-2.5 w-2.5 text-white" />
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {/* Service Content */}
-                                    <div className="pr-6">
-                                      <h4
-                                        className={`font-semibold text-sm mb-1 ${
-                                          isSelected
-                                            ? "text-indigo-900"
-                                            : "text-gray-800"
-                                        }`}
-                                      >
-                                        {service.name}
-                                      </h4>
-                                      <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-                                        {service.description}
-                                      </p>
-                                      <div className="flex items-center justify-between">
-                                        <p
-                                          className={`text-sm font-bold ${
+                                  return (
+                                    <div
+                                      key={service.id}
+                                      className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
+                                        isSelected
+                                          ? "border-indigo-500 bg-indigo-50 shadow-md"
+                                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                                      }`}
+                                      onClick={() =>
+                                        isSelected
+                                          ? removeService(service.id)
+                                          : addService(service)
+                                      }
+                                    >
+                                      {/* Checkbox */}
+                                      <div className="absolute top-2 right-2">
+                                        <div
+                                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
                                             isSelected
-                                              ? "text-indigo-600"
-                                              : "text-gray-700"
+                                              ? "bg-indigo-600 border-indigo-600"
+                                              : "border-gray-300"
                                           }`}
                                         >
-                                          ₹{service.price}
-                                        </p>
-                                        {isSelected && (
-                                          <Badge className="bg-indigo-600 text-white text-xs py-0 px-1">
-                                            Added
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {/* Quantity Controls */}
-                                    {isSelected && (
-                                      <div
-                                        className="mt-2 pt-2 border-t border-indigo-200"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-xs font-medium text-indigo-700">
-                                            Qty:
-                                          </span>
-                                          <div className="flex items-center gap-1">
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
-                                              onClick={() =>
-                                                updateServiceQuantity(
-                                                  service.id,
-                                                  quantity - 1
-                                                )
-                                              }
-                                            >
-                                              <Minus className="h-2.5 w-2.5" />
-                                            </Button>
-                                            <span className="w-5 text-center font-semibold text-indigo-800 text-xs">
-                                              {quantity}
-                                            </span>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
-                                              onClick={() =>
-                                                updateServiceQuantity(
-                                                  service.id,
-                                                  quantity + 1
-                                                )
-                                              }
-                                            >
-                                              <Plus className="h-2.5 w-2.5" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        <div className="flex justify-between items-center mt-1 text-xs">
-                                          <span className="text-gray-600">
-                                            Total:
-                                          </span>
-                                          <span className="font-bold text-indigo-700">
-                                            ₹{service.price * quantity}
-                                          </span>
+                                          {isSelected && (
+                                            <Check className="h-2.5 w-2.5 text-white" />
+                                          )}
                                         </div>
                                       </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
 
-                        {/* Consultation Services */}
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 p-3 rounded-lg border bg-green-50 border-green-200 text-green-700">
-                            <Stethoscope className="h-4 w-4" />
-                            <h3 className="font-semibold">Consultation</h3>
-                            <Badge
-                              variant="secondary"
-                              className="ml-auto text-xs"
-                            >
-                              {
-                                availableServices.filter(
-                                  (s) => s.category === "Consultation"
-                                ).length
-                              }{" "}
-                              services
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-3 gap-3">
-                            {availableServices
-                              .filter(
-                                (service) => service.category === "Consultation"
-                              )
-                              .map((service) => {
-                                const isSelected = selectedServices.some(
-                                  (s) => s.id === service.id
-                                );
-                                const quantity =
-                                  selectedServices.find(
-                                    (s) => s.id === service.id
-                                  )?.quantity || 0;
-
-                                return (
-                                  <div
-                                    key={service.id}
-                                    className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
-                                      isSelected
-                                        ? "border-green-500 bg-green-50 shadow-md"
-                                        : "border-gray-200 hover:border-green-300 hover:bg-gray-50"
-                                    }`}
-                                    onClick={() =>
-                                      isSelected
-                                        ? removeService(service.id)
-                                        : addService(service)
-                                    }
-                                  >
-                                    <div className="absolute top-2 right-2">
-                                      <div
-                                        className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                          isSelected
-                                            ? "bg-green-600 border-green-600"
-                                            : "border-gray-300"
-                                        }`}
-                                      >
-                                        {isSelected && (
-                                          <Check className="h-2.5 w-2.5 text-white" />
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="pr-6">
-                                      <h4
-                                        className={`font-semibold text-sm mb-1 ${
-                                          isSelected
-                                            ? "text-green-900"
-                                            : "text-gray-800"
-                                        }`}
-                                      >
-                                        {service.name}
-                                      </h4>
-                                      <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-                                        {service.description}
-                                      </p>
-                                      <div className="flex items-center justify-between">
-                                        <p
-                                          className={`text-sm font-bold ${
+                                      {/* Service Content */}
+                                      <div className="pr-6">
+                                        <h4
+                                          className={`font-semibold text-sm mb-1 ${
                                             isSelected
-                                              ? "text-green-600"
-                                              : "text-gray-700"
+                                              ? "text-indigo-900"
+                                              : "text-gray-800"
                                           }`}
                                         >
-                                          ₹{service.price}
+                                          {service.name}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                          {service.description}
                                         </p>
-                                        {isSelected && (
-                                          <Badge className="bg-green-600 text-white text-xs py-0 px-1">
-                                            Added
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {isSelected && (
-                                      <div
-                                        className="mt-2 pt-2 border-t border-green-200"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
                                         <div className="flex items-center justify-between">
-                                          <span className="text-xs font-medium text-green-700">
-                                            Qty:
-                                          </span>
-                                          <div className="flex items-center gap-1">
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-5 w-5 p-0 border-green-300 text-green-600"
-                                              onClick={() =>
-                                                updateServiceQuantity(
-                                                  service.id,
-                                                  quantity - 1
-                                                )
-                                              }
-                                            >
-                                              <Minus className="h-2.5 w-2.5" />
-                                            </Button>
-                                            <span className="w-5 text-center font-semibold text-green-800 text-xs">
-                                              {quantity}
-                                            </span>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-5 w-5 p-0 border-green-300 text-green-600"
-                                              onClick={() =>
-                                                updateServiceQuantity(
-                                                  service.id,
-                                                  quantity + 1
-                                                )
-                                              }
-                                            >
-                                              <Plus className="h-2.5 w-2.5" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        <div className="flex justify-between items-center mt-1 text-xs">
-                                          <span className="text-gray-600">
-                                            Total:
-                                          </span>
-                                          <span className="font-bold text-green-700">
-                                            ₹{service.price * quantity}
-                                          </span>
+                                          <p
+                                            className={`text-sm font-bold ${
+                                              isSelected
+                                                ? "text-indigo-600"
+                                                : "text-gray-700"
+                                            }`}
+                                          >
+                                            ₹{service.price}
+                                          </p>
+                                          {isSelected && (
+                                            <Badge className="bg-indigo-600 text-white text-xs py-0 px-1">
+                                              Added
+                                            </Badge>
+                                          )}
                                         </div>
                                       </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
 
-                        {/* COMBO TREATMENT Services */}
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 p-3 rounded-lg border bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-700">
-                            <Calculator className="h-4 w-4" />
-                            <h3 className="font-semibold">COMBO TREATMENT</h3>
-                            <Badge
-                              variant="secondary"
-                              className="ml-auto text-xs"
-                            >
-                              {
-                                availableServices.filter(
-                                  (s) => s.category === "COMBO TREATMENT"
-                                ).length
-                              }{" "}
-                              services
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-3 gap-3">
-                            {availableServices
-                              .filter(
-                                (service) =>
-                                  service.category === "COMBO TREATMENT"
-                              )
-                              .map((service) => {
-                                const isSelected = selectedServices.some(
-                                  (s) => s.id === service.id
-                                );
-                                const quantity =
-                                  selectedServices.find(
-                                    (s) => s.id === service.id
-                                  )?.quantity || 0;
-
-                                return (
-                                  <div
-                                    key={service.id}
-                                    className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
-                                      isSelected
-                                        ? "border-purple-500 bg-purple-50 shadow-md"
-                                        : "border-gray-200 hover:border-purple-300 hover:bg-gray-50"
-                                    }`}
-                                    onClick={() =>
-                                      isSelected
-                                        ? removeService(service.id)
-                                        : addService(service)
-                                    }
-                                  >
-                                    <div className="absolute top-2 right-2">
-                                      <div
-                                        className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                          isSelected
-                                            ? "bg-purple-600 border-purple-600"
-                                            : "border-gray-300"
-                                        }`}
-                                      >
-                                        {isSelected && (
-                                          <Check className="h-2.5 w-2.5 text-white" />
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="pr-6">
-                                      <h4
-                                        className={`font-semibold text-sm mb-1 ${
-                                          isSelected
-                                            ? "text-purple-900"
-                                            : "text-gray-800"
-                                        }`}
-                                      >
-                                        {service.name}
-                                      </h4>
-                                      <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-                                        {service.description}
-                                      </p>
-                                      <div className="flex items-center justify-between">
-                                        <p
-                                          className={`text-sm font-bold ${
-                                            isSelected
-                                              ? "text-purple-600"
-                                              : "text-gray-700"
-                                          }`}
+                                      {/* Quantity Controls */}
+                                      {isSelected && (
+                                        <div
+                                          className="mt-2 pt-2 border-t border-indigo-200"
+                                          onClick={(e) => e.stopPropagation()}
                                         >
-                                          ₹{service.price}
-                                        </p>
-                                        {isSelected && (
-                                          <Badge className="bg-purple-600 text-white text-xs py-0 px-1">
-                                            Added
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {isSelected && (
-                                      <div
-                                        className="mt-2 pt-2 border-t border-purple-200"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-xs font-medium text-purple-700">
-                                            Qty:
-                                          </span>
-                                          <div className="flex items-center gap-1">
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-5 w-5 p-0 border-purple-300 text-purple-600"
-                                              onClick={() =>
-                                                updateServiceQuantity(
-                                                  service.id,
-                                                  quantity - 1
-                                                )
-                                              }
-                                            >
-                                              <Minus className="h-2.5 w-2.5" />
-                                            </Button>
-                                            <span className="w-5 text-center font-semibold text-purple-800 text-xs">
-                                              {quantity}
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-indigo-700">
+                                              Qty:
                                             </span>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-5 w-5 p-0 border-purple-300 text-purple-600"
-                                              onClick={() =>
-                                                updateServiceQuantity(
-                                                  service.id,
-                                                  quantity + 1
-                                                )
-                                              }
-                                            >
-                                              <Plus className="h-2.5 w-2.5" />
-                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity - 1
+                                                  )
+                                                }
+                                              >
+                                                <Minus className="h-2.5 w-2.5" />
+                                              </Button>
+                                              <span className="w-5 text-center font-semibold text-indigo-800 text-xs">
+                                                {quantity}
+                                              </span>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity + 1
+                                                  )
+                                                }
+                                              >
+                                                <Plus className="h-2.5 w-2.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="flex justify-between items-center mt-1 text-xs">
+                                            <span className="text-gray-600">
+                                              Total:
+                                            </span>
+                                            <span className="font-bold text-indigo-700">
+                                              ₹{service.price * quantity}
+                                            </span>
                                           </div>
                                         </div>
-                                        <div className="flex justify-between items-center mt-1 text-xs">
-                                          <span className="text-gray-600">
-                                            Total:
-                                          </span>
-                                          <span className="font-bold text-purple-700">
-                                            ₹{service.price * quantity}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
-
-                        {/* Summary Section */}
-                        {selectedServices.length > 0 && (
-                          <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-indigo-600" />
-                                <span className="font-semibold text-indigo-800">
-                                  {selectedServices.length} service
-                                  {selectedServices.length !== 1 ? "s" : ""}{" "}
-                                  selected
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm text-indigo-600">
-                                  Total Quantity
-                                </p>
-                                <p className="font-bold text-indigo-800">
-                                  {selectedServices.reduce(
-                                    (sum, s) => sum + s.quantity,
-                                    0
-                                  )}{" "}
-                                  sessions
-                                </p>
-                              </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    </CardContent>
+
+                          {/* Electrotherapy Services */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-700">
+                              <Zap className="h-4 w-4" />
+                              <h3 className="font-semibold">Electrotherapy</h3>
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs"
+                              >
+                                {
+                                  services?.filter(
+                                    (s) => s.category === "electrotherapy"
+                                  ).length
+                                }{" "}
+                                services
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {services
+                                ?.filter(
+                                  (service) =>
+                                    service.category === "electrotherapy"
+                                )
+                                .map((service) => {
+                                  const isSelected = selectedServices.some(
+                                    (s) => s.id === service.id
+                                  );
+                                  const quantity =
+                                    selectedServices.find(
+                                      (s) => s.id === service.id
+                                    )?.quantity || 0;
+
+                                  return (
+                                    <div
+                                      key={service.id}
+                                      className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
+                                        isSelected
+                                          ? "border-indigo-500 bg-indigo-50 shadow-md"
+                                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                                      }`}
+                                      onClick={() =>
+                                        isSelected
+                                          ? removeService(service.id)
+                                          : addService(service)
+                                      }
+                                    >
+                                      {/* Checkbox */}
+                                      <div className="absolute top-2 right-2">
+                                        <div
+                                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                            isSelected
+                                              ? "bg-indigo-600 border-indigo-600"
+                                              : "border-gray-300"
+                                          }`}
+                                        >
+                                          {isSelected && (
+                                            <Check className="h-2.5 w-2.5 text-white" />
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Service Content */}
+                                      <div className="pr-6">
+                                        <h4
+                                          className={`font-semibold text-sm mb-1 ${
+                                            isSelected
+                                              ? "text-indigo-900"
+                                              : "text-gray-800"
+                                          }`}
+                                        >
+                                          {service.name}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                          {service.description}
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <p
+                                            className={`text-sm font-bold ${
+                                              isSelected
+                                                ? "text-indigo-600"
+                                                : "text-gray-700"
+                                            }`}
+                                          >
+                                            ₹{service.price}
+                                          </p>
+                                          {isSelected && (
+                                            <Badge className="bg-indigo-600 text-white text-xs py-0 px-1">
+                                              Added
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Quantity Controls */}
+                                      {isSelected && (
+                                        <div
+                                          className="mt-2 pt-2 border-t border-indigo-200"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-indigo-700">
+                                              Qty:
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity - 1
+                                                  )
+                                                }
+                                              >
+                                                <Minus className="h-2.5 w-2.5" />
+                                              </Button>
+                                              <span className="w-5 text-center font-semibold text-indigo-800 text-xs">
+                                                {quantity}
+                                              </span>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity + 1
+                                                  )
+                                                }
+                                              >
+                                                <Plus className="h-2.5 w-2.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="flex justify-between items-center mt-1 text-xs">
+                                            <span className="text-gray-600">
+                                              Total:
+                                            </span>
+                                            <span className="font-bold text-indigo-700">
+                                              ₹{service.price * quantity}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+
+                          {/* Exercise Therapy Services */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-700">
+                              <Dumbbell className="h-4 w-4" />
+                              <h3 className="font-semibold">
+                                Exercise Therapy
+                              </h3>
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs"
+                              >
+                                {
+                                  services?.filter(
+                                    (s) => s.category === "exercise-therapy"
+                                  ).length
+                                }{" "}
+                                services
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {services
+                                ?.filter(
+                                  (service) =>
+                                    service.category === "exercise-therapy"
+                                )
+                                .map((service) => {
+                                  const isSelected = selectedServices.some(
+                                    (s) => s.id === service.id
+                                  );
+                                  const quantity =
+                                    selectedServices.find(
+                                      (s) => s.id === service.id
+                                    )?.quantity || 0;
+
+                                  return (
+                                    <div
+                                      key={service.id}
+                                      className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
+                                        isSelected
+                                          ? "border-indigo-500 bg-indigo-50 shadow-md"
+                                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                                      }`}
+                                      onClick={() =>
+                                        isSelected
+                                          ? removeService(service.id)
+                                          : addService(service)
+                                      }
+                                    >
+                                      {/* Checkbox */}
+                                      <div className="absolute top-2 right-2">
+                                        <div
+                                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                            isSelected
+                                              ? "bg-indigo-600 border-indigo-600"
+                                              : "border-gray-300"
+                                          }`}
+                                        >
+                                          {isSelected && (
+                                            <Check className="h-2.5 w-2.5 text-white" />
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Service Content */}
+                                      <div className="pr-6">
+                                        <h4
+                                          className={`font-semibold text-sm mb-1 ${
+                                            isSelected
+                                              ? "text-indigo-900"
+                                              : "text-gray-800"
+                                          }`}
+                                        >
+                                          {service.name}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                          {service.description}
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <p
+                                            className={`text-sm font-bold ${
+                                              isSelected
+                                                ? "text-indigo-600"
+                                                : "text-gray-700"
+                                            }`}
+                                          >
+                                            ₹{service.price}
+                                          </p>
+                                          {isSelected && (
+                                            <Badge className="bg-indigo-600 text-white text-xs py-0 px-1">
+                                              Added
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Quantity Controls */}
+                                      {isSelected && (
+                                        <div
+                                          className="mt-2 pt-2 border-t border-indigo-200"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-indigo-700">
+                                              Qty:
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity - 1
+                                                  )
+                                                }
+                                              >
+                                                <Minus className="h-2.5 w-2.5" />
+                                              </Button>
+                                              <span className="w-5 text-center font-semibold text-indigo-800 text-xs">
+                                                {quantity}
+                                              </span>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity + 1
+                                                  )
+                                                }
+                                              >
+                                                <Plus className="h-2.5 w-2.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="flex justify-between items-center mt-1 text-xs">
+                                            <span className="text-gray-600">
+                                              Total:
+                                            </span>
+                                            <span className="font-bold text-indigo-700">
+                                              ₹{service.price * quantity}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+
+                          {/* Heat Therapy Services */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-700">
+                              <Thermometer className="h-4 w-4" />
+                              <h3 className="font-semibold">Heat Therapy</h3>
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs"
+                              >
+                                {
+                                  services?.filter(
+                                    (s) => s.category === "heat-therapy"
+                                  ).length
+                                }{" "}
+                                services
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {services
+                                ?.filter(
+                                  (service) =>
+                                    service.category === "heat-therapy"
+                                )
+                                .map((service) => {
+                                  const isSelected = selectedServices.some(
+                                    (s) => s.id === service.id
+                                  );
+                                  const quantity =
+                                    selectedServices.find(
+                                      (s) => s.id === service.id
+                                    )?.quantity || 0;
+
+                                  return (
+                                    <div
+                                      key={service.id}
+                                      className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
+                                        isSelected
+                                          ? "border-indigo-500 bg-indigo-50 shadow-md"
+                                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                                      }`}
+                                      onClick={() =>
+                                        isSelected
+                                          ? removeService(service.id)
+                                          : addService(service)
+                                      }
+                                    >
+                                      {/* Checkbox */}
+                                      <div className="absolute top-2 right-2">
+                                        <div
+                                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                            isSelected
+                                              ? "bg-indigo-600 border-indigo-600"
+                                              : "border-gray-300"
+                                          }`}
+                                        >
+                                          {isSelected && (
+                                            <Check className="h-2.5 w-2.5 text-white" />
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Service Content */}
+                                      <div className="pr-6">
+                                        <h4
+                                          className={`font-semibold text-sm mb-1 ${
+                                            isSelected
+                                              ? "text-indigo-900"
+                                              : "text-gray-800"
+                                          }`}
+                                        >
+                                          {service.name}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                          {service.description}
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <p
+                                            className={`text-sm font-bold ${
+                                              isSelected
+                                                ? "text-indigo-600"
+                                                : "text-gray-700"
+                                            }`}
+                                          >
+                                            ₹{service.price}
+                                          </p>
+                                          {isSelected && (
+                                            <Badge className="bg-indigo-600 text-white text-xs py-0 px-1">
+                                              Added
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Quantity Controls */}
+                                      {isSelected && (
+                                        <div
+                                          className="mt-2 pt-2 border-t border-indigo-200"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-indigo-700">
+                                              Qty:
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity - 1
+                                                  )
+                                                }
+                                              >
+                                                <Minus className="h-2.5 w-2.5" />
+                                              </Button>
+                                              <span className="w-5 text-center font-semibold text-indigo-800 text-xs">
+                                                {quantity}
+                                              </span>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-indigo-300 text-indigo-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity + 1
+                                                  )
+                                                }
+                                              >
+                                                <Plus className="h-2.5 w-2.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="flex justify-between items-center mt-1 text-xs">
+                                            <span className="text-gray-600">
+                                              Total:
+                                            </span>
+                                            <span className="font-bold text-indigo-700">
+                                              ₹{service.price * quantity}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+
+                          {/* Consultation Services */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 p-3 rounded-lg border bg-green-50 border-green-200 text-green-700">
+                              <Stethoscope className="h-4 w-4" />
+                              <h3 className="font-semibold">Consultation</h3>
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs"
+                              >
+                                {
+                                  services?.filter(
+                                    (s) => s.category === "consultation"
+                                  ).length
+                                }{" "}
+                                services
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {services
+                                ?.filter(
+                                  (service) =>
+                                    service.category === "consultation"
+                                )
+                                .map((service) => {
+                                  const isSelected = selectedServices.some(
+                                    (s) => s.id === service.id
+                                  );
+                                  const quantity =
+                                    selectedServices.find(
+                                      (s) => s.id === service.id
+                                    )?.quantity || 0;
+
+                                  return (
+                                    <div
+                                      key={service.id}
+                                      className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
+                                        isSelected
+                                          ? "border-green-500 bg-green-50 shadow-md"
+                                          : "border-gray-200 hover:border-green-300 hover:bg-gray-50"
+                                      }`}
+                                      onClick={() =>
+                                        isSelected
+                                          ? removeService(service.id)
+                                          : addService(service)
+                                      }
+                                    >
+                                      <div className="absolute top-2 right-2">
+                                        <div
+                                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                            isSelected
+                                              ? "bg-green-600 border-green-600"
+                                              : "border-gray-300"
+                                          }`}
+                                        >
+                                          {isSelected && (
+                                            <Check className="h-2.5 w-2.5 text-white" />
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="pr-6">
+                                        <h4
+                                          className={`font-semibold text-sm mb-1 ${
+                                            isSelected
+                                              ? "text-green-900"
+                                              : "text-gray-800"
+                                          }`}
+                                        >
+                                          {service.name}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                          {service.description}
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <p
+                                            className={`text-sm font-bold ${
+                                              isSelected
+                                                ? "text-green-600"
+                                                : "text-gray-700"
+                                            }`}
+                                          >
+                                            ₹{service.price}
+                                          </p>
+                                          {isSelected && (
+                                            <Badge className="bg-green-600 text-white text-xs py-0 px-1">
+                                              Added
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {isSelected && (
+                                        <div
+                                          className="mt-2 pt-2 border-t border-green-200"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-green-700">
+                                              Qty:
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-green-300 text-green-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity - 1
+                                                  )
+                                                }
+                                              >
+                                                <Minus className="h-2.5 w-2.5" />
+                                              </Button>
+                                              <span className="w-5 text-center font-semibold text-green-800 text-xs">
+                                                {quantity}
+                                              </span>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-green-300 text-green-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity + 1
+                                                  )
+                                                }
+                                              >
+                                                <Plus className="h-2.5 w-2.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="flex justify-between items-center mt-1 text-xs">
+                                            <span className="text-gray-600">
+                                              Total:
+                                            </span>
+                                            <span className="font-bold text-green-700">
+                                              ₹{service.price * quantity}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+
+                          {/* COMBO TREATMENT Services */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 p-3 rounded-lg border bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-700">
+                              <Calculator className="h-4 w-4" />
+                              <h3 className="font-semibold">Combo Treatment</h3>
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs"
+                              >
+                                {
+                                  services?.filter(
+                                    (s) => s.category === "combo-treatment"
+                                  ).length
+                                }{" "}
+                                services
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {services
+                                ?.filter(
+                                  (service) =>
+                                    service.category === "combo-treatment"
+                                )
+                                .map((service) => {
+                                  const isSelected = selectedServices.some(
+                                    (s) => s.id === service.id
+                                  );
+                                  const quantity =
+                                    selectedServices.find(
+                                      (s) => s.id === service.id
+                                    )?.quantity || 0;
+
+                                  return (
+                                    <div
+                                      key={service.id}
+                                      className={`relative border-2 rounded-lg p-3 transition-all duration-200 cursor-pointer ${
+                                        isSelected
+                                          ? "border-purple-500 bg-purple-50 shadow-md"
+                                          : "border-gray-200 hover:border-purple-300 hover:bg-gray-50"
+                                      }`}
+                                      onClick={() =>
+                                        isSelected
+                                          ? removeService(service.id)
+                                          : addService(service)
+                                      }
+                                    >
+                                      <div className="absolute top-2 right-2">
+                                        <div
+                                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                            isSelected
+                                              ? "bg-purple-600 border-purple-600"
+                                              : "border-gray-300"
+                                          }`}
+                                        >
+                                          {isSelected && (
+                                            <Check className="h-2.5 w-2.5 text-white" />
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="pr-6">
+                                        <h4
+                                          className={`font-semibold text-sm mb-1 ${
+                                            isSelected
+                                              ? "text-purple-900"
+                                              : "text-gray-800"
+                                          }`}
+                                        >
+                                          {service.name}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                          {service.description}
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <p
+                                            className={`text-sm font-bold ${
+                                              isSelected
+                                                ? "text-purple-600"
+                                                : "text-gray-700"
+                                            }`}
+                                          >
+                                            ₹{service.price}
+                                          </p>
+                                          {isSelected && (
+                                            <Badge className="bg-purple-600 text-white text-xs py-0 px-1">
+                                              Added
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {isSelected && (
+                                        <div
+                                          className="mt-2 pt-2 border-t border-purple-200"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-purple-700">
+                                              Qty:
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-purple-300 text-purple-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity - 1
+                                                  )
+                                                }
+                                              >
+                                                <Minus className="h-2.5 w-2.5" />
+                                              </Button>
+                                              <span className="w-5 text-center font-semibold text-purple-800 text-xs">
+                                                {quantity}
+                                              </span>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 w-5 p-0 border-purple-300 text-purple-600"
+                                                onClick={() =>
+                                                  updateServiceQuantity(
+                                                    service.id,
+                                                    quantity + 1
+                                                  )
+                                                }
+                                              >
+                                                <Plus className="h-2.5 w-2.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="flex justify-between items-center mt-1 text-xs">
+                                            <span className="text-gray-600">
+                                              Total:
+                                            </span>
+                                            <span className="font-bold text-purple-700">
+                                              ₹{service.price * quantity}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+
+                          {/* Summary Section */}
+                          {selectedServices.length > 0 && (
+                            <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-5 w-5 text-indigo-600" />
+                                  <span className="font-semibold text-indigo-800">
+                                    {selectedServices.length} service
+                                    {selectedServices.length !== 1
+                                      ? "s"
+                                      : ""}{" "}
+                                    selected
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-indigo-600">
+                                    Total Quantity
+                                  </p>
+                                  <p className="font-bold text-indigo-800">
+                                    {selectedServices.reduce(
+                                      (sum, s) => sum + s.quantity,
+                                      0
+                                    )}{" "}
+                                    sessions
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    )}
                   </Card>
 
                   {/* Selected Services */}
@@ -1289,7 +1702,9 @@ export function InvoicesSection() {
                               <span>₹{calculateSubtotal()}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>GST (18%):</span>
+                              <span>
+                                Offer applied ({paymentDetails.offer})%:
+                              </span>
                               <span>₹{calculateOffer()}</span>
                             </div>
                             <Separator />
@@ -1407,9 +1822,7 @@ export function InvoicesSection() {
                   <TableCell>
                     <div>
                       <p className="font-medium">{invoice.patient}</p>
-                      <p className="text-sm text-gray-500">
-                        {invoice.patientId}
-                      </p>
+                      <p className="text-sm text-gray-500">{invoice.id}</p>
                     </div>
                   </TableCell>
                   <TableCell>{invoice.date}</TableCell>
@@ -1563,108 +1976,143 @@ export function InvoicesSection() {
         }
       `}</style>
 
-      {/* Hidden Print Content */}
+      {/* Clean Print Content */}
       {selectedServices.length > 0 && (
         <div className="print-area hidden print:block">
           <div className="max-w-4xl mx-auto bg-white p-8">
-            {/* Print Header with Company Logo */}
-            <div className="flex justify-between items-start mb-8 border-b-2 border-indigo-600 pb-6">
-              <div className="flex items-center">
-                <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-4 text-white font-bold text-2xl">
-                  TC
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-indigo-600">
-                    THERA-CURE
-                  </h1>
-                  <p className="text-gray-600 font-medium">
-                    Advanced Physiotherapy Clinic
-                  </p>
-                  <div className="text-sm text-gray-500 mt-2">
-                    <p>361/A, Basudevpur Road, Ground Floor</p>
-                    <p>
-                      Nilanjana Apartment, Shyamnagar, West Bengal, 743127,
-                      India
+            {/* Header Section - Clinic Details */}
+            <div className="mb-6">
+              <div className="flex items-start justify-between">
+                {/* Left: Logo and Clinic Info */}
+                <div className="flex items-start space-x-4">
+                  <img
+                    src="/logo.png"
+                    alt="Thera-Cure Logo"
+                    className="w-20 h-20 object-contain"
+                  />
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-1">
+                      THERA-CURE
+                    </h1>
+                    <p className="text-lg text-gray-600 mb-3">
+                      Advanced Physiotherapy Clinic
                     </p>
-                    <p>📧 contacts@mstheracure.com | 📞 (033) 3564 7255</p>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>
+                        361/A, Basudevpur Road, Ground Floor, Nilanjana
+                        Apartment
+                      </p>
+                      <p>Shyamnagar, West Bengal, 743127, India</p>
+                      <p>
+                        Phone: (033) 3564 7255 | Email: contacts@mstheracure.com
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <h2 className="text-3xl font-bold text-gray-800">INVOICE</h2>
-                <p className="text-xl text-indigo-600 font-semibold">
-                  #{invoiceDetails.invoiceId}
-                </p>
-                <div className="text-sm text-gray-600 mt-2">
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {new Date(invoiceDetails.date).toLocaleDateString("en-IN")}
+
+                {/* Right: Invoice Info */}
+                <div className="text-right">
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                    INVOICE
+                  </h2>
+                  <p className="text-lg font-semibold text-gray-700">
+                    #{invoiceDetails.invoiceId}
                   </p>
-                  {invoiceDetails.dueDate && (
+                  <div className="mt-3 text-sm text-gray-600">
                     <p>
-                      <strong>Due:</strong>{" "}
-                      {new Date(invoiceDetails.dueDate).toLocaleDateString(
+                      <strong>Date:</strong>{" "}
+                      {new Date(invoiceDetails.date).toLocaleDateString(
                         "en-IN"
                       )}
                     </p>
-                  )}
+                    {invoiceDetails.dueDate && (
+                      <p>
+                        <strong>Due Date:</strong>{" "}
+                        {new Date(invoiceDetails.dueDate).toLocaleDateString(
+                          "en-IN"
+                        )}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Border Line */}
+              <div className="mt-6 border-b-2 border-gray-300"></div>
             </div>
 
-            {/* Patient and Treatment Info */}
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="font-bold text-gray-800 mb-4 text-lg border-b border-gray-300 pb-2">
-                  Bill To:
-                </h3>
-                <div className="space-y-2">
-                  <p className="font-semibold text-lg">Rohan Mondal</p>
-                  <p className="text-gray-600">
-                    <strong>Patient ID:</strong> {patientInfo.patientId}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Phone:</strong> 9800095652
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Address:</strong> 123 Park Street, Kolkata
-                  </p>
-                </div>
-              </div>
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="font-bold text-gray-800 mb-4 text-lg border-b border-gray-300 pb-2">
-                  Treatment Details:
-                </h3>
-                <div className="space-y-2">
-                  <p className="text-gray-600">
-                    <strong>Payment Method:</strong>{" "}
-                    {paymentDetails.paymentMethod.toUpperCase()}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Payment Date:</strong>{" "}
-                    {new Date(paymentDetails.paymentDate).toLocaleDateString(
-                      "en-IN"
+            {/* Patient Details Section */}
+            <div className="mb-6">
+              <div className="grid grid-cols-2 gap-8">
+                {/* Bill To */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 border-b border-gray-200 pb-1">
+                    BILL TO:
+                  </h3>
+                  <div className="space-y-2">
+                    <p className="text-xl font-semibold text-gray-800">
+                      {patientInfo.name}
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>Patient ID:</strong> {patientInfo.id}
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>Phone:</strong> {patientInfo.phone}
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>Address:</strong> {patientInfo.address}
+                    </p>
+                    {patientInfo.email && (
+                      <p className="text-gray-600">
+                        <strong>Email:</strong> {patientInfo.email}
+                      </p>
                     )}
-                  </p>
+                  </div>
+                </div>
+
+                {/* Payment Info */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 border-b border-gray-200 pb-1">
+                    PAYMENT DETAILS:
+                  </h3>
+                  <div className="space-y-2">
+                    <p className="text-gray-600">
+                      <strong>Method:</strong>{" "}
+                      {paymentDetails.paymentMethod.toUpperCase()}
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>Date:</strong>{" "}
+                      {new Date(paymentDetails.paymentDate).toLocaleDateString(
+                        "en-IN"
+                      )}
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>Amount Paid:</strong> ₹
+                      {paymentDetails.amountPaid.toLocaleString("en-IN")}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Services Table */}
-            <div className="mb-8">
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-3">
+                SERVICES PROVIDED:
+              </h3>
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
-                  <tr className="bg-indigo-600 text-white">
-                    <th className="text-left p-4 border border-gray-300">
-                      Service
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-800">
+                      Service Description
                     </th>
-                    <th className="text-center p-4 border border-gray-300">
+                    <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800 w-20">
                       Qty
                     </th>
-                    <th className="text-right p-4 border border-gray-300">
+                    <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800 w-32">
                       Rate (₹)
                     </th>
-                    <th className="text-right p-4 border border-gray-300">
+                    <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800 w-32">
                       Amount (₹)
                     </th>
                   </tr>
@@ -1673,27 +2121,28 @@ export function InvoicesSection() {
                   {selectedServices.map((service, index) => (
                     <tr
                       key={service.id}
-                      className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}
+                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                     >
-                      <td className="p-4 border border-gray-300">
+                      <td className="border border-gray-300 px-4 py-3">
                         <div>
-                          <p className="font-semibold">{service.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {service.category}
+                          <p className="font-semibold text-gray-800">
+                            {service.name}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm text-gray-600 capitalize">
+                            {service.category.replace("-", " ")}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
                             {service.description}
                           </p>
                         </div>
                       </td>
-                      <td className="text-center p-4 border border-gray-300 font-semibold">
+                      <td className="border border-gray-300 px-4 py-3 text-center font-semibold">
                         {service.quantity}
                       </td>
-                      <td className="text-right p-4 border border-gray-300">
-                        ₹{service.price.toLocaleString("en-IN")}
+                      <td className="border border-gray-300 px-4 py-3 text-right font-semibold">
+                        {service.price.toLocaleString("en-IN")}
                       </td>
-                      <td className="text-right p-4 border border-gray-300 font-semibold">
-                        ₹
+                      <td className="border border-gray-300 px-4 py-3 text-right font-semibold">
                         {(service.price * service.quantity).toLocaleString(
                           "en-IN"
                         )}
@@ -1704,69 +2153,92 @@ export function InvoicesSection() {
               </table>
             </div>
 
-            {/* Totals and Payment Summary */}
-            <div className="flex justify-end mb-8">
-              <div className="w-96">
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-gray-700">
-                      <span>Subtotal:</span>
-                      <span>
+            {/* Payment Summary */}
+            <div className="flex justify-end mb-6">
+              <div className="w-80">
+                <table className="w-full">
+                  <tbody>
+                    <tr>
+                      <td className="py-2 text-right font-medium text-gray-700">
+                        Subtotal:
+                      </td>
+                      <td className="py-2 text-right font-semibold text-gray-800 pl-4">
                         ₹{calculateSubtotal().toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-gray-700">
-                      <span>Offer applyed ({}%):</span>
-                      <span>₹{calculateOffer().toLocaleString("en-IN")}</span>
-                    </div>
-                    <div className="border-t-2 border-gray-300 pt-3">
-                      <div className="flex justify-between text-xl font-bold text-gray-900">
-                        <span>Total Amount:</span>
-                        <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-green-600 font-semibold">
-                      <span>Amount Paid:</span>
-                      <span>
+                      </td>
+                    </tr>
+                    {paymentDetails.offer > 0 && (
+                      <tr>
+                        <td className="py-2 text-right font-medium text-gray-700">
+                          Discount ({paymentDetails.offer}%):
+                        </td>
+                        <td className="py-2 text-right font-semibold text-green-600 pl-4">
+                          -₹{calculateOffer().toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className="border-t border-gray-300">
+                      <td className="py-3 text-right font-bold text-lg text-gray-800">
+                        Total Amount:
+                      </td>
+                      <td className="py-3 text-right font-bold text-lg text-gray-800 pl-4">
+                        ₹{calculateTotal().toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-right font-medium text-gray-700">
+                        Amount Paid:
+                      </td>
+                      <td className="py-2 text-right font-semibold text-green-600 pl-4">
                         ₹{paymentDetails.amountPaid.toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-red-600 font-bold text-lg border-t border-gray-300 pt-3">
-                      <span>Balance Due:</span>
-                      <span>₹{calculateBalance().toLocaleString("en-IN")}</span>
-                    </div>
-                  </div>
-                </div>
+                      </td>
+                    </tr>
+                    <tr className="border-t border-gray-300">
+                      <td className="py-3 text-right font-bold text-lg text-gray-800">
+                        {calculateBalance() > 0 ? "Balance Due:" : "Overpaid:"}
+                      </td>
+                      <td
+                        className={`py-3 text-right font-bold text-lg pl-4 ${
+                          calculateBalance() > 0
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        ₹{Math.abs(calculateBalance()).toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Notes Section */}
             {invoiceDetails.notes && (
-              <div className="mb-8 bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
-                <h4 className="font-semibold text-gray-800 mb-2">Notes:</h4>
-                <p className="text-gray-700">{invoiceDetails.notes}</p>
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">NOTES:</h3>
+                <div className="bg-gray-50 p-4 rounded border">
+                  <p className="text-gray-700">{invoiceDetails.notes}</p>
+                </div>
               </div>
             )}
 
             {/* Footer */}
-            <div className="border-t-2 border-gray-300 pt-6 text-center">
-              <div className="mb-4">
-                <p className="text-lg font-semibold text-indigo-600">
+            <div className="mt-8 pt-6 border-t border-gray-300">
+              <div className="text-center">
+                <p className="text-lg font-semibold text-gray-800 mb-2">
                   Thank you for choosing Thera-Cure!
                 </p>
                 <p className="text-gray-600">
                   Your health and recovery are our priority.
                 </p>
-              </div>
-              <div className="text-sm text-gray-500">
-                <p>
-                  For any queries regarding this invoice, please contact us at
-                  the above details.
-                </p>
-                <p className="mt-2">
-                  This is a computer-generated invoice and does not require a
-                  signature.
-                </p>
+                <div className="mt-4 text-sm text-gray-500">
+                  <p>
+                    For any queries regarding this invoice, please contact us at
+                    the above details.
+                  </p>
+                  <p className="mt-1">
+                    Generated on: {new Date().toLocaleString("en-IN")}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

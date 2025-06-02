@@ -1,27 +1,41 @@
-import { useState, useCallback } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { createUserSchema } from "@/lib/validations/user"
-import { z } from "zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus, Eye, EyeOff, Filter } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { useState, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createUserSchema } from "@/lib/validations/user";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Plus, Eye, EyeOff } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
-type FormData = z.infer<typeof createUserSchema>
+type FormData = z.infer<typeof createUserSchema>;
 
 interface AddEmployeeDialogProps {
-  onUserCreated: () => void
+  onUserCreated: () => void;
 }
 
 export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [phoneValue, setPhoneValue] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(createUserSchema),
@@ -32,74 +46,79 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
       role: "therapist",
       password: "",
     },
-  })
+  });
 
   const formatPhoneNumber = useCallback((value: string) => {
-    const digits = value.replace(/\D/g, "")
-    
-    if (digits.length <= 3) {
-      return digits
-    } else if (digits.length <= 6) {
-      return `${digits.slice(0, 3)}-${digits.slice(3)}`
-    } else if (digits.length <= 10) {
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
-    } else {
-      return `+${digits.slice(0, 1)} ${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7, 11)}`
-    }
-  }, [])
+    const digits = value.replace(/\D/g, "");
 
-  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value)
-    setPhoneValue(formatted)
-    form.setValue("phone", formatted)
-  }, [form, formatPhoneNumber])
+    if (digits.length <= 3) {
+      return digits;
+    } else if (digits.length <= 6) {
+      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else if (digits.length <= 10) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    } else {
+      return `+${digits.slice(0, 1)} ${digits.slice(1, 4)}-${digits.slice(
+        4,
+        7
+      )}-${digits.slice(7, 11)}`;
+    }
+  }, []);
+
+  const handlePhoneChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const formatted = formatPhoneNumber(e.target.value);
+      setPhoneValue(formatted);
+      form.setValue("phone", formatted);
+    },
+    [form, formatPhoneNumber]
+  );
 
   async function onSubmit(data: FormData) {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       const response = await fetch("/api/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to create employee")
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create employee");
       }
 
       toast({
         title: "Employee added successfully",
         description: "New employee has been added to the system.",
-      })
-      
-      form.reset()
-      setPhoneValue("")
-      setIsDialogOpen(false)
-      onUserCreated() // Refresh the users list
+      });
+
+      form.reset();
+      setPhoneValue("");
+      setIsDialogOpen(false);
+      onUserCreated(); // Refresh the users list
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create employee",
+        description:
+          error instanceof Error ? error.message : "Failed to create employee",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   return (
     <div className="flex gap-2">
-      <Button variant="outline" size="sm" className="flex items-center gap-1 border-indigo-600 text-indigo-700 hover:bg-indigo-50">
-        <Filter className="h-4 w-4" />
-        Filter
-      </Button>
-      
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
-          <Button size="sm" className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white">
+          <Button
+            size="sm"
+            className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
             <Plus className="h-4 w-4" />
             Add Employee
           </Button>
@@ -107,9 +126,15 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add New Employee</DialogTitle>
-            <DialogDescription>Add a new employee to the system. Fill in all the required details.</DialogDescription>
+            <DialogDescription>
+              Add a new employee to the system. Fill in all the required
+              details.
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-4 py-4"
+          >
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Full Name
@@ -142,7 +167,9 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
                   <SelectItem value="therapist">Therapist</SelectItem>
                   <SelectItem value="admin">Administrator</SelectItem>
                   <SelectItem value="receptionist">Receptionist</SelectItem>
-                  <SelectItem value="content_manager">Content Manager</SelectItem>
+                  <SelectItem value="content_manager">
+                    Content Manager
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -178,8 +205,8 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
                 onChange={handlePhoneChange}
                 onBlur={() => {
                   if (phoneValue && !phoneValue.startsWith("+")) {
-                    setPhoneValue("+" + phoneValue)
-                    form.setValue("phone", "+" + phoneValue)
+                    setPhoneValue("+" + phoneValue);
+                    form.setValue("phone", "+" + phoneValue);
                   }
                 }}
               />
@@ -246,5 +273,5 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

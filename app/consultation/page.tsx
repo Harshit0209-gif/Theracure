@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   Search,
-  Accessibility,
-  CalendarCheck2,
-  Plus,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -49,151 +46,234 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-const consultationData = [
-  {
-    id: 1,
-    name: "Mr. Rohan Mondal",
-    nameId: "PT-0258",
-    doctor: "Dr. Mainak Sur",
-    status: "Not Assigned",
-    date: "2024-01-26",
-    time: "4:00 PM",
-    therapyType: "Manual Therapy",
-  },
-  {
-    id: 2,
-    name: "Mr. Rohan Mondal",
-    nameId: "PT-0258",
-    doctor: "Dr. Mainak Sur",
-    status: "Assigned",
-    date: "2024-01-26",
-    time: "4:00 PM",
-    therapyType: "Exercise Therapy",
-  },
-  {
-    id: 3,
-    name: "Mr. Rohan Mondal",
-    nameId: "PT-0258",
-    doctor: "Dr. Mainak Sur",
-    status: "Done",
-    date: "2024-01-26",
-    time: "4:00 PM",
-    therapyType: "Electrotherapy",
-  },
-  {
-    id: 4,
-    name: "Ms. Priya Sharma",
-    nameId: "PT-0259",
-    doctor: "Dr. Mainak Sur",
-    status: "Assigned",
-    date: "2024-01-26",
-    time: "5:00 PM",
-    therapyType: "Manual Therapy",
-  },
-  {
-    id: 5,
-    name: "Mr. Amit Kumar",
-    nameId: "PT-0260",
-    doctor: "Dr. Mainak Sur",
-    status: "Not Assigned",
-    date: "2024-01-26",
-    time: "5:30 PM",
-    therapyType: "Hydrotherapy",
-  },
-  {
-    id: 6,
-    name: "Ms. Sneha Das",
-    nameId: "PT-0261",
-    doctor: "Dr. Mainak Sur",
-    status: "Done",
-    date: "2024-01-26",
-    time: "6:00 PM",
-    therapyType: "Heat Therapy",
-  },
-];
+interface Consultation {
+  id: string;
+  name: string;
+  email: string;
+  consultationWith: string;
+  consultationDate: string;
+  consultationTime: string;
+  status: "NOT_ASSIGN" | "ASSIGNED" | "COMPLETED" | "CANCELLED";
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const statusColor: Record<string, string> = {
-  "Not Assigned": "bg-red-100 text-red-700 border-red-200",
-  Assigned: "bg-green-100 text-green-700 border-green-200",
-  Done: "bg-indigo-100 text-indigo-700 border-indigo-200",
-  Cancelled: "bg-gray-100 text-gray-700 border-gray-200",
+  NOT_ASSIGN: "bg-red-100 text-red-700 border-red-200",
+  ASSIGNED: "bg-green-100 text-green-700 border-green-200",
+  COMPLETED: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  CANCELLED: "bg-gray-100 text-gray-700 border-gray-200",
 };
+
+const statusLabels: Record<string, string> = {
+  NOT_ASSIGN: "Not Assigned",
+  ASSIGNED: "Assigned",
+  COMPLETED: "Done",
+  CANCELLED: "Cancelled",
+};
+
 const availableDoctors = [
-  { value: "dr-mainak-sur", label: "Dr. Mainak Sur (PT)" },
-  { value: "dr-diksha-palit", label: "Dr. Diksha Palit (PT)" },
-  { value: "dr-diptesh-dey", label: "Dr. Diptesh Dey (PT)" },
+  { value: "Dr. Mainak Sur (PT)", label: "Dr. Mainak Sur (PT)" },
+  { value: "Dr. Diksha Palit (PT)", label: "Dr. Diksha Palit (PT)" },
+  { value: "Dr. Diptesh Dey (PT)", label: "Dr. Diptesh Dey (PT)" },
 ];
 
-const Consultation = () => {
+const updateConsultation = async (id: string, consultationWith: string) => {
+  try {
+    const response = await fetch(`/api/consultations/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        consultationWith: consultationWith,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to update consultation");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error updating consultation:", error);
+    throw error;
+  }
+};
+
+const fetchConsultations = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(`/api/consultations?${params}`);
+
+    const data = await response.json();
+    console.log("consultation---", data);
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to fetch consultations");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching consultations:", error);
+    throw error;
+  }
+};
+
+export default function Consultation() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [consultations, setConsutations] = useState(consultationData);
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingConsultation, setEditingConsultation] = useState("");
+  const [editingConsultation, setEditingConsultation] =
+    useState<Consultation | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const pageSize = 5;
 
-  // Filter consultations based on search
-  const filtered = consultations.filter(
-    (a) =>
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.nameId.toLowerCase().includes(search.toLowerCase()) ||
-      a.doctor.toLowerCase().includes(search.toLowerCase())
-  );
+  // Fetch consultations from API
+  const loadConsultations = async () => {
+    setLoading(true);
+    try {
+      const filters = {
+        page: page.toString(),
+        limit: pageSize.toString(),
+        ...(search && { search }),
+      };
 
-  const handleEdit = (consultation: string) => {
-    setEditingConsultation(consultation);
-    setSelectedDoctor(consultation);
-    setIsEditDialogOpen(true);
-  };
+      const response = await fetchConsultations(filters);
 
-  const handleSaveEdit = () => {
-    if (editingConsultation && selectedDoctor) {
-      setConsutations((prev) =>
-        prev.map((c) =>
-          c.id === editingConsultation.id ? { ...c, doctor: selectedDoctor } : c
-        )
-      );
-
+      if (response.success) {
+        setConsultations(response.data);
+        setTotalPages(response.pagination.totalPages);
+      }
+    } catch (error) {
       toast({
-        title: "Consultation Updated",
-        description: `Consultation has been reassigned to ${selectedDoctor}`,
+        title: "Error",
+        description: "Failed to load consultations",
+        variant: "destructive",
       });
-
-      setIsEditDialogOpen(false);
-      setEditingConsultation("");
-      setSelectedDoctor("");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Pagination
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => {
+    loadConsultations();
+  }, [page, search]);
 
-  const handleStatusUpdate = (id: number, newStatus: string) => {
-    setConsutations((prev) =>
-      prev.map((apt) => (apt.id === id ? { ...apt, status: newStatus } : apt))
-    );
+  const handleEdit = (consultation: any) => {
+    setEditingConsultation(consultation);
+    setSelectedDoctor(consultation.consultationWith || "");
+    setIsEditDialogOpen(true);
+  };
 
-    toast({
-      title: "Status Updated",
-      description: `Consutation status has been updated to ${newStatus}`,
-    });
+  const handleSaveEdit = async () => {
+    if (editingConsultation && selectedDoctor) {
+      try {
+        await updateConsultation(editingConsultation.id, selectedDoctor);
+
+        // Update local state
+        setConsultations((prev) =>
+          prev.map((c) =>
+            c.id === editingConsultation.id
+              ? { ...c, consultationWith: selectedDoctor }
+              : c
+          )
+        );
+
+        toast({
+          title: "Success",
+          description: `Consultation has been reassigned to ${selectedDoctor}`,
+          variant: "default",
+          duration: 3000,
+        });
+
+        setIsEditDialogOpen(false);
+        setEditingConsultation(null);
+        setSelectedDoctor("");
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update consultation",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+  const updateConsultationStatus = async (id: string, status: string) => {
+    try {
+      const response = await fetch(`/api/consultations/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: status,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update consultation status");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error updating consultation status:", error);
+      throw error;
+    }
+  };
+
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
+    try {
+      let apiCall;
+      switch (newStatus) {
+        case "ASSIGNED":
+          apiCall = updateConsultationStatus(id, "ASSIGNED");
+          break;
+        case "COMPLETED":
+          apiCall = updateConsultationStatus(id, "COMPLETED");
+          break;
+        case "CANCELLED":
+          apiCall = updateConsultationStatus(id, "CANCELLED");
+          break;
+        default:
+          throw new Error("Invalid status");
+      }
+
+      await apiCall;
+
+      // Update local state
+      setConsultations((prev) =>
+        prev.map((apt) => (apt.id === id ? { ...apt, status: newStatus } : apt))
+      );
+
+      toast({
+        title: "Status Updated",
+        description: `Consultation status has been updated to ${statusLabels[newStatus]}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive",
+      });
+    }
   };
 
   const openCancelDialog = (consultation: any) => {
     const confirmCancel = window.confirm(
-      `Are you sure you want to cancel the consultation for ${consultation.name} with ${consultation.doctor} at ${consultation.time}?`
+      `Are you sure you want to cancel the consultation for ${consultation.name} with ${consultation.consultationWith} at ${consultation.consultationTime}?`
     );
 
     if (confirmCancel) {
-      handleStatusUpdate(consultation.id, "Cancelled");
-      toast({
-        title: "Consutation Cancelled",
-        description: `Consutation for ${consultation.name} has been cancelled.`,
-        variant: "destructive",
-      });
+      handleStatusUpdate(consultation.id, "CANCELLED");
     }
   };
 
@@ -214,7 +294,7 @@ const Consultation = () => {
       <span
         className={`px-2 py-1 rounded-full text-xs font-semibold border ${statusClasses}`}
       >
-        {status}
+        {statusLabels[status] || status}
       </span>
     );
   };
@@ -232,7 +312,6 @@ const Consultation = () => {
               <span className="text-2xl font-bold text-indigo-700">
                 {consultations.length}
               </span>
-              <span className="text-gray-600 text-sm">consultations today</span>
             </div>
           </div>
         </div>
@@ -253,7 +332,7 @@ const Consultation = () => {
           </div>
         </div>
 
-        {/* Consutations Table */}
+        {/* Consultations Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
@@ -265,7 +344,6 @@ const Consultation = () => {
                 <TableHead className="text-white font-semibold">
                   Date & Time
                 </TableHead>
-
                 <TableHead className="text-white font-semibold">
                   Status
                 </TableHead>
@@ -275,17 +353,26 @@ const Consultation = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.length === 0 ? (
+              {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={5}
+                    className="text-center py-8 text-gray-500"
+                  >
+                    Loading consultations...
+                  </TableCell>
+                </TableRow>
+              ) : consultations.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
                     className="text-center py-8 text-gray-500"
                   >
                     No consultations found.
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((consultation) => (
+                consultations.map((consultation) => (
                   <TableRow
                     key={consultation.id}
                     className="hover:bg-gray-50 transition-colors"
@@ -295,14 +382,16 @@ const Consultation = () => {
                         <p className="font-semibold">{consultation.name}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{consultation.doctor}</TableCell>
+                    <TableCell>
+                      {consultation.consultationWith || "Not Assigned"}
+                    </TableCell>
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {formatDate(consultation.date)}
+                          {formatDate(consultation.consultationDate)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {consultation.time}
+                          {consultation.consultationTime}
                         </p>
                       </div>
                     </TableCell>
@@ -319,8 +408,8 @@ const Consultation = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          {consultation.status !== "Cancelled" &&
-                            consultation.status !== "Done" && (
+                          {consultation.status !== "CANCELLED" &&
+                            consultation.status !== "COMPLETED" && (
                               <>
                                 <DropdownMenuItem
                                   onClick={() => handleEdit(consultation)}
@@ -329,12 +418,12 @@ const Consultation = () => {
                                   Edit Consultation
                                 </DropdownMenuItem>
 
-                                {consultation.status === "Not Assigned" && (
+                                {consultation.status === "NOT_ASSIGN" && (
                                   <DropdownMenuItem
                                     onClick={() =>
                                       handleStatusUpdate(
                                         consultation.id,
-                                        "Assigned"
+                                        "ASSIGNED"
                                       )
                                     }
                                   >
@@ -343,12 +432,12 @@ const Consultation = () => {
                                   </DropdownMenuItem>
                                 )}
 
-                                {consultation.status === "Assigned" && (
+                                {consultation.status === "ASSIGNED" && (
                                   <DropdownMenuItem
                                     onClick={() =>
                                       handleStatusUpdate(
                                         consultation.id,
-                                        "Done"
+                                        "COMPLETED"
                                       )
                                     }
                                   >
@@ -364,22 +453,22 @@ const Consultation = () => {
                                   onClick={() => openCancelDialog(consultation)}
                                 >
                                   <X className="mr-2 h-4 w-4" />
-                                  Cancel Consutation
+                                  Cancel Consultation
                                 </DropdownMenuItem>
                               </>
                             )}
 
-                          {consultation.status === "Cancelled" && (
+                          {consultation.status === "CANCELLED" && (
                             <DropdownMenuItem disabled>
                               <X className="mr-2 h-4 w-4" />
-                              Consutation Cancelled
+                              Consultation Cancelled
                             </DropdownMenuItem>
                           )}
 
-                          {consultation.status === "Done" && (
+                          {consultation.status === "COMPLETED" && (
                             <DropdownMenuItem disabled>
                               <CheckCircle className="mr-2 h-4 w-4" />
-                              Consutation Completed
+                              Consultation Completed
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -393,12 +482,10 @@ const Consultation = () => {
         </div>
 
         {/* Pagination */}
-        {filtered.length > pageSize && (
+        {totalPages > 1 && (
           <div className="flex justify-between items-center mt-4 p-4 bg-white rounded-lg shadow-sm">
             <span className="text-sm text-gray-700">
-              Showing {(page - 1) * pageSize + 1} to{" "}
-              {Math.min(page * pageSize, filtered.length)} of {filtered.length}{" "}
-              consultations
+              Page {page} of {totalPages}
             </span>
             <div className="flex gap-2 items-center">
               <Button
@@ -440,7 +527,8 @@ const Consultation = () => {
           </div>
         )}
       </div>
-      {/* edit consultation */}
+
+      {/* Edit Consultation Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -458,8 +546,8 @@ const Consultation = () => {
               <div className="space-y-2">
                 <Label>Date & Time</Label>
                 <p className="text-sm text-gray-600">
-                  {formatDate(editingConsultation.date)} at{" "}
-                  {editingConsultation.time}
+                  {formatDate(editingConsultation.consultationDate)} at{" "}
+                  {editingConsultation.consultationTime}
                 </p>
               </div>
 
@@ -474,7 +562,7 @@ const Consultation = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {availableDoctors.map((doctor) => (
-                      <SelectItem key={doctor.value} value={doctor.label}>
+                      <SelectItem key={doctor.value} value={doctor.value}>
                         {doctor.label}
                       </SelectItem>
                     ))}
@@ -488,7 +576,7 @@ const Consultation = () => {
               variant="outline"
               onClick={() => {
                 setIsEditDialogOpen(false);
-                setEditingConsultation("");
+                setEditingConsultation(null);
                 setSelectedDoctor("");
               }}
             >
@@ -506,6 +594,4 @@ const Consultation = () => {
       </Dialog>
     </DashboardLayout>
   );
-};
-
-export default Consultation;
+}

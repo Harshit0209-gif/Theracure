@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
@@ -10,11 +11,11 @@ import {
   Settings,
   FileEdit,
   Bell,
-  BarChart2,
-  Layers,
   UserCog,
   Handshake,
   TrendingUp,
+  UserIcon,
+  Bed,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -56,18 +57,16 @@ export function Sidebar({
     },
     {
       title: "Patients",
-      icon: <Users className="mr-3 h-5 w-5" />,
+      icon: <Users className="h-6 w-6" />,
       href: "/patients",
       roles: ["receptionist", "admin", "therapist"],
     },
     {
       title: "Prescriptions",
-      icon: <FileText className="mr-3 h-5 w-5" />,
+      icon: <FileText className="h-6 w-6" />,
       href: "/prescriptions",
-      roles: ["therapist"],
+      roles: ["therapist", "admin"],
     },
-
-    // Content Management Items
     {
       title: "Blog Management",
       icon: <FileEdit className="h-6 w-6" />,
@@ -82,14 +81,26 @@ export function Sidebar({
     },
     {
       title: "Employees",
-      icon: <UserCog className="mr-3 h-5 w-5" />,
+      icon: <UserCog className="h-6 w-6" />,
       href: "/employees",
       roles: ["admin"],
     },
     {
       title: "Analytics",
-      icon: <TrendingUp className="mr-3 h-5 w-5" />,
+      icon: <TrendingUp className="h-6 w-6" />,
       href: "/analytics",
+      roles: ["admin"],
+    },
+    {
+      title: "Profile",
+      icon: <UserIcon className="h-6 w-6" />,
+      href: "/therapist/profile",
+      roles: ["therapist"],
+    },
+    {
+      title: "Services",
+      icon: <Bed className="h-6 w-6" />,
+      href: "/services",
       roles: ["admin"],
     },
 
@@ -116,15 +127,27 @@ export function Sidebar({
       <div className="p-4 flex items-center justify-center">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center">
-              <span className="text-indigo-800 font-bold text-sm">TC</span>
+            <div className="h-8 w-8 relative">
+              <Image
+                src="/logo.png"
+                alt="Theracure Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-            <span className="font-bold text-lg">Dashboard</span>
+            <span className="font-bold text-lg">Theracure</span>
           </div>
         )}
         {collapsed && (
-          <div className="h-8 w-8 mx-auto rounded-full bg-white flex items-center justify-center">
-            <span className="text-indigo-800 font-bold text-sm">TC</span>
+          <div className="h-8 w-8 relative mx-auto">
+            <Image
+              src="/logo.png"
+              alt="Theracure Logo"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
         )}
       </div>
