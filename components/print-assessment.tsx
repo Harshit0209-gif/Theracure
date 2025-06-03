@@ -47,28 +47,22 @@ interface PrintAssessmentProps {
   size?: string;
   className?: string;
   showPreview?: boolean;
-  autoDownload?: boolean;
 }
 
 const PrintAssessment = ({
   assessmentData,
   patientInfo,
   disabled = false,
-  variant = "outline",
-  size = "default",
   className = "",
   showPreview = true,
-  autoDownload = true,
 }: PrintAssessmentProps) => {
   const [loading, setLoading] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
 
-  // Main print function
   const handlePrint = async (options = {}) => {
     try {
       setLoading(true);
 
-      // Validate required data
       if (!patientInfo) {
         toast({
           title: "Cannot Print",
@@ -84,7 +78,11 @@ const PrintAssessment = ({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(assessmentData),
+        body: JSON.stringify({
+          assessmentData,
+          patientInfo,
+          type: "assessment",
+        }),
       });
 
       if (!response.ok) {
@@ -94,30 +92,9 @@ const PrintAssessment = ({
 
       const blob = await response.blob();
 
-      if (autoDownload) {
-        // Auto download the PDF
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, "_blank");
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `assessment-${assessmentData.patient.id}-${
-          new Date().toISOString().split("T")[0]
-        }.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-
-        toast({
-          title: "Success",
-          description: "Assessment form has been downloaded as PDF.",
-        });
-      } else {
-        // Open in new tab for preview/print
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, "_blank");
-        setTimeout(() => window.URL.revokeObjectURL(url), 2000);
-      }
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
     } catch (error) {
       console.error("Print error:", error);
       toast({
@@ -163,8 +140,6 @@ const PrintAssessment = ({
       {/* Main Print Button */}
       <Button
         type="button"
-        variant={variant}
-        size={size}
         onClick={showPreview ? handlePrintPreview : handlePrint}
         disabled={disabled || loading || !patientInfo}
         className={`flex items-center gap-2 border-green-600 text-green-700 hover:bg-green-50 ${className}`}

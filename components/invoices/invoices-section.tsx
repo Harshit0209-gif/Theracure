@@ -302,24 +302,63 @@ export function InvoicesSection() {
       paymentDate: new Date().toISOString().split("T")[0],
     });
   };
-
-  const handleSaveInvoice = async () => {
-    console.log("Saving invoice...");
+  const checkIfInvoiceIsValid = () => {
     if (!patientInfo.id || selectedServices.length === 0) {
       toast({
         title: "Validation Error",
         description: "Please enter patient ID and select at least one service.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
+    if (selectedServices.length === 0) {
+      toast({
+        title: "No Services Selected",
+        description: "Please select at least one service for the invoice.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (calculateTotal() <= 0) {
+      toast({
+        title: "Invalid Total Amount",
+        description: "Total amount must be greater than zero.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (paymentDetails.amountPaid < 0) {
+      toast({
+        title: "Invalid Amount Paid",
+        description: "Amount paid cannot be negative.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (paymentDetails.offer < 0 || paymentDetails.offer > 100) {
+      toast({
+        title: "Invalid Offer Percentage",
+        description: "Offer percentage must be between 0 and 100.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (new Date(invoiceDetails.date) > new Date()) {
+      toast({
+        title: "Invalid Invoice Date",
+        description: "Invoice date cannot be in the future.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     if (calculateBalance() < 0) {
       toast({
         title: "Validation Error",
         description: "Amount paid cannot exceed total amount.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
     if (!user) {
       toast({
@@ -327,8 +366,14 @@ export function InvoicesSection() {
         description: "You must be logged in to create an invoice.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const handleSaveInvoice = async () => {
+    console.log("Saving invoice...");
+    checkIfInvoiceIsValid();
     const invoicePayload = {
       id: invoiceDetails.invoiceId,
       patientId: patientInfo.id,
@@ -411,7 +456,7 @@ export function InvoicesSection() {
     fetchInvoices();
   }, []);
 
-  const handlePrintInvoice = () => {
+  const handlePrintInvoice = async () => {
     if (!patientInfo.id || selectedServices.length === 0) {
       toast({
         title: "Cannot Print",
@@ -421,7 +466,46 @@ export function InvoicesSection() {
       });
       return;
     }
-    window.print();
+    try {
+      const response = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "invoice",
+          patientInfo,
+          invoiceDetails,
+          paymentDetails: {
+            ...paymentDetails,
+            totalAmount: calculateTotal(),
+            subTotal: calculateSubtotal(),
+            offerAmount: calculateOffer(),
+            due: calculateBalance(),
+          },
+          selectedServices,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to generate PDF");
+      }
+      const blob = await response.blob();
+
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+    } catch (error) {
+      console.error("Print error:", error);
+      toast({
+        title: "Print Error",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to generate PDF",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -680,29 +764,65 @@ export function InvoicesSection() {
                           <Input
                             id="amountPaid"
                             type="number"
-                            onChange={(e) =>
+                            min="0"
+                            step="0.01"
+                            value={paymentDetails.amountPaid || ""}
+                            onChange={(e) => {
+                              const value = Math.max(
+                                0,
+                                Number(e.target.value) || 0
+                              );
                               setPaymentDetails({
                                 ...paymentDetails,
-                                amountPaid: Number(e.target.value),
-                              })
-                            }
+                                amountPaid: value,
+                              });
+                            }}
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "-" ||
+                                e.key === "+" ||
+                                e.key === "e" ||
+                                e.key === "E"
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
                             placeholder="0"
-                            className="mt-1"
+                            className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                           />
                         </div>
+
                         <div>
-                          <Label htmlFor="amountPaid">Offer Apply (%)</Label>
+                          <Label htmlFor="offer">Offer Apply (%)</Label>
                           <Input
                             id="offer"
                             type="number"
-                            onChange={(e) =>
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={paymentDetails.offer || ""}
+                            onChange={(e) => {
+                              const value = Math.max(
+                                0,
+                                Math.min(100, Number(e.target.value) || 0)
+                              );
                               setPaymentDetails({
                                 ...paymentDetails,
-                                offer: Number(e.target.value),
-                              })
-                            }
+                                offer: value,
+                              });
+                            }}
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "-" ||
+                                e.key === "+" ||
+                                e.key === "e" ||
+                                e.key === "E"
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
                             placeholder="0"
-                            className="mt-1"
+                            className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                           />
                         </div>
                       </CardContent>
@@ -2020,513 +2140,6 @@ export function InvoicesSection() {
           </div>
         </div>
       </div>
-
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print-area,
-          .print-area * {
-            visibility: visible;
-          }
-          .print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            background: white;
-          }
-          .no-print {
-            display: none !important;
-          }
-          .pdf-logo img {
-            width: 107px;
-            height: 47px;
-            display: block;
-          }
-          @page {
-            margin: 0.1in;
-            size: A4;
-          }
-        }
-      `}</style>
-
-      {/* Clean Print Content */}
-      {/* {selectedServices.length > 0 && (
-				<div className="print-area hidden print:block">
-					<div className="max-w-4xl mx-auto bg-white p-8">
-						<div className="mb-6">
-							<div className="flex items-start justify-between">
-								<div className="flex items-start space-x-4">
-									<img
-										src="/logo.png"
-										alt="Thera-Cure Logo"
-										className="w-20 h-20 object-contain"
-									/>
-									<div>
-										<h1 className="text-3xl font-bold text-gray-800 mb-1">
-											THERA-CURE
-										</h1>
-										<p className="text-lg text-gray-600 mb-3">
-											Advanced Physiotherapy Clinic
-										</p>
-										<div className="text-sm text-gray-600 space-y-1">
-											<p>
-												361/A, Basudevpur Road, Ground Floor, Nilanjana
-												Apartment
-											</p>
-											<p>Shyamnagar, West Bengal, 743127, India</p>
-											<p>
-												Phone: (033) 3564 7255 | Email: contacts@mstheracure.com
-											</p>
-										</div>
-									</div>
-								</div>
-
-								
-								<div className="text-right">
-									<h2 className="text-3xl font-bold text-gray-800 mb-2">
-										INVOICE
-									</h2>
-									<p className="text-lg font-semibold text-gray-700">
-										#{invoiceDetails.invoiceId}
-									</p>
-									<div className="mt-3 text-sm text-gray-600">
-										<p>
-											<strong>Date:</strong>{" "}
-											{new Date(invoiceDetails.date).toLocaleDateString(
-												"en-IN"
-											)}
-										</p>
-										{invoiceDetails.dueDate && (
-											<p>
-												<strong>Due Date:</strong>{" "}
-												{new Date(invoiceDetails.dueDate).toLocaleDateString(
-													"en-IN"
-												)}
-											</p>
-										)}
-									</div>
-								</div>
-							</div>
-
-							
-							<div className="mt-6 border-b-2 border-gray-300"></div>
-						</div>
-
-						
-						<div className="mb-6">
-							<div className="grid grid-cols-2 gap-8">
-								
-								<div>
-									<h3 className="text-lg font-bold text-gray-800 mb-3 border-b border-gray-200 pb-1">
-										BILL TO:
-									</h3>
-									<div className="space-y-2">
-										<p className="text-xl font-semibold text-gray-800">
-											{patientInfo.name}
-										</p>
-										<p className="text-gray-600">
-											<strong>Patient ID:</strong> {patientInfo.id}
-										</p>
-										<p className="text-gray-600">
-											<strong>Phone:</strong> {patientInfo.phone}
-										</p>
-										<p className="text-gray-600">
-											<strong>Address:</strong> {patientInfo.address}
-										</p>
-										{patientInfo.email && (
-											<p className="text-gray-600">
-												<strong>Email:</strong> {patientInfo.email}
-											</p>
-										)}
-									</div>
-								</div>
-
-								
-								<div>
-									<h3 className="text-lg font-bold text-gray-800 mb-3 border-b border-gray-200 pb-1">
-										PAYMENT DETAILS:
-									</h3>
-									<div className="space-y-2">
-										<p className="text-gray-600">
-											<strong>Method:</strong>{" "}
-											{paymentDetails.paymentMethod.toUpperCase()}
-										</p>
-										<p className="text-gray-600">
-											<strong>Date:</strong>{" "}
-											{new Date(paymentDetails.paymentDate).toLocaleDateString(
-												"en-IN"
-											)}
-										</p>
-										<p className="text-gray-600">
-											<strong>Amount Paid:</strong> ₹
-											{paymentDetails.amountPaid.toLocaleString("en-IN")}
-										</p>
-									</div>
-								</div>
-							</div>
-						</div>
-
-						
-						<div className="mb-6">
-							<h3 className="text-lg font-bold text-gray-800 mb-3">
-								SERVICES PROVIDED:
-							</h3>
-							<table className="w-full border-collapse border border-gray-300">
-								<thead>
-									<tr className="bg-gray-100">
-										<th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-800">
-											Service Description
-										</th>
-										<th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800 w-20">
-											Qty
-										</th>
-										<th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800 w-32">
-											Rate (₹)
-										</th>
-										<th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800 w-32">
-											Amount (₹)
-										</th>
-									</tr>
-								</thead>
-								<tbody>
-									{selectedServices.map((service, index) => (
-										<tr
-											key={service.id}
-											className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-											<td className="border border-gray-300 px-4 py-3">
-												<div>
-													<p className="font-semibold text-gray-800">
-														{service.name}
-													</p>
-													<p className="text-sm text-gray-600 capitalize">
-														{service.category.replace("-", " ")}
-													</p>
-													<p className="text-sm text-gray-500 mt-1">
-														{service.description}
-													</p>
-												</div>
-											</td>
-											<td className="border border-gray-300 px-4 py-3 text-center font-semibold">
-												{service.quantity}
-											</td>
-											<td className="border border-gray-300 px-4 py-3 text-right font-semibold">
-												{service.price.toLocaleString("en-IN")}
-											</td>
-											<td className="border border-gray-300 px-4 py-3 text-right font-semibold">
-												{(service.price * service.quantity).toLocaleString(
-													"en-IN"
-												)}
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-
-						
-						<div className="flex justify-end mb-6">
-							<div className="w-80">
-								<table className="w-full">
-									<tbody>
-										<tr>
-											<td className="py-2 text-right font-medium text-gray-700">
-												Subtotal:
-											</td>
-											<td className="py-2 text-right font-semibold text-gray-800 pl-4">
-												₹{calculateSubtotal().toLocaleString("en-IN")}
-											</td>
-										</tr>
-										{paymentDetails.offer > 0 && (
-											<tr>
-												<td className="py-2 text-right font-medium text-gray-700">
-													Discount ({paymentDetails.offer}%):
-												</td>
-												<td className="py-2 text-right font-semibold text-green-600 pl-4">
-													-₹{calculateOffer().toLocaleString("en-IN")}
-												</td>
-											</tr>
-										)}
-										<tr className="border-t border-gray-300">
-											<td className="py-3 text-right font-bold text-lg text-gray-800">
-												Total Amount:
-											</td>
-											<td className="py-3 text-right font-bold text-lg text-gray-800 pl-4">
-												₹{calculateTotal().toLocaleString("en-IN")}
-											</td>
-										</tr>
-										<tr>
-											<td className="py-2 text-right font-medium text-gray-700">
-												Amount Paid:
-											</td>
-											<td className="py-2 text-right font-semibold text-green-600 pl-4">
-												₹{paymentDetails.amountPaid.toLocaleString("en-IN")}
-											</td>
-										</tr>
-										<tr className="border-t border-gray-300">
-											<td className="py-3 text-right font-bold text-lg text-gray-800">
-												{calculateBalance() > 0 ? "Balance Due:" : "Overpaid:"}
-											</td>
-											<td
-												className={`py-3 text-right font-bold text-lg pl-4 ${
-													calculateBalance() > 0
-														? "text-red-600"
-														: "text-green-600"
-												}`}>
-												₹{Math.abs(calculateBalance()).toLocaleString("en-IN")}
-											</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-
-						
-						{invoiceDetails.notes && (
-							<div className="mb-6">
-								<h3 className="text-lg font-bold text-gray-800 mb-2">NOTES:</h3>
-								<div className="bg-gray-50 p-4 rounded border">
-									<p className="text-gray-700">{invoiceDetails.notes}</p>
-								</div>
-							</div>
-						)}
-
-						
-						<div className="mt-8 pt-6 border-t border-gray-300">
-							<div className="text-center">
-								<p className="text-lg font-semibold text-gray-800 mb-2">
-									Thank you for choosing Thera-Cure!
-								</p>
-								<p className="text-gray-600">
-									Your health and recovery are our priority.
-								</p>
-								<div className="mt-4 text-sm text-gray-500">
-									<p>
-										For any queries regarding this invoice, please contact us at
-										the above details.
-									</p>
-									<p className="mt-1">
-										Generated on: {new Date().toLocaleString("en-IN")}
-									</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			)} */}
-
-      {selectedServices.length > 0 && (
-        <div className="print-area">
-          <div className="max-w-2xl mx-auto bg-white p-8 font-sans">
-            {/* Header Section */}
-            <div className="text-center mb-8">
-              {/* Logo */}
-              <div className="mb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-2">
-                  <span className="text-orange-600 font-bold text-xl pdf-logo">
-                    <img
-                      src="/apple-touch-icon.png"
-                      alt="Thera-Cure Logo"
-                      className=""
-                    />
-                  </span>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="text-md text-gray-600 mb-3">
-                <p>
-                  361/A, Basudevpur Road, Ground Floor, Nilanjana Apartment
-                  Shyamnagar, West Bengal, 743127, India
-                </p>
-              </div>
-
-              {/* Contact Info */}
-              <div className="flex justify-center mb-6">
-                <div className="text-md text-gray-600">
-                  <span>Phone: (033) 3564 7255</span>
-                  <span className="mx-4">Email: contacts@mstheracure.com</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Invoice Info Row */}
-            <div className="flex justify-between items-start pt-6 mt-6 border-t border-gray-200">
-              <div>
-                <p className="text-md text-gray-600">
-                  Invoice No.:{" "}
-                  <span className="font-semibold">
-                    {invoiceDetails.invoiceId}
-                  </span>
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">
-                  Date:{" "}
-                  <span className="font-semibold">
-                    {new Date(invoiceDetails.date).toLocaleDateString("en-IN")}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {/* Bill To and Payment Details */}
-            <div className="grid grid-cols-2 gap-6 mb-6 pt-6 mt-6 border-t border-gray-200">
-              {/* Bill To */}
-              <div className="bg-gray-50 p-4  rounded-[14px] border border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-1">
-                  Bill to:
-                </h3>
-                <div className="text-sm space-y-1">
-                  <p>
-                    <span className="text-gray-600">Patient Id:</span>{" "}
-                    <span className="font-medium">{patientInfo.id}</span>
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Phone:</span>{" "}
-                    <span className="font-medium">{patientInfo.phone}</span>
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Address:</span>{" "}
-                    <span className="font-medium">{patientInfo.address}</span>
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Emails:</span>{" "}
-                    <span className="font-medium">{patientInfo.email}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Payment Details */}
-              <div className="bg-gray-50 p-4 rounded-[14px] border border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3  border-b border-gray-200 pb-1">
-                  Payment Details:
-                </h3>
-                <div className="text-sm space-y-1 mb-4">
-                  <p>
-                    <span className="text-gray-600">Date:</span>{" "}
-                    <span className="font-medium">
-                      {new Date(paymentDetails.paymentDate).toLocaleDateString(
-                        "en-IN"
-                      )}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Method:</span>{" "}
-                    <span className="font-medium capitalize">
-                      {paymentDetails.paymentMethod}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-gray-600">Offer Applied:</span>{" "}
-                    <span className="font-medium">{paymentDetails.offer}%</span>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Amount:</span>
-                    <span className="font-semibold">₹{calculateTotal()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Offer Amount:</span>
-                    <span className="font-semibold">₹{calculateOffer()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Amount Paid:</span>
-                    <span className="font-semibold">
-                      ₹{paymentDetails.amountPaid}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Balance Due:</span>
-                    <span className="font-semibold">
-                      ₹{Math.abs(calculateBalance())}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing Breakdown */}
-            <div className="mb-8">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                Pricing Breakdown:
-              </h3>
-
-              {/* Table Header */}
-              <div className="bg-gray-100 p-3 rounded-t border">
-                <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
-                  <div>Service Description</div>
-                  <div className="text-center">Qty.</div>
-                  <div className="text-center">Rate (₹/hr)</div>
-                  <div className="text-center">Amount (₹)</div>
-                </div>
-              </div>
-
-              {/* Table Content */}
-              {selectedServices.map((service, index) => (
-                <div
-                  key={service.id}
-                  className="border-l border-r border-b p-3"
-                >
-                  <div className="grid grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="font-semibold text-gray-800">
-                        {service.name}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {service.description}
-                      </p>
-                    </div>
-                    <div className="text-center font-medium">
-                      {service.quantity}
-                    </div>
-                    <div className="text-center font-medium">
-                      {service.price}
-                    </div>
-                    <div className="text-center font-medium">
-                      {service.price * service.quantity}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Subtotal Row */}
-              <div className="bg-gray-50 p-3 rounded-b border-l border-r border-b">
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-3"></div>
-                  <div className="text-left pr-5 ">
-                    <span className="text-sm font-semibold">
-                      Total: &nbsp;&nbsp;&nbsp; ₹{calculateSubtotal()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="text-center bg-gray-100 p-6 rounded border-t border-gray-300">
-              <h3 className="text-lg font-bold text-gray-800 mb-2">
-                Thank you for choosing Thera-Cure!
-              </h3>
-              <p className="text-sm text-gray-600 mb-2">
-                Your health and recovery are our priority.
-              </p>
-              <p className="text-xs text-gray-500">
-                For any queries regarding this invoice, please contact us at the
-                above details.
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Generated On: {new Date().toLocaleDateString("en-IN")}{" "}
-                {new Date().toLocaleTimeString("en-IN")}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

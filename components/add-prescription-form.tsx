@@ -49,12 +49,12 @@ const assessmentData = {
   patient: {
     patientName: "John Doe",
     id: "001",
-    age: "35",
+    age: 35,
     gender: "Male",
   },
   assessmentDate: "2024-01-26",
-  height: "175",
-  weight: "70",
+  height: 175,
+  weight: 70,
   chiefComplaints: "Lower back pain radiating to left leg for 2 weeks",
   historyOfIllness:
     "Patient reports gradual onset of lower back pain following heavy lifting at work. Pain is worse in the morning and improves with movement.",
