@@ -1,64 +1,149 @@
 // /lib/generateInvoicePDF.js
 import puppeteer from "puppeteer";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const generateInvoicePDF = async (invoiceData: any) => {
-  let browser;
+	let browser;
 
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-gpu",
-      ],
-    });
+	try {
+		browser = await puppeteer.launch({
+			headless: true,
+			args: [
+				"--no-sandbox",
+				"--disable-setuid-sandbox",
+				"--disable-dev-shm-usage",
+				"--disable-accelerated-2d-canvas",
+				"--no-first-run",
+				"--no-zygote",
+				"--disable-gpu",
+			],
+		});
 
-    const page = await browser.newPage();
+		const page = await browser.newPage();
 
-    // Generate HTML template with data
-    const htmlTemplate = generateInvoiceHTML(invoiceData);
+		// Generate HTML template with data
+		const htmlTemplate = await generateInvoiceHTML(invoiceData);
 
-    await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
+		await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
 
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "0.2in",
-        right: "0.2in",
-        bottom: "0.2in",
-        left: "0.2in",
-      },
-      preferCSSPageSize: true,
-    });
+		const pdfBuffer = await page.pdf({
+			format: "A4",
+			printBackground: true,
+			margin: {
+				top: "0.2in",
+				right: "0.2in",
+				bottom: "0.2in",
+				left: "0.2in",
+			},
+			preferCSSPageSize: true,
+		});
 
-    return pdfBuffer;
-  } catch (error) {
-    console.error("PDF generation error:", error);
-    throw error;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
+		return pdfBuffer;
+	} catch (error) {
+		console.error("PDF generation error:", error);
+		throw error;
+	} finally {
+		if (browser) {
+			await browser.close();
+		}
+	}
 };
 
-// HTML Template Generator Function
-const generateInvoiceHTML = (data: any) => {
-  const {
-    patientInfo,
-    invoiceDetails,
-    paymentDetails,
-    selectedServices,
-    notes,
-  } = data;
+// Function to convert image to base64
+const getImageAsBase64 = async () => {
+	try {
+		// Construct the path to the image
+		// Assuming this file is in /lib/ and image is in app/lib/utils/
+		const imagePath = path.resolve(__dirname, "../utils/apple-touch-icon.png");
 
-  return `
+		// Alternative paths to try if the above doesn't work
+		const alternativePaths = [
+			path.resolve(__dirname, "./utils/apple-touch-icon.png"),
+			path.resolve(__dirname, "../app/lib/utils/apple-touch-icon.png"),
+			path.resolve(process.cwd(), "app/lib/utils/apple-touch-icon.png"),
+			path.resolve(process.cwd(), "lib/utils/apple-touch-icon.png"),
+		];
+
+		let imageBuffer;
+		let foundPath = null;
+
+		// Try the main path first
+		try {
+			imageBuffer = await fs.readFile(imagePath);
+			foundPath = imagePath;
+		} catch (error) {
+			// Try alternative paths
+			for (const altPath of alternativePaths) {
+				try {
+					imageBuffer = await fs.readFile(altPath);
+					foundPath = altPath;
+					break;
+				} catch (altError) {
+					continue;
+				}
+			}
+		}
+
+		if (!imageBuffer) {
+			console.warn("Logo image not found at any of the expected paths:", [
+				imagePath,
+				...alternativePaths,
+			]);
+			return null;
+		}
+
+		console.log("Logo image found at:", foundPath);
+
+		// Convert to base64
+		const base64String = imageBuffer.toString("base64");
+
+		// Determine MIME type based on file extension
+		const ext = path.extname(foundPath).toLowerCase();
+		let mimeType = "image/png"; // default
+
+		switch (ext) {
+			case ".jpg":
+			case ".jpeg":
+				mimeType = "image/jpeg";
+				break;
+			case ".png":
+				mimeType = "image/png";
+				break;
+			case ".svg":
+				mimeType = "image/svg+xml";
+				break;
+			case ".gif":
+				mimeType = "image/gif";
+				break;
+		}
+
+		return `data:${mimeType};base64,${base64String}`;
+	} catch (error) {
+		console.error("Error reading logo image:", error);
+		return null;
+	}
+};
+
+// HTML Template Generator Function (now async)
+const generateInvoiceHTML = async (data: any) => {
+	const {
+		patientInfo,
+		invoiceDetails,
+		paymentDetails,
+		selectedServices,
+		notes,
+	} = data;
+
+	// Get the logo as base64
+	const logoBase64 = await getImageAsBase64();
+
+	return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -99,10 +184,25 @@ const generateInvoiceHTML = (data: any) => {
           padding-bottom: 15px;
         }
         
-        .logo {
+        .logo-container {
           width: 80px;
           height: 50px;
           margin: 0 auto 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .logo-image {
+          width: 80px;
+          height: 50px;
+          object-fit: contain;
+          display: block;
+        }
+        
+        .logo-fallback {
+          width: 80px;
+          height: 50px;
           background: #f97316;
           border-radius: 8px;
           display: flex;
@@ -111,13 +211,6 @@ const generateInvoiceHTML = (data: any) => {
           color: white;
           font-weight: bold;
           font-size: 16px;
-        }
-
-        .logo img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          display: block;
         }
         
         .company-name {
@@ -358,40 +451,35 @@ const generateInvoiceHTML = (data: any) => {
       <div class="container">
         
         <!-- Header -->
-       <div class="header">
-        <div class="logo">
-          <img 
-            src="/logo.png" 
-            alt="Thera-Cure Logo" 
-            style="width: 80px; height: 50px; object-fit: contain;"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-          />
-          <!-- Fallback text logo if image fails to load -->
-          <div style="display: none; width: 80px; height: 50px; background: #f97316; border-radius: 8px; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">
-            TC
+        <div class="header">
+          <div class="logo-container">
+            ${
+							logoBase64
+								? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo"  style="width:140px; height:auto;"/>`
+								: `<div class="logo-fallback">TC</div>`
+						}
+          </div>
+          <div class="company-name">THERA-CURE</div>
+          <div class="company-address">
+            361/A, Basudevpur Road, Ground Floor, Nilanjana Apartment<br>
+            Shyamnagar, West Bengal, 743127, India
+          </div>
+          <div class="company-contact">
+            Phone: (033) 3564 7255 | Email: contacts@mstheracure.com
           </div>
         </div>
-        <div class="company-name">THERA-CURE</div>
-        <div class="company-address">
-          361/A, Basudevpur Road, Ground Floor, Nilanjana Apartment<br>
-          Shyamnagar, West Bengal, 743127, India
-        </div>
-        <div class="company-contact">
-          Phone: (033) 3564 7255 | Email: contacts@mstheracure.com
-        </div>
-      </div>
 
         <!-- Invoice Info -->
         <div class="invoice-info">
           <div>
             <div class="invoice-number">Invoice No: ${
-              invoiceDetails.invoiceId
-            }</div>
+							invoiceDetails.invoiceId
+						}</div>
           </div>
           <div class="text-right">
             <div class="invoice-date">Date: ${new Date(
-              invoiceDetails.date
-            ).toLocaleDateString("en-IN")}</div>
+							invoiceDetails.date
+						).toLocaleDateString("en-IN")}</div>
           </div>
         </div>
 
@@ -401,11 +489,11 @@ const generateInvoiceHTML = (data: any) => {
           <div class="detail-card">
             <div class="detail-title">BILL TO:</div>
             <div class="detail-item">
-              <span class="detail-label">patientInfo Name:</span>
+              <span class="detail-label">Patient Name:</span>
               <span class="detail-value">${patientInfo.name}</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">patientInfo ID:</span>
+              <span class="detail-label">Patient ID:</span>
               <span class="detail-value">${patientInfo.id}</span>
             </div>
             <div class="detail-item">
@@ -428,21 +516,21 @@ const generateInvoiceHTML = (data: any) => {
             <div class="detail-item">
               <span class="detail-label">Payment Date:</span>
               <span class="detail-value">${new Date(
-                paymentDetails.paymentDate
-              ).toLocaleDateString("en-IN")}</span>
+								paymentDetails.paymentDate
+							).toLocaleDateString("en-IN")}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Payment Method:</span>
               <span class="detail-value">${paymentDetails.paymentMethod.toUpperCase()}</span>
             </div>
             ${
-              paymentDetails.offer > 0
-                ? `<div class="detail-item">
+							paymentDetails.offer > 0
+								? `<div class="detail-item">
                   <span class="detail-label">Offer Applied:</span>
                   <span class="detail-value">${paymentDetails.offer}%</span>
                 </div>`
-                : ""
-            }
+								: ""
+						}
           </div>
         </div>
 
@@ -460,26 +548,26 @@ const generateInvoiceHTML = (data: any) => {
             </thead>
             <tbody>
               ${selectedServices
-                .map(
-                  (service: any) => `
+								.map(
+									(service: any) => `
                 <tr class="table-row">
                   <td>
                     <div class="service-name">${service.name}</div>
                     <div class="service-description">${
-                      service.description
-                    }</div>
+											service.description
+										}</div>
                   </td>
                   <td class="text-center">${service.quantity}</td>
                   <td class="text-center">${service.price.toLocaleString(
-                    "en-IN"
-                  )}</td>
+										"en-IN"
+									)}</td>
                   <td class="text-center">${(
-                    service.price * service.quantity
-                  ).toLocaleString("en-IN")}</td>
+										service.price * service.quantity
+									).toLocaleString("en-IN")}</td>
                 </tr>
               `
-                )
-                .join("")}
+								)
+								.join("")}
             </tbody>
           </table>
         </div>
@@ -490,38 +578,38 @@ const generateInvoiceHTML = (data: any) => {
             <tr>
               <td class="totals-label">Subtotal:</td>
               <td class="totals-value">₹${paymentDetails.subTotal.toLocaleString(
-                "en-IN"
-              )}</td>
+								"en-IN"
+							)}</td>
             </tr>
             ${
-              paymentDetails.offer > 0
-                ? `
+							paymentDetails.offer > 0
+								? `
             <tr>
               <td class="totals-label">Discount (${paymentDetails.offer}%):</td>
               <td class="totals-value" style="color: #059669;">- ₹${paymentDetails.offerAmount.toLocaleString(
-                "en-IN"
-              )}</td>
+								"en-IN"
+							)}</td>
             </tr>
             `
-                : ""
-            }
+								: ""
+						}
             <tr class="total-final">
               <td class="totals-label">Total Amount:</td>
               <td class="totals-value">₹${paymentDetails.totalAmount.toLocaleString(
-                "en-IN"
-              )}</td>
+								"en-IN"
+							)}</td>
             </tr>
             <tr>
               <td class="totals-label">Amount Paid:</td>
               <td class="totals-value paid-amount">₹${paymentDetails.amountPaid.toLocaleString(
-                "en-IN"
-              )}</td>
+								"en-IN"
+							)}</td>
             </tr>
             <tr>
               <td class="totals-label">Due:</td>
               <td class="totals-value ${
-                paymentDetails.due > 0 ? "due-amount" : "paid-amount"
-              }">
+								paymentDetails.due > 0 ? "due-amount" : "paid-amount"
+							}">
                 ₹${Math.abs(paymentDetails.due).toLocaleString("en-IN")}
               </td>
             </tr>
@@ -529,8 +617,8 @@ const generateInvoiceHTML = (data: any) => {
         </div>
 
         ${
-          invoiceDetails.notes
-            ? `
+					invoiceDetails.notes
+						? `
         <!-- Notes Section -->
         <div class="notes-section">
           <div class="section-title">NOTES:</div>
@@ -539,8 +627,8 @@ const generateInvoiceHTML = (data: any) => {
           </div>
         </div>
         `
-            : ""
-        }
+						: ""
+				}
 
         <!-- Footer -->
         <div class="footer">
@@ -557,40 +645,5 @@ const generateInvoiceHTML = (data: any) => {
     </html>
   `;
 };
-
-// Usage Example:
-// const invoiceData = {
-//   invoiceId: "TC-202401-001",
-//   date: "2024-01-26",
-//   patientInfo: {
-//     name: "John Doe",
-//     id: "PT-001",
-//     phone: "9876543210",
-//     email: "john@example.com",
-//     address: "123 Main St, City"
-//   },
-//   paymentDetails: {
-//     paymentDate: "2024-01-26",
-//     paymentMethod: "cash",
-//     offer: 10
-//   },
-//   services: [
-//     {
-//       name: "Physical Therapy",
-//       description: "One hour session",
-//       quantity: 2,
-//       price: 500
-//     }
-//   ],
-//   totals: {
-//     subtotal: 1000,
-//     offer: 10,
-//     offerAmount: 100,
-//     total: 900,
-//     amountPaid: 500,
-//     balance: 400
-//   },
-//   notes: "Follow-up required after 1 week"
-// };
 
 export default generateInvoicePDF;

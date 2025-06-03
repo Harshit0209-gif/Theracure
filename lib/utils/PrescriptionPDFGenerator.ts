@@ -1,14 +1,99 @@
 import puppeteer from "puppeteer";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Function to convert image to base64
+const getImageAsBase64 = async () => {
+	try {
+		// Construct the path to the image
+		// Assuming this file is in /lib/ and image is in app/lib/utils/
+		const imagePath = path.resolve(__dirname, "../utils/apple-touch-icon.png");
+
+		// Alternative paths to try if the above doesn't work
+		const alternativePaths = [
+			path.resolve(__dirname, "./utils/apple-touch-icon.png"),
+			path.resolve(__dirname, "../app/lib/utils/apple-touch-icon.png"),
+			path.resolve(process.cwd(), "app/lib/utils/apple-touch-icon.png"),
+			path.resolve(process.cwd(), "lib/utils/apple-touch-icon.png"),
+		];
+
+		let imageBuffer;
+		let foundPath = null;
+
+		// Try the main path first
+		try {
+			imageBuffer = await fs.readFile(imagePath);
+			foundPath = imagePath;
+		} catch (error) {
+			// Try alternative paths
+			for (const altPath of alternativePaths) {
+				try {
+					imageBuffer = await fs.readFile(altPath);
+					foundPath = altPath;
+					break;
+				} catch (altError) {
+					continue;
+				}
+			}
+		}
+
+		if (!imageBuffer) {
+			console.warn("Logo image not found at any of the expected paths:", [
+				imagePath,
+				...alternativePaths,
+			]);
+			return null;
+		}
+
+		console.log("Logo image found at:", foundPath);
+
+		// Convert to base64
+		const base64String = imageBuffer.toString("base64");
+
+		// Determine MIME type based on file extension
+		const ext = path.extname(foundPath).toLowerCase();
+		let mimeType = "image/png"; // default
+
+		switch (ext) {
+			case ".jpg":
+			case ".jpeg":
+				mimeType = "image/jpeg";
+				break;
+			case ".png":
+				mimeType = "image/png";
+				break;
+			case ".svg":
+				mimeType = "image/svg+xml";
+				break;
+			case ".gif":
+				mimeType = "image/gif";
+				break;
+		}
+
+		return `data:${mimeType};base64,${base64String}`;
+	} catch (error) {
+		console.error("Error reading logo image:", error);
+		return null;
+	}
+};
 
 const generateAssessmentPDF = async (assessment: any) => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-  const page = await browser.newPage();
+	const browser = await puppeteer.launch({
+		headless: true,
+		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+	});
+	const page = await browser.newPage();
 
-  // HTML Template (use the template from the artifact above)
-  const htmlTemplate = `
+	// Get the logo as base64
+	const logoBase64 = await getImageAsBase64();
+
+	// HTML Template
+	const htmlTemplate = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -58,7 +143,16 @@ const generateAssessmentPDF = async (assessment: any) => {
           flex-shrink: 0;
         }
         
-        .logo {
+        
+        
+        .logo-image {
+          width: 70px;
+          height: 70px;
+          object-fit: contain;
+          display: block;
+        }
+        
+        .logo-fallback {
           width: 70px;
           height: 70px;
           background: linear-gradient(135deg, #4a90e2, #357abd);
@@ -69,7 +163,6 @@ const generateAssessmentPDF = async (assessment: any) => {
           color: white;
           font-weight: bold;
           font-size: 16px;
-          margin-bottom: 5px;
         }
         
         .clinic-info {
@@ -149,7 +242,12 @@ const generateAssessmentPDF = async (assessment: any) => {
         }
         
         .patient-left {
-          flex: 1;
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          font-size: 11px;
+          gap:12px;
+          flex-wrap:wrap;
         }
         
         .patient-right {
@@ -161,6 +259,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           display: flex;
           align-items: center;
           margin-bottom: 8px;
+          width:calc(33% - 8px)
         }
         
         .field-label {
@@ -301,18 +400,18 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div class="watermark">THERA-CURE</div>
         
         <!-- Header -->
-        <div class="header">
-          <div class="logo-section">
-            <div class="logo">TC</div>
-          </div>
+        <div class="header" style="display:flex; flex-direction:row; justify-content:space-between; align-items:flex-start;">
           
-          <div class="clinic-info">
-            <div class="clinic-name">THERA-CURE</div>
-            <div class="clinic-subtitle">Advanced Physiotherapy Clinic</div>
-            <div class="contact-info">
-              <p><strong>ADDRESS:</strong> 361/A, BASUDEVPUR ROAD,</p>
-              <p>GROUND FLOOR - 'NILANJANA' APARTMENT,</p>
-              <p>SHYAMNAGAR, NORTH 24 PARGANAS, PIN - 743127</p>
+          <div class="clinic-info" style="margin-top:-20px;">
+            <div class="logo">
+              ${
+								logoBase64
+									? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo" style="width:140px; height:auto;"/>`
+									: `<div class="logo-fallback">TC</div>`
+							}
+            </div>
+            <div class="contact-info" style="width:200px;">
+              <p><strong>ADDRESS:</strong> 361/A, BASUDEVPUR ROAD, GROUND FLOOR - 'NILANJANA' APARTMENT, SHYAMNAGAR, NORTH 24 PARGANAS, PIN - 743127</p>
               <p><strong>Tel:</strong> (033) 3564 7255</p>
               <p><strong>Email:</strong> contacts@mstheracure.com</p>
               <p><strong>Website:</strong> www.mstheracure.com</p>
@@ -347,34 +446,20 @@ const generateAssessmentPDF = async (assessment: any) => {
             <div class="field-group">
               <span class="field-label">Name:</span>
               <span class="field-value">${
-                assessment.patient?.patientName || assessment.patientName || ""
-              }</span>
+								assessment.patient?.patientName || assessment.patientName || ""
+							}</span>
             </div>
             <div class="field-group">
-              <span class="field-label">Age / Gender:</span>
+              <span class="field-label">Age:</span>
               <span class="field-value">${
-                assessment.patient?.age || assessment.age || ""
-              } / ${
-    assessment.patient?.gender || assessment.gender || ""
-  }</span>
+								assessment.patient?.age || assessment.age || ""
+							} </span>
             </div>
-          </div>
-          <div class="patient-right">
-            <div class="field-group">
-              <span class="field-label">Patient ID:</span>
-              <span class="field-value">THRC${
-                assessment.patient?.id || assessment.patientId || ""
-              }</span>
-            </div>
-            <div class="field-group">
-              <span class="field-label">Date:</span>
+             <div class="field-group">
+              <span class="field-label">Gender:</span>
               <span class="field-value">${
-                assessment.assessmentDate
-                  ? new Date(assessment.assessmentDate).toLocaleDateString(
-                      "en-IN"
-                    )
-                  : ""
-              }</span>
+								assessment.patient?.gender || assessment.gender || ""
+							}</span>
             </div>
             <div class="field-group">
               <span class="field-label">Height:</span>
@@ -384,7 +469,25 @@ const generateAssessmentPDF = async (assessment: any) => {
               <span class="field-label">Weight:</span>
               <span class="field-value">${assessment.weight || ""} kgs.</span>
             </div>
+            
+            <div class="field-group">
+              <span class="field-label">Patient ID:</span>
+              <span class="field-value">THRC${
+								assessment.patient?.id || assessment.patientId || ""
+							}</span>
+            </div>
+            <div class="field-group">
+              <span class="field-label">Date:</span>
+              <span class="field-value">${
+								assessment.assessmentDate
+									? new Date(assessment.assessmentDate).toLocaleDateString(
+											"en-IN"
+									  )
+									: ""
+							}</span>
+            </div>
           </div>
+          
         </div>
         
         <!-- Body Diagram Container -->
@@ -418,8 +521,8 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div class="assessment-section">
           <div class="section-label">H/O:</div>
           <div class="section-content">${
-            assessment.historyOfIllness || ""
-          }</div>
+						assessment.historyOfIllness || ""
+					}</div>
         </div>
         
         <div class="two-column">
@@ -427,8 +530,8 @@ const generateAssessmentPDF = async (assessment: any) => {
             <div class="assessment-section">
               <div class="section-label">On Observation:</div>
               <div class="section-content">${
-                assessment.onObservation || ""
-              }</div>
+								assessment.onObservation || ""
+							}</div>
             </div>
           </div>
           <div class="column">
@@ -449,16 +552,16 @@ const generateAssessmentPDF = async (assessment: any) => {
             <div class="assessment-section">
               <div class="section-label">Differential Diagnosis:</div>
               <div class="section-content">${
-                assessment.differentialDiagnosis || ""
-              }</div>
+								assessment.differentialDiagnosis || ""
+							}</div>
             </div>
           </div>
           <div class="column">
             <div class="assessment-section">
               <div class="section-label">Investigations:</div>
               <div class="section-content">${
-                assessment.investigations || ""
-              }</div>
+								assessment.investigations || ""
+							}</div>
             </div>
           </div>
         </div>
@@ -471,15 +574,15 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div class="assessment-section">
           <div class="section-label">Provisional Diagnosis:</div>
           <div class="section-content">${
-            assessment.provisionalDiagnosis || ""
-          }</div>
+						assessment.provisionalDiagnosis || ""
+					}</div>
         </div>
         
         <div class="assessment-section">
           <div class="section-label">Physiotherapy Management:</div>
           <div class="section-content">${
-            assessment.physiotherapyMgmt || ""
-          }</div>
+						assessment.physiotherapyMgmt || ""
+					}</div>
         </div>
         
         <!-- Signature Section -->
@@ -497,22 +600,22 @@ const generateAssessmentPDF = async (assessment: any) => {
     </html>
   `;
 
-  await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
+	await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
 
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: {
-      top: "0mm",
-      right: "0mm",
-      bottom: "0mm",
-      left: "0mm",
-    },
-    preferCSSPageSize: true,
-  });
+	const pdfBuffer = await page.pdf({
+		format: "A4",
+		printBackground: true,
+		margin: {
+			top: "0mm",
+			right: "0mm",
+			bottom: "0mm",
+			left: "0mm",
+		},
+		preferCSSPageSize: true,
+	});
 
-  await browser.close();
-  return pdfBuffer;
+	await browser.close();
+	return pdfBuffer;
 };
 
 export default generateAssessmentPDF;
