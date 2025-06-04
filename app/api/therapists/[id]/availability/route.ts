@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDay } from "date-fns";
+import {
+  generateAvailablePeriods,
+  generateStartTimes,
+} from "@/lib/utils/AppointmentAvailableTimeSlotGenerator";
 
 export async function GET(
   req: NextRequest,
@@ -10,14 +14,12 @@ export async function GET(
     const { id } = await params;
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
-    const startTime = searchParams.get("startTime");
-    const endTime = searchParams.get("endTime");
 
-    if (!date || !startTime || !endTime) {
+    if (!date) {
       return NextResponse.json(
         {
           success: false,
-          error: "Date, start time, and end time are required",
+          error: "Date parameter is required",
         },
         { status: 400 }
       );
@@ -26,71 +28,80 @@ export async function GET(
     // Convert date to weekday (0-6)
     const weekDay = getDay(new Date(date));
 
-    // 1. Check if therapist has availability for this weekday
-    const therapistAvailability = await prisma.therapistTimeSlot.findFirst({
+    // 1. Get therapist's working schedule for this weekday
+    const therapistSchedule = await prisma.therapistTimeSlot.findMany({
       where: {
         therapistId: id,
         weekDay,
         isAvailable: true,
-        startTime: { lte: startTime },
-        endTime: { gte: endTime },
+      },
+      orderBy: {
+        startTime: "asc",
       },
     });
 
-    if (!therapistAvailability) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Therapist is not available during this time slot",
-        },
-        { status: 400 }
-      );
+    if (therapistSchedule.length === 0) {
+      return NextResponse.json({
+        success: true,
+        availablePeriods: [],
+        message: "Therapist is not available on this day",
+      });
     }
 
-    // 2. Check for existing appointments that overlap with the requested time
+    // 2. Get all existing appointments for the date
+    const startOfDay = new Date(`${date}T00:00:00`);
+    const endOfDay = new Date(`${date}T23:59:59`);
+
     const existingAppointments = await prisma.therapistAssignment.findMany({
       where: {
         therapistId: id,
         status: { in: ["confirmed"] },
-        OR: [
-          {
-            AND: [
-              {
-                appointmentStartTime: { lte: new Date(`${date}T${startTime}`) },
-              },
-              { appointmentEndTime: { gt: new Date(`${date}T${startTime}`) } },
-            ],
-          },
-          {
-            AND: [
-              { appointmentStartTime: { lt: new Date(`${date}T${endTime}`) } },
-              { appointmentEndTime: { gte: new Date(`${date}T${endTime}`) } },
-            ],
-          },
-        ],
+        appointmentStartTime: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      orderBy: {
+        appointmentStartTime: "asc",
+      },
+      select: {
+        appointmentStartTime: true,
+        appointmentEndTime: true,
+        status: true,
       },
     });
 
-    if (existingAppointments.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Therapist already has an appointment during this time",
-        },
-        { status: 400 }
-      );
-    }
+    // 3. Generate available periods by splitting schedule around appointments
+    const availablePeriods = generateAvailablePeriods(
+      therapistSchedule,
+      existingAppointments,
+      date
+    );
+
+    // 4. Generate start time options (15-minute intervals)
+    const availableStartTimes = generateStartTimes(availablePeriods);
 
     return NextResponse.json({
       success: true,
-      isAvailable: true,
+      availablePeriods,
+      availableStartTimes,
+      therapistSchedule: therapistSchedule.map((slot) => ({
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        weekDay: slot.weekDay,
+      })),
+      existingAppointments: existingAppointments.map((apt) => ({
+        startTime: apt.appointmentStartTime.toTimeString().slice(0, 5),
+        endTime: apt.appointmentEndTime.toTimeString().slice(0, 5),
+        status: apt.status,
+      })),
     });
   } catch (error) {
-    console.error("Error checking availability:", error);
+    console.error("Error getting availability:", error);
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to check availability",
+        error: "Failed to get availability",
       },
       { status: 500 }
     );

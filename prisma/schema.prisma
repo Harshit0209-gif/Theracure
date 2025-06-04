@@ -118,6 +118,9 @@ model Service {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  //relation
+  therapist_assignments TherapistAssignment[] @relation("ServiceTherapistAssignments")
+
   @@map("services")
 }
 
@@ -167,7 +170,7 @@ model TherapistAssignment {
   therapistId           String            @map("therapist_id")
   appointmentStartTime  DateTime          @map("appointment_start_time")
   appointmentEndTime    DateTime          @map("appointment_end_time")
-  therapyType           String            @map("therapy_type")
+  serviceId             String?           @map("service_id")
   assignedDate          DateTime          @map("assigned_date") @db.Date
   status                AppointmentStatus @default(confirmed)
   notes                 String?           @db.Text
@@ -181,6 +184,7 @@ model TherapistAssignment {
   therapistInfo         Therapist         @relation("TherapistAssignments", fields: [therapistId], references: [id], map: "therapist_assignments_therapist_fkey")
   createdBy             User              @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   therapySessions       TherapySession[]  @relation("AssignmentTherapySessions")
+  service               Service?          @relation("ServiceTherapistAssignments", fields: [serviceId], references: [id])
 
   @@map("therapist_assignments")
   @@index([therapistId, appointmentStartTime])

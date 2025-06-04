@@ -154,21 +154,6 @@ const ServiceManagement = () => {
       },
       description: "Combined therapy packages for comprehensive treatment",
     },
-    {
-      key: "heat-therapy",
-      label: "Heat Therapy",
-      icon: Thermometer,
-      colors: {
-        bg: "bg-red-50",
-        border: "border-red-200",
-        text: "text-red-700",
-        accent: "red",
-        gradient: "bg-gradient-to-r from-red-50 to-orange-50",
-        hoverBg: "hover:bg-red-100",
-        selectedBg: "bg-red-500",
-      },
-      description: "Thermotherapy and heat-based treatment modalities",
-    },
   ];
 
   // Fetch services
@@ -208,7 +193,7 @@ const ServiceManagement = () => {
       if (!response.ok) throw new Error("Failed to add service");
 
       const newService = await response.json();
-      setServices([...services, newService]);
+      setServices([...services, newService.data]);
       setFormData({
         name: "",
         description: "",

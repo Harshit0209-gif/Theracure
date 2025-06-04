@@ -1,4 +1,3 @@
-// /lib/generateInvoicePDF.js
 import puppeteer from "puppeteer";
 import fs from "fs/promises";
 import path from "path";
@@ -9,141 +8,141 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const generateInvoicePDF = async (invoiceData: any) => {
-	let browser;
+  let browser;
 
-	try {
-		browser = await puppeteer.launch({
-			headless: true,
-			args: [
-				"--no-sandbox",
-				"--disable-setuid-sandbox",
-				"--disable-dev-shm-usage",
-				"--disable-accelerated-2d-canvas",
-				"--no-first-run",
-				"--no-zygote",
-				"--disable-gpu",
-			],
-		});
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+      ],
+    });
 
-		const page = await browser.newPage();
+    const page = await browser.newPage();
 
-		// Generate HTML template with data
-		const htmlTemplate = await generateInvoiceHTML(invoiceData);
+    // Generate HTML template with data
+    const htmlTemplate = await generateInvoiceHTML(invoiceData);
 
-		await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
+    await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
 
-		const pdfBuffer = await page.pdf({
-			format: "A4",
-			printBackground: true,
-			margin: {
-				top: "0.2in",
-				right: "0.2in",
-				bottom: "0.2in",
-				left: "0.2in",
-			},
-			preferCSSPageSize: true,
-		});
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "0.2in",
+        right: "0.2in",
+        bottom: "0.2in",
+        left: "0.2in",
+      },
+      preferCSSPageSize: true,
+    });
 
-		return pdfBuffer;
-	} catch (error) {
-		console.error("PDF generation error:", error);
-		throw error;
-	} finally {
-		if (browser) {
-			await browser.close();
-		}
-	}
+    return pdfBuffer;
+  } catch (error) {
+    console.error("PDF generation error:", error);
+    throw error;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 };
 
 // Function to convert image to base64
 const getImageAsBase64 = async () => {
-	try {
-		// Construct the path to the image
-		// Assuming this file is in /lib/ and image is in app/lib/utils/
-		const imagePath = path.resolve(__dirname, "../utils/apple-touch-icon.png");
+  try {
+    // Construct the path to the image
+    // Assuming this file is in /lib/ and image is in app/lib/utils/
+    const imagePath = path.resolve(__dirname, "../utils/apple-touch-icon.png");
 
-		// Alternative paths to try if the above doesn't work
-		const alternativePaths = [
-			path.resolve(__dirname, "./utils/apple-touch-icon.png"),
-			path.resolve(__dirname, "../app/lib/utils/apple-touch-icon.png"),
-			path.resolve(process.cwd(), "app/lib/utils/apple-touch-icon.png"),
-			path.resolve(process.cwd(), "lib/utils/apple-touch-icon.png"),
-		];
+    // Alternative paths to try if the above doesn't work
+    const alternativePaths = [
+      path.resolve(__dirname, "./utils/apple-touch-icon.png"),
+      path.resolve(__dirname, "../app/lib/utils/apple-touch-icon.png"),
+      path.resolve(process.cwd(), "app/lib/utils/apple-touch-icon.png"),
+      path.resolve(process.cwd(), "lib/utils/apple-touch-icon.png"),
+    ];
 
-		let imageBuffer;
-		let foundPath = null;
+    let imageBuffer;
+    let foundPath = null;
 
-		// Try the main path first
-		try {
-			imageBuffer = await fs.readFile(imagePath);
-			foundPath = imagePath;
-		} catch (error) {
-			// Try alternative paths
-			for (const altPath of alternativePaths) {
-				try {
-					imageBuffer = await fs.readFile(altPath);
-					foundPath = altPath;
-					break;
-				} catch (altError) {
-					continue;
-				}
-			}
-		}
+    // Try the main path first
+    try {
+      imageBuffer = await fs.readFile(imagePath);
+      foundPath = imagePath;
+    } catch (error) {
+      // Try alternative paths
+      for (const altPath of alternativePaths) {
+        try {
+          imageBuffer = await fs.readFile(altPath);
+          foundPath = altPath;
+          break;
+        } catch (altError) {
+          continue;
+        }
+      }
+    }
 
-		if (!imageBuffer) {
-			console.warn("Logo image not found at any of the expected paths:", [
-				imagePath,
-				...alternativePaths,
-			]);
-			return null;
-		}
+    if (!imageBuffer) {
+      console.warn("Logo image not found at any of the expected paths:", [
+        imagePath,
+        ...alternativePaths,
+      ]);
+      return null;
+    }
 
-		console.log("Logo image found at:", foundPath);
+    console.log("Logo image found at:", foundPath);
 
-		// Convert to base64
-		const base64String = imageBuffer.toString("base64");
+    // Convert to base64
+    const base64String = imageBuffer.toString("base64");
 
-		// Determine MIME type based on file extension
-		const ext = path.extname(foundPath).toLowerCase();
-		let mimeType = "image/png"; // default
+    // Determine MIME type based on file extension
+    const ext = path.extname(foundPath).toLowerCase();
+    let mimeType = "image/png"; // default
 
-		switch (ext) {
-			case ".jpg":
-			case ".jpeg":
-				mimeType = "image/jpeg";
-				break;
-			case ".png":
-				mimeType = "image/png";
-				break;
-			case ".svg":
-				mimeType = "image/svg+xml";
-				break;
-			case ".gif":
-				mimeType = "image/gif";
-				break;
-		}
+    switch (ext) {
+      case ".jpg":
+      case ".jpeg":
+        mimeType = "image/jpeg";
+        break;
+      case ".png":
+        mimeType = "image/png";
+        break;
+      case ".svg":
+        mimeType = "image/svg+xml";
+        break;
+      case ".gif":
+        mimeType = "image/gif";
+        break;
+    }
 
-		return `data:${mimeType};base64,${base64String}`;
-	} catch (error) {
-		console.error("Error reading logo image:", error);
-		return null;
-	}
+    return `data:${mimeType};base64,${base64String}`;
+  } catch (error) {
+    console.error("Error reading logo image:", error);
+    return null;
+  }
 };
 
 // HTML Template Generator Function (now async)
 const generateInvoiceHTML = async (data: any) => {
-	const {
-		patientInfo,
-		invoiceDetails,
-		paymentDetails,
-		selectedServices,
-		notes,
-	} = data;
+  const {
+    patientInfo,
+    invoiceDetails,
+    paymentDetails,
+    selectedServices,
+    notes,
+  } = data;
 
-	// Get the logo as base64
-	const logoBase64 = await getImageAsBase64();
+  // Get the logo as base64
+  const logoBase64 = await getImageAsBase64();
 
-	return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -454,10 +453,10 @@ const generateInvoiceHTML = async (data: any) => {
         <div class="header">
           <div class="logo-container">
             ${
-							logoBase64
-								? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo"  style="width:140px; height:auto;"/>`
-								: `<div class="logo-fallback">TC</div>`
-						}
+              logoBase64
+                ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo"  style="width:140px; height:auto;"/>`
+                : `<div class="logo-fallback">TC</div>`
+            }
           </div>
           <div class="company-name">THERA-CURE</div>
           <div class="company-address">
@@ -473,13 +472,13 @@ const generateInvoiceHTML = async (data: any) => {
         <div class="invoice-info">
           <div>
             <div class="invoice-number">Invoice No: ${
-							invoiceDetails.invoiceId
-						}</div>
+              invoiceDetails.invoiceId
+            }</div>
           </div>
           <div class="text-right">
             <div class="invoice-date">Date: ${new Date(
-							invoiceDetails.date
-						).toLocaleDateString("en-IN")}</div>
+              invoiceDetails.date
+            ).toLocaleDateString("en-IN")}</div>
           </div>
         </div>
 
@@ -516,21 +515,21 @@ const generateInvoiceHTML = async (data: any) => {
             <div class="detail-item">
               <span class="detail-label">Payment Date:</span>
               <span class="detail-value">${new Date(
-								paymentDetails.paymentDate
-							).toLocaleDateString("en-IN")}</span>
+                paymentDetails.paymentDate
+              ).toLocaleDateString("en-IN")}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Payment Method:</span>
               <span class="detail-value">${paymentDetails.paymentMethod.toUpperCase()}</span>
             </div>
             ${
-							paymentDetails.offer > 0
-								? `<div class="detail-item">
+              paymentDetails.offer > 0
+                ? `<div class="detail-item">
                   <span class="detail-label">Offer Applied:</span>
                   <span class="detail-value">${paymentDetails.offer}%</span>
                 </div>`
-								: ""
-						}
+                : ""
+            }
           </div>
         </div>
 
@@ -548,26 +547,26 @@ const generateInvoiceHTML = async (data: any) => {
             </thead>
             <tbody>
               ${selectedServices
-								.map(
-									(service: any) => `
+                .map(
+                  (service: any) => `
                 <tr class="table-row">
                   <td>
                     <div class="service-name">${service.name}</div>
                     <div class="service-description">${
-											service.description
-										}</div>
+                      service.description
+                    }</div>
                   </td>
                   <td class="text-center">${service.quantity}</td>
                   <td class="text-center">${service.price.toLocaleString(
-										"en-IN"
-									)}</td>
+                    "en-IN"
+                  )}</td>
                   <td class="text-center">${(
-										service.price * service.quantity
-									).toLocaleString("en-IN")}</td>
+                    service.price * service.quantity
+                  ).toLocaleString("en-IN")}</td>
                 </tr>
               `
-								)
-								.join("")}
+                )
+                .join("")}
             </tbody>
           </table>
         </div>
@@ -578,38 +577,38 @@ const generateInvoiceHTML = async (data: any) => {
             <tr>
               <td class="totals-label">Subtotal:</td>
               <td class="totals-value">₹${paymentDetails.subTotal.toLocaleString(
-								"en-IN"
-							)}</td>
+                "en-IN"
+              )}</td>
             </tr>
             ${
-							paymentDetails.offer > 0
-								? `
+              paymentDetails.offer > 0
+                ? `
             <tr>
               <td class="totals-label">Discount (${paymentDetails.offer}%):</td>
               <td class="totals-value" style="color: #059669;">- ₹${paymentDetails.offerAmount.toLocaleString(
-								"en-IN"
-							)}</td>
+                "en-IN"
+              )}</td>
             </tr>
             `
-								: ""
-						}
+                : ""
+            }
             <tr class="total-final">
               <td class="totals-label">Total Amount:</td>
               <td class="totals-value">₹${paymentDetails.totalAmount.toLocaleString(
-								"en-IN"
-							)}</td>
+                "en-IN"
+              )}</td>
             </tr>
             <tr>
               <td class="totals-label">Amount Paid:</td>
               <td class="totals-value paid-amount">₹${paymentDetails.amountPaid.toLocaleString(
-								"en-IN"
-							)}</td>
+                "en-IN"
+              )}</td>
             </tr>
             <tr>
               <td class="totals-label">Due:</td>
               <td class="totals-value ${
-								paymentDetails.due > 0 ? "due-amount" : "paid-amount"
-							}">
+                paymentDetails.due > 0 ? "due-amount" : "paid-amount"
+              }">
                 ₹${Math.abs(paymentDetails.due).toLocaleString("en-IN")}
               </td>
             </tr>
@@ -617,8 +616,8 @@ const generateInvoiceHTML = async (data: any) => {
         </div>
 
         ${
-					invoiceDetails.notes
-						? `
+          invoiceDetails.notes
+            ? `
         <!-- Notes Section -->
         <div class="notes-section">
           <div class="section-title">NOTES:</div>
@@ -627,8 +626,8 @@ const generateInvoiceHTML = async (data: any) => {
           </div>
         </div>
         `
-						: ""
-				}
+            : ""
+        }
 
         <!-- Footer -->
         <div class="footer">

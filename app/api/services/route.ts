@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
         isActive: validationResult.data.isActive ?? true,
       },
     });
+    console.log("Service created:", service);
 
     return NextResponse.json(
       {
