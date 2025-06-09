@@ -37,18 +37,24 @@ interface Prescription {
   patientId: string;
   patientName: string;
   prescribedBy: string;
-  medicines: string;
-  dosage: string;
-  instructions: string;
   prescriptionDate: string;
   createdAt: string;
   updatedAt: string;
+  therapist: {
+    user: {
+      name: string;
+    };
+  };
+  patient: {
+    id: string;
+    patientName: string;
+  };
 }
 
 interface PaginationInfo {
-  total: number;
-  pages: number;
-  page: number;
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
   limit: number;
 }
 
@@ -66,9 +72,9 @@ export function PrescriptionManagementSection() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<PaginationInfo>({
-    total: 0,
-    pages: 0,
-    page: 1,
+    totalCount: 0,
+    totalPages: 0,
+    currentPage: 1,
     limit: 5,
   });
   const [selectedPrescription, setSelectedPrescription] =
@@ -92,9 +98,23 @@ export function PrescriptionManagementSection() {
       }
 
       const data: ApiResponse = await response.json();
+      console.log("API response data:", data.prescriptions);
 
       if (data.success) {
-        setPrescriptions(data.prescriptions);
+        const transformedPrescriptions: Prescription[] = data.prescriptions.map(
+          (prescription) => ({
+            id: prescription.id,
+            patientId: prescription.patient.id,
+            patientName: prescription.patient.patientName,
+            prescribedBy: prescription.therapist.user.name,
+            prescriptionDate: prescription.createdAt || "Not specified",
+            createdAt: prescription.createdAt,
+            updatedAt: prescription.updatedAt,
+            therapist: prescription.therapist,
+            patient: prescription.patient,
+          })
+        );
+        setPrescriptions(transformedPrescriptions);
         setPagination(data.pagination);
       } else {
         throw new Error("API returned error");
@@ -107,43 +127,8 @@ export function PrescriptionManagementSection() {
         variant: "destructive",
       });
     } finally {
+      console.log("Fetched prescriptions:", prescriptions);
       setLoading(false);
-    }
-  };
-
-  // Add new prescription api call
-  const addPrescription = async (prescriptionData: any) => {
-    try {
-      const response = await fetch("/api/prescriptions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(prescriptionData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to add prescription");
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast({
-          title: "Success",
-          description: "Prescription added successfully.",
-        });
-        fetchPrescriptions(); // Refresh the list
-      } else {
-        throw new Error("API returned error");
-      }
-    } catch (error) {
-      console.error("Error adding prescription:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add prescription. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -363,7 +348,9 @@ export function PrescriptionManagementSection() {
               prescriptions.map((prescription, index) => (
                 <TableRow key={prescription.id} className="hover:bg-gray-50">
                   <TableCell>
-                    {(pagination.page - 1) * pagination.limit + index + 1}
+                    {(pagination.currentPage - 1) * pagination.limit +
+                      index +
+                      1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {prescription.patientName}
@@ -421,17 +408,20 @@ export function PrescriptionManagementSection() {
         {!loading && prescriptions.length > 0 && (
           <div className="flex justify-between items-center p-4 bg-white border-t">
             <span className="text-sm text-gray-700">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total} prescriptions
+              Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
+              {Math.min(
+                pagination.totalPages * pagination.limit,
+                pagination.totalPages
+              )}{" "}
+              of {pagination.totalCount} prescriptions
             </span>
             <div className="flex items-center space-x-2">
               <Button
                 size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.page === 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.currentPage === 1}
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -439,31 +429,34 @@ export function PrescriptionManagementSection() {
 
               {/* Page Numbers */}
               <div className="flex items-center space-x-1">
-                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(
-                  (pg) => (
-                    <Button
-                      key={pg}
-                      size="sm"
-                      variant={pg === pagination.page ? "default" : "outline"}
-                      className={
-                        pg === pagination.page
-                          ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 w-8 h-8 p-0"
-                          : "text-indigo-700 hover:bg-indigo-50 w-8 h-8 p-0"
-                      }
-                      onClick={() => handlePageChange(pg)}
-                    >
-                      {pg}
-                    </Button>
-                  )
-                )}
+                {Array.from(
+                  { length: pagination.totalPages },
+                  (_, i) => i + 1
+                ).map((pg) => (
+                  <Button
+                    key={pg}
+                    size="sm"
+                    variant={
+                      pg === pagination.currentPage ? "default" : "outline"
+                    }
+                    className={
+                      pg === pagination.currentPage
+                        ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 w-8 h-8 p-0"
+                        : "text-indigo-700 hover:bg-indigo-50 w-8 h-8 p-0"
+                    }
+                    onClick={() => handlePageChange(pg)}
+                  >
+                    {pg}
+                  </Button>
+                ))}
               </div>
 
               <Button
                 size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.currentPage === pagination.totalPages}
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />

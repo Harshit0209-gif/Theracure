@@ -74,8 +74,6 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               patientName: true,
-              age: true,
-              gender: true,
             },
           },
           therapist: {
@@ -130,18 +128,9 @@ export async function POST(request: NextRequest) {
     console.log("Creating prescription with data:", body);
 
     // Validate required fields
-    const {
-      sessionId,
-      patientId,
-      therapistId,
-      prescriptionText,
-      exercises,
-      medications,
-      restrictions,
-      followUpDate,
-    } = body;
+    const { patientId, therapistId, assessmentData } = body;
 
-    if (!sessionId || !patientId || !therapistId || !prescriptionText) {
+    if (!patientId || !therapistId) {
       return NextResponse.json(
         {
           success: false,
@@ -156,20 +145,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Validate that related records exist
-    const [session, patient, therapist] = await Promise.all([
-      prisma.therapySession.findUnique({ where: { id: sessionId } }),
-      prisma.patient.findUnique({ where: { id: patientId } }),
-      prisma.therapist.findUnique({ where: { id: therapistId } }),
-    ]);
-
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "Session not found" },
-        { status: 404 }
-      );
-    }
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+    });
 
     if (!patient) {
       return NextResponse.json(
@@ -178,6 +156,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const therapist = await prisma.therapist.findUnique({
+      where: { id: therapistId },
+    });
+    console.log("therapist found:  ", therapist);
     if (!therapist) {
       return NextResponse.json(
         { success: false, error: "Therapist not found" },
@@ -185,32 +167,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate JSON fields if provided
-    if (exercises && typeof exercises !== "object") {
-      return NextResponse.json(
-        { success: false, error: "Exercises must be a valid JSON object" },
-        { status: 400 }
-      );
-    }
-
-    if (medications && typeof medications !== "object") {
-      return NextResponse.json(
-        { success: false, error: "Medications must be a valid JSON object" },
-        { status: 400 }
-      );
-    }
-
-    // Create new prescription
-    const prescription = await prisma.prescription.create({
+    //1. create a session if it doesn't exist
+    const newSession = await prisma.therapySession.create({
       data: {
-        sessionId,
         patientId,
         therapistId,
-        prescriptionText: prescriptionText.trim(),
-        exercises: exercises || null,
-        medications: medications || null,
-        restrictions: restrictions?.trim() || null,
-        followUpDate: followUpDate ? new Date(followUpDate) : null,
+        sessionNotes: assessmentData?.sessionNotes || "",
+        sessionData: JSON.stringify(assessmentData || {}),
+      },
+    });
+    //2. create a prescription if it doesn't exist
+    //check if a prescription already exists for this session
+    const existingPrescription = await prisma.prescription.findFirst({
+      where: {
+        sessionId: newSession.id,
+      },
+    });
+    if (existingPrescription) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Prescription already exists for this session",
+        },
+        { status: 400 }
+      );
+    }
+
+    //create a new prescription
+    const newPrescription = await prisma.prescription.create({
+      data: {
+        sessionId: newSession.id,
+        patientId: patientId,
+        therapistId: therapistId,
+        followUpDate: body.followUpDate ? new Date(body.followUpDate) : null,
       },
       include: {
         patient: {
@@ -219,8 +208,6 @@ export async function POST(request: NextRequest) {
             patientName: true,
             age: true,
             gender: true,
-            height: true,
-            weigth: true,
           },
         },
         therapist: {
@@ -237,16 +224,16 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             sessionDate: true,
-            sessionType: true,
           },
         },
       },
     });
 
+    //3. return the created prescription
     return NextResponse.json(
       {
         success: true,
-        prescription,
+        newPrescription,
         message: "Prescription created successfully",
       },
       { status: 201 }

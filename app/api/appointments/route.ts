@@ -1,11 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { safeValidate, validationErrorResponse } from "@/lib/utils/validation";
-import {
-  conflictCheckSchema,
-  createAppointmentSchema,
-} from "@/lib/validations/appointment";
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { getDay } from "date-fns";
 
 export async function GET(req: NextRequest) {

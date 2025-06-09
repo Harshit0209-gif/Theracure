@@ -45,11 +45,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { AddConsultationDialog } from "@/components/new-consultstation";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Consultation {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   consultationWith: string;
   consultationDate: string;
   consultationTime: string;
@@ -134,6 +136,10 @@ export default function Consultation() {
     useState<Consultation | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const pageSize = 5;
+
+  const { user } = useAuth();
+
+  const isTherapist = user?.role === "therapist";
 
   // Fetch consultations from API
   const loadConsultations = async () => {
@@ -277,6 +283,11 @@ export default function Consultation() {
     }
   };
 
+  const handleAddConsultation = (newConsultation: Consultation) => {
+    setConsultations((prev) => [newConsultation, ...prev]);
+    setPage(1);
+  };
+
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
       year: "numeric",
@@ -330,6 +341,12 @@ export default function Consultation() {
               }}
             />
           </div>
+
+          {!isTherapist && (
+            <div className="ml-4">
+              <AddConsultationDialog onAdd={handleAddConsultation} />
+            </div>
+          )}
         </div>
 
         {/* Consultations Table */}

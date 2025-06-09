@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 // Updated schema for day-wise availability
 const availabilitySchema = z
@@ -62,7 +63,11 @@ const availabilitySchema = z
 type AvailabilityFormData = z.infer<typeof availabilitySchema>;
 
 const therapistSchema = z.object({
-  specialization: z.string().min(1, "Specialization is required"),
+  specialization: z
+    .string()
+    .min(3, "Specialization is required")
+    .or(z.literal("")),
+  qualification: z.string().optional(),
 });
 
 type TherapistFormData = z.infer<typeof therapistSchema>;
@@ -326,7 +331,7 @@ export default function TherapistProfile() {
                     <Input
                       id="name"
                       value={user?.name || ""}
-                      disabled
+                      disabled={!isEditingProfile}
                       className="bg-gray-50"
                     />
                   </div>
@@ -352,6 +357,25 @@ export default function TherapistProfile() {
                   {profileForm.formState.errors.specialization && (
                     <p className="text-sm text-red-500">
                       {profileForm.formState.errors.specialization.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="qualification">
+                    Qualifications & Experience
+                  </Label>
+                  <Textarea
+                    id="qualification"
+                    {...profileForm.register("qualification")}
+                    disabled={!isEditingProfile}
+                    placeholder="e.g., B.P.T [W.B.U.H.S], Physiotherapist of IPGME&R AND SSKM HOSPITAL"
+                    rows={6}
+                    className="resize-none"
+                  />
+                  {profileForm.formState.errors.qualification && (
+                    <p className="text-sm text-red-500">
+                      {profileForm.formState.errors.qualification.message}
                     </p>
                   )}
                 </div>

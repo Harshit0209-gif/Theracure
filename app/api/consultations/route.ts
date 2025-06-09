@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-// Enum for consultation status
-enum ConsultationStatus {
-  NOT_ASSIGN = "NOT_ASSIGN",
-  ASSIGNED = "ASSIGNED",
-  IN_PROGRESS = "IN_PROGRESS",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-}
+import { consulationSchema } from "@/lib/validations/consulation";
+import { ConsultationStatus } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -108,92 +101,65 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    console.log("request body: ", body);
+    const result = consulationSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid request body",
+          details: result.error,
+        },
+        { status: 400 }
+      );
+    }
     const {
       name,
       email,
-      mobileNumber,
+      phone,
       consultationDate,
       consultationTime,
-      message,
-      consultationWith,
-    } = body;
-
-    if (
-      !name ||
-      !email ||
-      !mobileNumber ||
-      !consultationDate ||
-      !consultationTime
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Missing required fields",
-          required: [
-            "name",
-            "email",
-            "mobileNumber",
-            "consultationDate",
-            "consultationTime",
-          ],
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid email format" },
-        { status: 400 }
-      );
-    }
-
-    // Validate mobile number (basic validation)
-    const mobileRegex = /^[0-9]{10}$/;
-    if (!mobileRegex.test(mobileNumber.replace(/\D/g, ""))) {
-      return NextResponse.json(
-        { success: false, error: "Mobile number must be 10 digits" },
-        { status: 400 }
-      );
-    }
+      note,
+      consultationwith,
+    } = result.data;
 
     // Check for duplicate consultation (same person, same date/time)
-    const existingConsultation = await prisma.consultation.findFirst({
+    const existingConsultations = await prisma.consultation.findMany({
       where: {
-        email,
         consultationDate: new Date(consultationDate),
-        consultationTime,
+        consultationTime: consultationTime,
         status: {
-          not: "CANCELLED",
+          notIn: [ConsultationStatus.CANCELLED, ConsultationStatus.COMPLETED],
         },
       },
     });
-
-    if (existingConsultation) {
+    console.log("existing consultation: ", existingConsultations);
+    if (existingConsultations.length > 0) {
       return NextResponse.json(
         {
           success: false,
-          error: "Consultation already exists for this date and time",
+          error: "Another Consultation already exists for this date and time",
         },
         { status: 409 }
       );
     }
 
-    // Create new consultation
     const consultation = await prisma.consultation.create({
       data: {
         name: name.trim(),
-        email: email.toLowerCase().trim(),
-        mobileNumber: mobileNumber.replace(/\D/g, ""), // Remove non-digits
+        email: email?.toLowerCase().trim() || "",
+        mobileNumber: phone.replace(/\D/g, ""),
         consultationDate: new Date(consultationDate),
-        consultationTime,
-        message: message?.trim() || null,
-        consultationWith: consultationWith?.trim() || null,
-        status: "NOT_ASSIGN",
+        consultationTime: consultationTime,
+        note: note?.trim() || "",
+        consultationWith: consultationwith?.trim(),
+        createdBy: body.createdById,
+        status: "ASSIGNED",
       },
     });
+
+    console.log("consultation ", consultation);
 
     return NextResponse.json(
       {

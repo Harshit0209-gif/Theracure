@@ -10,10 +10,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Search, User, Loader2, Printer } from "lucide-react";
+import {
+  Plus,
+  Search,
+  User,
+  Loader2,
+  Printer,
+  FileText,
+  Activity,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import PrintAssessment from "@/components/print-assessment";
+import { useAuth } from "@/contexts/auth-context";
+import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
 
 interface PatientInfo {
   id: string;
@@ -45,35 +55,6 @@ interface AssessmentFormData {
   notes?: string;
 }
 
-const assessmentData = {
-  patient: {
-    patientName: "John Doe",
-    id: "001",
-    age: 35,
-    gender: "Male",
-  },
-  assessmentDate: "2024-01-26",
-  height: 175,
-  weight: 70,
-  chiefComplaints: "Lower back pain radiating to left leg for 2 weeks",
-  historyOfIllness:
-    "Patient reports gradual onset of lower back pain following heavy lifting at work. Pain is worse in the morning and improves with movement.",
-  onObservation:
-    "Patient appears uncomfortable, antalgic gait noted, forward head posture observed",
-  onPalpation:
-    "Tenderness over L4-L5 region, muscle spasm in lumbar paraspinals",
-  onExaminations:
-    "Reduced lumbar flexion (30°), positive straight leg raise test at 45° on left side",
-  differentialDiagnosis:
-    "1. Lumbar disc herniation 2. Lumbar radiculopathy 3. Muscle strain",
-  investigations: "MRI lumbar spine recommended to rule out disc herniation",
-  specialTests:
-    "Straight leg raise test: Positive at 45° (left), Negative (right). Lasegue test: Positive",
-  provisionalDiagnosis: "L4-L5 disc herniation with left sided radiculopathy",
-  physiotherapyMgmt:
-    "1. Pain management with TENS and heat therapy 2. Gentle lumbar mobilization 3. Core strengthening exercises 4. Postural correction 5. Patient education",
-};
-
 export function AddAssessmentDialog({
   onAssessmentAdded,
 }: {
@@ -84,6 +65,7 @@ export function AddAssessmentDialog({
   const [searchingPatient, setSearchingPatient] = useState(false);
   const [patientId, setPatientId] = useState("");
   const [patientInfo, setPatientInfo] = useState<PatientInfo | null>(null);
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState<AssessmentFormData>({
     patientId: "",
@@ -92,7 +74,7 @@ export function AddAssessmentDialog({
 
   // Fetch patient details by ID
   const fetchPatientDetails = async (id: string) => {
-    if (!id.trim()) {
+    if (!id.trim() || id.length < 7) {
       setPatientInfo(null);
       return;
     }
@@ -121,7 +103,7 @@ export function AddAssessmentDialog({
         setFormData((prev) => ({ ...prev, patientId: id }));
         toast({
           title: "Patient Found",
-          description: `Patient: ${data.patient.patientName}`,
+          description: `Patient: ${data.patient.name}`,
         });
       }
     } catch (error) {
@@ -158,7 +140,17 @@ export function AddAssessmentDialog({
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create an assessment",
+        variant: "destructive",
+      });
+      return;
+    }
     e.preventDefault();
+    console.log("Form submitted with data:", formData);
+    console.log("Patient Info:", patientInfo);
 
     if (!patientInfo) {
       toast({
@@ -181,9 +173,10 @@ export function AddAssessmentDialog({
     try {
       setLoading(true);
 
-      const assessmentData = {
-        ...formData,
+      const payloadData = {
+        assessmentData: formData,
         patientId: patientInfo.id,
+        therapistId: user.id,
       };
 
       const response = await fetch("/api/prescriptions", {
@@ -191,7 +184,7 @@ export function AddAssessmentDialog({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(assessmentData),
+        body: JSON.stringify(payloadData),
       });
 
       if (!response.ok) {
@@ -301,14 +294,16 @@ export function AddAssessmentDialog({
                       Patient Found
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+
+                  {/* Basic Info Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
                     <div>
                       <span className="font-medium text-gray-600">Name:</span>
                       <p className="text-gray-900">{patientInfo.name}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">ID:</span>
-                      {patientInfo.id}
+                      <p className="text-gray-900">{patientInfo.id}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">Age:</span>
@@ -321,30 +316,81 @@ export function AddAssessmentDialog({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-600">Height:</span>
-                      <p className="text-gray-900">
-                        {patientInfo.height
-                          ? `${patientInfo.height} cm`
-                          : "Not recorded"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-600">Weight:</span>
-                      <p className="text-gray-900">
-                        {patientInfo.weight
-                          ? `${patientInfo.weight} kg`
-                          : "Not recorded"}
-                      </p>
+
+                  {/* Physical Measurements & BMI */}
+                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                    <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      Physical Measurements
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-600">
+                          Height:
+                        </span>
+                        <p className="text-gray-900">
+                          {patientInfo.height
+                            ? `${patientInfo.height} cm`
+                            : "Not recorded"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-600">
+                          Weight:
+                        </span>
+                        <p className="text-gray-900">
+                          {patientInfo.weight
+                            ? `${patientInfo.weight} kg`
+                            : "Not recorded"}
+                        </p>
+                      </div>
+
+                      {/* BMI Calculation */}
+                      {patientInfo.height && patientInfo.weight && (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-600">
+                            BMI:
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const bmiData = calculateSimpleBMI(
+                                parseInt(patientInfo.weight),
+                                parseInt(patientInfo.height)
+                              );
+                              return (
+                                <>
+                                  <span className="text-gray-900 font-medium">
+                                    {bmiData.bmi}
+                                  </span>
+                                  <span
+                                    className="px-2 py-1 rounded-full text-xs font-medium"
+                                    style={{
+                                      backgroundColor: bmiData.color + "20",
+                                      color: bmiData.color,
+                                      border: `1px solid ${bmiData.color}40`,
+                                    }}
+                                  >
+                                    {bmiData.status}
+                                  </span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Medical History */}
                   {patientInfo.medicalHistory && (
                     <div className="mt-4 pt-3 border-t border-gray-200">
-                      <span className="font-medium text-gray-600">
-                        Medical History:
-                      </span>
-                      <div className="mt-1 p-2 bg-gray-50 rounded-md border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-gray-600" />
+                        <span className="font-medium text-gray-600">
+                          Medical History:
+                        </span>
+                      </div>
+                      <div className="p-3 bg-gray-50 rounded-md border">
                         <p className="text-gray-900 text-sm whitespace-pre-wrap">
                           {patientInfo.medicalHistory}
                         </p>
@@ -545,11 +591,13 @@ export function AddAssessmentDialog({
 
           {/* Form Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <PrintAssessment
-              assessmentData={assessmentData}
-              patientInfo={assessmentData.patient}
-              showPreview={false}
-            />
+            {patientInfo && (
+              <PrintAssessment
+                assessmentData={formData}
+                patientInfo={patientInfo}
+                therapistId={user?.id}
+              />
+            )}
             <Button
               type="button"
               variant="outline"

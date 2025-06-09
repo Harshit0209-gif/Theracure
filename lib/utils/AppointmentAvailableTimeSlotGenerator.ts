@@ -3,7 +3,7 @@ interface AvailablePeriod {
   endTime: string;
   available: boolean;
   reason?: string;
-  duration?: number; // in minutes
+  duration?: number;
 }
 
 interface TherapistSchedule {

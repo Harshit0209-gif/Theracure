@@ -34,10 +34,20 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+const MAX_YEAR = new Date().getFullYear() + 1;
 const appointmentSchema = z.object({
   patientId: z.string().min(1, "Please select a patient"),
   therapistId: z.string().min(1, "Please select a therapist"),
-  appointmentDate: z.string().min(1, "Please select a date"),
+  appointmentDate: z.string().refine(
+    (dateStr) => {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      return year <= MAX_YEAR && !isNaN(date.getTime());
+    },
+    {
+      message: "Please enter a valid date within the next year.",
+    }
+  ),
   startTime: z.string().min(1, "Please select start time"),
   endTime: z.string().min(1, "Please select end time"),
   serviceCategory: z.string().min(1, "Please select a service category"),
@@ -228,9 +238,17 @@ export function ScheduleNewDialog({
   ) => {
     setIsCheckingAvailability(true);
     try {
+      const appointmentDate =
+        appointmentSchema.shape.appointmentDate.safeParse(date);
+      console.log(
+        "Checking availability for therapist:",
+        therapistId,
+        "on date:",
+        date
+      );
       // Fetch therapist's working schedule
       const therapistResponse = await fetch(
-        `/api/therapists/${therapistId}/availability?date=${date}`
+        `/api/therapists/${therapistId}/availability?date=${appointmentDate.data}`
       );
       const therapistData = await therapistResponse.json();
       console.log(
@@ -238,14 +256,14 @@ export function ScheduleNewDialog({
         therapistData
       );
 
-      if (!therapistData.success) {
+      if (!therapistData?.success) {
         throw new Error(
-          therapistData.error ||
+          therapistData?.error ||
             "Failed to fetch therapist schedule and availability"
         );
       }
       const schedule: TherapistAvailability[] =
-        therapistData.therapistSchedule.map((slot: any) => ({
+        therapistData.therapistSchedule?.map((slot: any) => ({
           dayOfWeek: slot.weekDay,
           startTime: slot.startTime,
           endTime: slot.endTime,

@@ -52,6 +52,7 @@ enum ConsultationStatus {
   NOT_ASSIGN
   ASSIGNED
   COMPLETED
+  CANCELLED
 }
 
 enum Gender {
@@ -130,9 +131,9 @@ model Service {
 model Therapist {
   id              String    @id @map("therapist_id")
   specialization  String?
-  availableSlots  Json?     @map("available_slots")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
+  qualification   String?
 
   // Relations
   user            User      @relation(fields: [id], references: [id], onDelete: Cascade)
@@ -183,7 +184,6 @@ model TherapistAssignment {
   therapist             User              @relation("TherapistAssignments", fields: [therapistId], references: [id], onDelete: Restrict, map: "therapist_assignments_user_fkey")
   therapistInfo         Therapist         @relation("TherapistAssignments", fields: [therapistId], references: [id], map: "therapist_assignments_therapist_fkey")
   createdBy             User              @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  therapySessions       TherapySession[]  @relation("AssignmentTherapySessions")
   service               Service?          @relation("ServiceTherapistAssignments", fields: [serviceId], references: [id])
 
   @@map("therapist_assignments")
@@ -198,7 +198,6 @@ model Prescription {
   sessionId         String         @map("session_id")
   patientId         String         @map("patient_id") @db.VarChar(20)
   therapistId       String         @map("therapist_id")
-  prescriptionText  String         @map("prescription_text") @db.Text
   exercises         Json?          @map("exercises")
   medications       Json?          @map("medications")
   restrictions      String?        @map("restrictions") @db.Text
@@ -248,26 +247,21 @@ model Invoice {
 
 model TherapySession {
   id              String    @id @default(uuid()) @map("session_id")
-  assignmentId    String    @map("assignment_id")
   patientId       String    @map("patient_id") @db.VarChar(20)
   therapistId     String    @map("therapist_id")
   sessionNotes    String?   @map("session_notes") @db.Text
-  treatmentPlan   String?   @map("treatment_plan") @db.Text
-  nextSteps       String?   @map("next_steps") @db.Text
-  sessionDate     DateTime  @map("session_date")
-  duration        Int?      @map("duration_minutes")
+  sessionDate     DateTime  @map("session_date") @default(now())
+  sessionData     Json?     @map("session_data")
   completed       Boolean   @default(false)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  assignment      TherapistAssignment @relation("AssignmentTherapySessions", fields: [assignmentId], references: [id], onDelete: Cascade)
   prescriptions   Prescription[]
   patient         Patient            @relation("PatientTherapySessions", fields: [patientId], references: [id])
   therapist       Therapist          @relation("TherapistTherapySessions", fields: [therapistId], references: [id])
 
   @@map("therapy_sessions")
-  @@index([assignmentId])
   @@index([sessionDate])
   @@index([patientId])
   @@index([therapistId])
@@ -277,15 +271,17 @@ model TherapySession {
 model Consultation {
   id              String   @id @default(cuid())
   name            String
-  email           String
+  email           String?
   mobileNumber    String    @map("mobile_number")
-  consultationDate DateTime  @map("appointment_date")
-  consultationTime String    @map("appointment_time")
-  message         String?   @db.Text
+  consultationDate DateTime  @map("consultation_date")
+  consultationTime String    @map("consultation_time")
+  note             String?   @db.Text
   status          ConsultationStatus @default(NOT_ASSIGN)
-  consultationWith String?  @map("consulation_with")
+  consultationWith String  @map("consulation_with")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @map("updated_at")
+  createdBy       String   @map("created_by")
+  
 
 
   @@index([id])
