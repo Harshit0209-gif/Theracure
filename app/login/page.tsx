@@ -1,33 +1,49 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth, type UserRole } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Eye, EyeOff } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth, type UserRole } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Heart,
+  Shield,
+  Stethoscope,
+  User,
+  Users,
+  FileText,
+} from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [role, setRole] = useState<UserRole>("receptionist")
-  const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const { login } = useAuth()
-  const router = useRouter()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("receptionist");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -36,247 +52,260 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password, role }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to login")
+        throw new Error(data.error || "Failed to login");
       }
 
       // Call the login function from auth context
-      await login(email, password, role)
-      
+      await login(email, password, role);
+
       toast({
         title: "Login successful",
         description: "Welcome back!",
-      })
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid credentials. Please try again.")
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Invalid credentials. Please try again."
+      );
       toast({
         title: "Login failed",
-        description: err instanceof Error ? err.message : "Invalid credentials. Please try again.",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Invalid credentials. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const roleOptions = [
+    {
+      value: "receptionist",
+      label: "Receptionist",
+      icon: User,
+      description: "Front desk and patient management",
+    },
+    {
+      value: "content-manager",
+      label: "Content Manager",
+      icon: FileText,
+      description: "Content and resource management",
+    },
+    {
+      value: "admin",
+      label: "Administrator",
+      icon: Shield,
+      description: "Full system administration",
+    },
+    {
+      value: "therapist",
+      label: "Therapist",
+      icon: Stethoscope,
+      description: "Patient treatment and therapy",
+    },
+  ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-indigo-800 to-indigo-900 p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-xl">
-          <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="h-12 w-12 rounded-full bg-indigo-700 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">TC</span>
-              </div>
-            </div>
-            <CardTitle className="text-2xl font-bold">THERA-CURE</CardTitle>
-            <CardDescription>Advanced Physiotherapy Clinic Dashboard</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="demo">Demo Access</TabsTrigger>
-              </TabsList>
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
 
-              <TabsContent value="login">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
+        <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute top-1/4 right-20 w-32 h-32 bg-blue-300/20 rounded-full blur-2xl animate-bounce"></div>
+        <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-purple-300/20 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute bottom-1/3 right-10 w-16 h-16 bg-indigo-300/20 rounded-full blur-lg animate-bounce"></div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="focus:ring-2 focus:ring-indigo-500"
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgIDwvcGF0dGVybj4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIgLz4KPC9zdmc+')] opacity-30"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-3 sm:p-4">
+        <div className="w-full max-w-md">
+          <Card className="backdrop-blur-xl bg-white/95 border-white/20 shadow-2xl">
+            <CardHeader className="text-center pb-4 px-4 pt-6">
+              {/* Company Logo */}
+              <div className="flex justify-center mb-3">
+                <div className="relative">
+                  <div className="flex items-center justify-center w-12 h-12">
+                    <img
+                      src="/fabicon.png"
+                      alt="Thera-Cure Logo"
+                      className="w-18 h-18 object-cover rounded-full"
                     />
                   </div>
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="pr-10 focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-500" />
-                        )}
-                        <span className="sr-only">
-                          {showPassword ? "Hide password" : "Show password"}
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
+              {/* Company Name and Tagline */}
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  THERA-CURE
+                </CardTitle>
+                <CardDescription className="text-sm text-gray-600 font-medium">
+                  Advanced Physiotherapy Clinic
+                </CardDescription>
+              </div>
+            </CardHeader>
 
-                  <div className="space-y-2">
-                    <Label>Select Role</Label>
-                    <RadioGroup
-                      value={role}
-                      onValueChange={(value) => setRole(value as UserRole)}
-                      className="flex flex-col space-y-1"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="receptionist" id="receptionist" />
-                        <Label htmlFor="receptionist" className="cursor-pointer">
-                          Receptionist
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="content-manager" id="content-manager" />
-                        <Label htmlFor="content-manager" className="cursor-pointer">
-                          Content Manager
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="admin" id="admin" />
-                        <Label htmlFor="admin" className="cursor-pointer">
-                          Administrator
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="therapist" id="therapist" />
-                        <Label htmlFor="therapist" className="cursor-pointer">
-                          Therapist
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors" 
-                    disabled={isLoading}
+            <CardContent className="space-y-4 px-4 sm:px-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <Alert
+                    variant="destructive"
+                    className="border-red-200 bg-red-50 py-2"
                   >
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Logging in...
-                      </div>
-                    ) : (
-                      "Login"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-red-800 text-sm">
+                      {error}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-              <TabsContent value="demo">
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-500">
-                    For demonstration purposes, you can access the dashboard with these pre-configured roles:
-                  </p>
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="email"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="h-10 bg-white/50 border-gray-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all duration-200 rounded-lg"
+                  />
+                </div>
 
-                  <div className="space-y-3">
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="password"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-10 pr-10 bg-white/50 border-gray-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all duration-200 rounded-lg"
+                    />
                     <Button
-                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
-                      onClick={async () => {
-                        try {
-                          await login("receptionist@example.com", "password123", "receptionist")
-                        } catch (error) {
-                          toast({
-                            title: "Login failed",
-                            description: error instanceof Error ? error.message : "Invalid credentials",
-                            variant: "destructive",
-                          })
-                        }
-                      }}
-                      disabled={isLoading}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
                     >
-                      Login as Receptionist
-                    </Button>
-
-                    <Button
-                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
-                      onClick={async () => {
-                        try {
-                          await login("content@example.com", "password123", "content-manager")
-                        } catch (error) {
-                          toast({
-                            title: "Login failed",
-                            description: error instanceof Error ? error.message : "Invalid credentials",
-                            variant: "destructive",
-                          })
-                        }
-                      }}
-                      disabled={isLoading}
-                    >
-                      Login as Content Manager
-                    </Button>
-
-                    <Button
-                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
-                      onClick={async () => {
-                        try {
-                          await login("admin@example.com", "password123", "admin")
-                        } catch (error) {
-                          toast({
-                            title: "Login failed",
-                            description: error instanceof Error ? error.message : "Invalid credentials",
-                            variant: "destructive",
-                          })
-                        }
-                      }}
-                      disabled={isLoading}
-                    >
-                      Login as Administrator
-                    </Button>
-
-                    <Button
-                      className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors"
-                      onClick={async () => {
-                        try {
-                          await login("therapist@example.com", "password123", "therapist")
-                        } catch (error) {
-                          toast({
-                            title: "Login failed",
-                            description: error instanceof Error ? error.message : "Invalid credentials",
-                            variant: "destructive",
-                          })
-                        }
-                      }}
-                      disabled={isLoading}
-                    >
-                      Login as Therapist
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+                      )}
                     </Button>
                   </div>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="flex flex-col">
-            <p className="text-xs text-center text-gray-500 mt-4">
-              © 2024 THERA-CURE Advanced Physiotherapy Clinic. All rights reserved.
-            </p>
-          </CardFooter>
-        </Card>
+
+                {/* Role Selection */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Select Your Role
+                  </Label>
+                  <RadioGroup
+                    value={role}
+                    onValueChange={(value) => setRole(value as UserRole)}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    {roleOptions.map((option) => {
+                      const IconComponent = option.icon;
+                      const isSelected = role === option.value;
+                      return (
+                        <div key={option.value} className="relative">
+                          <RadioGroupItem
+                            value={option.value}
+                            id={option.value}
+                            className="sr-only"
+                          />
+                          <Label
+                            htmlFor={option.value}
+                            className={`flex flex-col items-center justify-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 min-h-[70px] ${
+                              isSelected
+                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                : "border-gray-200 bg-white/60 hover:border-indigo-300 hover:bg-white/80"
+                            }`}
+                          >
+                            <IconComponent
+                              className={`w-5 h-5 mb-1 transition-colors ${
+                                isSelected
+                                  ? "text-indigo-600"
+                                  : "text-gray-500 hover:text-indigo-500"
+                              }`}
+                            />
+                            <span className="font-medium text-xs text-center">
+                              {option.label}
+                            </span>
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </RadioGroup>
+                </div>
+
+                {/* Login Button */}
+                <Button
+                  type="submit"
+                  className="w-full h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Signing In...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      <span>Sign In to Dashboard</span>
+                    </div>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+
+            <CardFooter className="flex flex-col space-y-2 pt-3 pb-4 px-4">
+              {/* Security Badge */}
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Shield className="w-3 h-3 text-green-500" />
+                <span>Secured with encryption</span>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center">
+                <p className="text-xs text-gray-400">
+                  © 2025 THERA-CURE • All rights reserved
+                </p>
+              </div>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     </div>
-  )
+  );
 }
