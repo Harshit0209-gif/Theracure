@@ -16,7 +16,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname === "/") {
+    if (pathname === "/" || pathname === "/login") {
       if (!user) {
         router.push("/login");
       } else {
@@ -29,6 +29,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
             break;
           case "admin":
             router.push("/admin");
+            break;
+          case "therapist":
+            router.push("/therapist");
             break;
         }
       }
