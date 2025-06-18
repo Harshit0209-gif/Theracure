@@ -14,7 +14,6 @@ import {
 import {
   Users,
   Calendar,
-  DollarSign,
   UserCheck,
   UserX,
   CheckCircle2,
@@ -24,7 +23,7 @@ import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
-  Loader2,
+  IndianRupee,
 } from "lucide-react";
 import Link from "next/link";
 import { useAdminDashboardData } from "@/hooks/use-admin-dashboard-data";
@@ -59,7 +58,7 @@ interface TodayAppointment {
   patientName: string;
   therapistName: string;
   time: string;
-  status: "confirmed" | "pending" | "in-progress" | "completed" | "cancelled";
+  status: "confirmed" | "completed" | "cancelled" | "in-progress" | "pending";
 }
 
 const formatCurrency = (amount: number): string => {
@@ -364,7 +363,7 @@ export default function AdminDashboard() {
                   )
                 : "Loading..."
             }
-            icon={<DollarSign className="h-6 w-6 text-orange-600" />}
+            icon={<IndianRupee className="h-6 w-6 text-orange-600" />}
             bgColor="bg-orange-100"
             isLoading={isLoading.revenue}
             error={error.revenue}

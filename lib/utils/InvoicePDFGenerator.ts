@@ -103,7 +103,7 @@ const getImageAsBase64 = async () => {
     const base64String = imageBuffer.toString("base64");
 
     // Determine MIME type based on file extension
-    const ext = path.extname(foundPath).toLowerCase();
+    const ext = foundPath ? path.extname(foundPath).toLowerCase() : "";
     let mimeType = "image/png"; // default
 
     switch (ext) {
@@ -138,6 +138,7 @@ const generateInvoiceHTML = async (data: any) => {
     selectedServices,
     notes,
   } = data;
+  console.log("Generating invoice HTML with data:", data);
 
   // Get the logo as base64
   const logoBase64 = await getImageAsBase64();
@@ -454,11 +455,10 @@ const generateInvoiceHTML = async (data: any) => {
           <div class="logo-container">
             ${
               logoBase64
-                ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo"  style="width:140px; height:auto;"/>`
+                ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo"  style="width:160px; height:auto;"/>`
                 : `<div class="logo-fallback">TC</div>`
             }
           </div>
-          <div class="company-name">THERA-CURE</div>
           <div class="company-address">
             361/A, Basudevpur Road, Ground Floor, Nilanjana Apartment<br>
             Shyamnagar, West Bengal, 743127, India
@@ -489,7 +489,7 @@ const generateInvoiceHTML = async (data: any) => {
             <div class="detail-title">BILL TO:</div>
             <div class="detail-item">
               <span class="detail-label">Patient Name:</span>
-              <span class="detail-value">${patientInfo.name}</span>
+              <span class="detail-value">${patientInfo.patientName}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Patient ID:</span>
@@ -585,9 +585,10 @@ const generateInvoiceHTML = async (data: any) => {
                 ? `
             <tr>
               <td class="totals-label">Discount (${paymentDetails.offer}%):</td>
-              <td class="totals-value" style="color: #059669;">- ₹${paymentDetails.offerAmount.toLocaleString(
-                "en-IN"
-              )}</td>
+              <td class="totals-value" style="color: #059669;">- ₹${(
+                (paymentDetails.subTotal * (paymentDetails?.offer ?? 0)) /
+                100
+              ).toLocaleString("en-IN")}</td>
             </tr>
             `
                 : ""
@@ -604,14 +605,24 @@ const generateInvoiceHTML = async (data: any) => {
                 "en-IN"
               )}</td>
             </tr>
-            <tr>
-              <td class="totals-label">Due:</td>
-              <td class="totals-value ${
-                paymentDetails.due > 0 ? "due-amount" : "paid-amount"
-              }">
-                ₹${Math.abs(paymentDetails.due).toLocaleString("en-IN")}
-              </td>
-            </tr>
+            <td class="totals-label">
+              ${
+                paymentDetails.amountPaid >= paymentDetails.totalAmount
+                  ? "Paid"
+                  : "Due"
+              }:
+            </td>
+            <td
+              class="totals-value ${
+                paymentDetails.amountPaid >= paymentDetails.totalAmount
+                  ? "paid-amount"
+                  : "due-amount"
+              }"
+            >
+              ₹${Math.abs(
+                paymentDetails.totalAmount - paymentDetails.amountPaid
+              ).toLocaleString("en-IN")}
+            </td>
           </table>
         </div>
 

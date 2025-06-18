@@ -3,7 +3,6 @@ import {
   Plus,
   CreditCard,
   Clock,
-  DollarSign,
   Download,
   Printer,
   MoreHorizontal,
@@ -21,15 +20,16 @@ import {
   Minus,
   Activity,
   Stethoscope,
-  Users,
   Mail,
   Search,
   XCircle,
   HandMetal,
   Zap,
   Dumbbell,
-  Thermometer,
   Loader2,
+  Eye,
+  Send,
+  IndianRupee,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,26 +72,27 @@ import { Separator } from "@/components/ui/separator";
 import { debounce } from "lodash";
 import { useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { generateInvoiceId } from "@/lib/utils/RandomIDGenerator";
+import {
+  calculateSubtotal,
+  calculateTotal,
+  calculateBalance,
+  calculateDiscount,
+  isPrintable,
+  mapInvoiceToPayload,
+} from "@/lib/utils/invoiceUtils";
 
-interface Service {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  quantity: number;
-}
-interface Invoices {
-  id: string;
-  patientId: string;
-  patientName: string;
-  date: string;
-  totalAmount: number;
-  status: string;
-}
+import { validateInvoice } from "@/lib/validations/invoiceValidator";
+import { saveInvoice, printInvoice } from "@/lib/utils/invoiceApi";
+
+import {
+  Service,
+  Invoice,
+  PatientInfo,
+  PaymentDetails,
+  InvoiceDetails,
+  InvoicePayload,
+} from "@/types/invoice";
 
 export function InvoicesSection() {
   const { toast } = useToast();
@@ -99,38 +100,45 @@ export function InvoicesSection() {
   const [isSearching, setIsSearching] = useState(false);
   const [patientFound, setPatientFound] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
-  const [invoices, setInvoices] = useState<Invoices[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isServicesLoading, setIsServicesLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 5;
   const totalPages = Math.ceil(invoices.length / pageSize);
+  const [selectedInvoiceForDetails, setSelectedInvoiceForDetails] =
+    useState<Invoice>();
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [printPayload, setPrintPayload] = useState<InvoicePayload | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [patientInfo, setPatientInfo] = useState({
-    name: "",
+  const [patientInfo, setPatientInfo] = useState<PatientInfo>({
+    patientName: "",
     id: "",
     phone: "",
     address: "",
     email: "",
-    gender: "",
-    age: "",
   });
 
-  const [invoiceDetails, setInvoiceDetails] = useState({
+  const [invoiceDetails, setInvoiceDetails] = useState<InvoiceDetails>({
     invoiceId: "",
     date: new Date().toISOString().split("T")[0],
-    dueDate: "",
-    doctor: "",
     notes: "",
+    createdBy: "system",
   });
 
-  const [paymentDetails, setPaymentDetails] = useState({
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
+    totalAmount: 0,
     amountPaid: 0,
+    subTotal: 0,
     offer: 0,
+    balance: 0,
+    discount: 0,
     paymentMethod: "cash",
     paymentDate: new Date().toISOString().split("T")[0],
+    status: "",
   });
 
   const fetchServices = useCallback(async () => {
@@ -163,17 +171,14 @@ export function InvoicesSection() {
         if (response.ok && data.success) {
           setPatientFound(true);
           setPatientInfo(data.patient);
-          console.log("patientInfo", data.patient);
         } else {
           setPatientFound(false);
           setPatientInfo((prev) => ({
             ...prev,
-            name: "",
+            patientName: "",
             phone: "",
             address: "",
             email: "",
-            gender: "",
-            age: "",
           }));
         }
       } catch (error) {
@@ -200,12 +205,10 @@ export function InvoicesSection() {
           setPatientFound(false);
           setPatientInfo((prev) => ({
             ...prev,
-            name: "",
+            patientName: "",
             phone: "",
             address: "",
             email: "",
-            gender: "",
-            age: "",
           }));
         }
       }, 500),
@@ -216,17 +219,6 @@ export function InvoicesSection() {
     const value = e.target.value;
     setPatientInfo((prev) => ({ ...prev, id: value }));
     debouncedSearch(value);
-  };
-
-  // Generate invoice ID
-  const generateInvoiceId = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, "0");
-    return `TC${year}${month}${random}`;
   };
 
   const addService = (service: Service) => {
@@ -242,7 +234,7 @@ export function InvoicesSection() {
     }
   };
 
-  const updateServiceQuantity = (serviceId: number, quantity: number) => {
+  const updateServiceQuantity = (serviceId: string, quantity: number) => {
     if (quantity <= 0) {
       removeService(serviceId);
     } else {
@@ -254,19 +246,9 @@ export function InvoicesSection() {
     }
   };
 
-  const removeService = (serviceId: number) => {
+  const removeService = (serviceId: string) => {
     setSelectedServices(selectedServices?.filter((s) => s.id !== serviceId));
   };
-
-  const calculateSubtotal = () =>
-    selectedServices.reduce(
-      (sum, service) => sum + service.price * service.quantity,
-      0
-    );
-  const calculateOffer = () =>
-    Math.round(calculateSubtotal() * paymentDetails.offer * 0.01);
-  const calculateTotal = () => calculateSubtotal() - calculateOffer();
-  const calculateBalance = () => calculateTotal() - paymentDetails.amountPaid;
 
   const openInvoiceDialog = () => {
     setInvoiceDetails({
@@ -280,152 +262,86 @@ export function InvoicesSection() {
     setIsInvoiceDialogOpen(false);
     setSelectedServices([]);
     setPatientInfo({
-      name: "",
+      patientName: "",
       id: "",
       phone: "",
       address: "",
       email: "",
-      gender: "",
-      age: "",
     });
     setInvoiceDetails({
       invoiceId: "",
       date: new Date().toISOString().split("T")[0],
-      dueDate: "",
-      doctor: "",
       notes: "",
+      createdBy: "",
     });
     setPaymentDetails({
+      totalAmount: 0,
       amountPaid: 0,
       offer: 0,
+      subTotal: 0,
+      balance: 0,
+      discount: 0,
       paymentMethod: "cash",
       paymentDate: new Date().toISOString().split("T")[0],
+      status: "",
     });
   };
-  const checkIfInvoiceIsValid = () => {
-    if (!patientInfo.id || selectedServices.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter patient ID and select at least one service.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (selectedServices.length === 0) {
-      toast({
-        title: "No Services Selected",
-        description: "Please select at least one service for the invoice.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (calculateTotal() <= 0) {
-      toast({
-        title: "Invalid Total Amount",
-        description: "Total amount must be greater than zero.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (paymentDetails.amountPaid < 0) {
-      toast({
-        title: "Invalid Amount Paid",
-        description: "Amount paid cannot be negative.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (paymentDetails.offer < 0 || paymentDetails.offer > 100) {
-      toast({
-        title: "Invalid Offer Percentage",
-        description: "Offer percentage must be between 0 and 100.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (new Date(invoiceDetails.date) > new Date()) {
-      toast({
-        title: "Invalid Invoice Date",
-        description: "Invoice date cannot be in the future.",
-        variant: "destructive",
-      });
-      return false;
-    }
 
-    if (calculateBalance() < 0) {
-      toast({
-        title: "Validation Error",
-        description: "Amount paid cannot exceed total amount.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (!user) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to create an invoice.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    return true;
+  const invoicePayload: InvoicePayload = {
+    invoiceDetails,
+    patientInfo,
+    paymentDetails,
+    selectedServices,
+    createdBy: user?.email,
+    type: "invoice",
   };
 
   const handleSaveInvoice = async () => {
-    console.log("Saving invoice...");
-    checkIfInvoiceIsValid();
-    const invoicePayload = {
-      id: invoiceDetails.invoiceId,
-      patientId: patientInfo.id,
-      patientName: patientInfo.name,
-      date: new Date(invoiceDetails.date).toISOString(),
-      totalAmount: calculateTotal(),
-      amountPaid: paymentDetails.amountPaid,
-      paymentMethod: paymentDetails.paymentMethod,
-      notes: invoiceDetails.notes,
-      status: calculateBalance() <= 0 ? "PAID" : "DUE",
-      createdBy: user.id || "unAuthenticated",
+    const isValid = validateInvoice({
+      patientInfo,
+      selectedServices,
+      paymentDetails,
+      invoiceDetails,
+      user,
+      toast,
+    });
+    if (!isValid) return;
+
+    const invoicePayload: InvoicePayload = {
+      invoiceDetails,
+      patientInfo,
+      paymentDetails,
+      selectedServices,
+      createdBy: user?.email,
+      type: "invoice",
     };
-    try {
-      const response = await fetch("/api/invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+
+    const result = await saveInvoice(invoicePayload);
+    if (result.success) {
+      const { invoice, selectedServices } = result.data;
+      setInvoices((prev) => [
+        {
+          ...invoice,
+          invoiceItems: selectedServices.map((i: Service) => ({
+            serviceId: i.id,
+            quantity: i.quantity,
+            priceAtPurchase: i.price,
+            description: i.description,
+            category: i.category,
+          })),
         },
-        body: JSON.stringify(invoicePayload),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        console.error("API Error:", result);
-        toast({
-          title: "Error",
-          description: result.error || "Failed to save invoice.",
-          variant: "destructive",
-        });
-        return;
-      }
-    } catch (error) {
-      console.error("Error saving invoice:", error);
+        ...prev,
+      ]);
+      setPage(1);
+      toast({ title: "Invoice Created", description: "Successfully created." });
+      closeInvoiceDialog();
+    } else {
       toast({
         title: "Error",
-        description: "Failed to save invoice. Please try again.",
+        description: result.error,
         variant: "destructive",
       });
-      return;
     }
-    invoices.push({
-      id: invoicePayload.id,
-      patientName: invoicePayload.patientName,
-      date: invoicePayload.date,
-      totalAmount: invoicePayload.totalAmount,
-      status: invoicePayload.status,
-      patientId: invoicePayload.patientId,
-    });
-    toast({
-      title: "Invoice Created",
-      description: `Invoice ${invoiceDetails.invoiceId} has been created successfully.`,
-    });
-    closeInvoiceDialog();
   };
 
   const fetchInvoices = async () => {
@@ -435,7 +351,6 @@ export function InvoicesSection() {
       if (response.ok && data.success) {
         console.log("Fetched invoices:", data.data);
         setInvoices(data.data);
-        console.log("Invoices:", invoices);
       } else {
         toast({
           title: "Error",
@@ -456,45 +371,48 @@ export function InvoicesSection() {
     fetchInvoices();
   }, []);
 
-  const handlePrintInvoice = async () => {
-    if (!patientInfo.id || selectedServices.length === 0) {
+  useEffect(() => {
+    const newSubTotal = calculateSubtotal(selectedServices);
+    const discount = calculateDiscount(newSubTotal, paymentDetails.offer);
+    const newTotal = calculateTotal(newSubTotal, paymentDetails.offer);
+    const newBalance = calculateBalance(newTotal, paymentDetails.amountPaid);
+
+    setPaymentDetails((prev) => ({
+      ...prev,
+      subTotal: newSubTotal,
+      totalAmount: newTotal,
+      balance: newBalance,
+      discount: discount,
+    }));
+  }, [selectedServices, paymentDetails.offer, paymentDetails.amountPaid]);
+
+  const createPrintPayload = (): InvoicePayload => ({
+    type: "invoice",
+    patientInfo,
+    invoiceDetails,
+    paymentDetails,
+    selectedServices,
+    createdBy: user?.email,
+  });
+
+  const handlePrintInvoice = async (payload?: InvoicePayload) => {
+    const printData = payload || printPayload;
+
+    if (!printData || !isPrintable(printData)) {
       toast({
         title: "Cannot Print",
-        description:
-          "Please enter patient ID and add services before printing.",
+        description: "Patient info or invoice items are missing.",
         variant: "destructive",
       });
       return;
     }
-    try {
-      const response = await fetch("/api/generate-pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type: "invoice",
-          patientInfo,
-          invoiceDetails,
-          paymentDetails: {
-            ...paymentDetails,
-            totalAmount: calculateTotal(),
-            subTotal: calculateSubtotal(),
-            offerAmount: calculateOffer(),
-            due: calculateBalance(),
-          },
-          selectedServices,
-        }),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to generate PDF");
-      }
-      const blob = await response.blob();
+    try {
+      const blob = await printInvoice(printData);
 
       const url = window.URL.createObjectURL(blob);
       window.open(url, "_blank");
+
       setTimeout(() => window.URL.revokeObjectURL(url), 2000);
     } catch (error) {
       console.error("Print error:", error);
@@ -506,6 +424,292 @@ export function InvoicesSection() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleViewDetails = (invoice: Invoice) => {
+    const payload = mapInvoiceToPayload(invoice);
+    setPrintPayload(payload);
+    setIsDetailsModalOpen(true);
+  };
+
+  const InvoiceDetailsModal = () => {
+    if (!printPayload) return;
+    const isValid = isPrintable(printPayload);
+    if (!isValid) {
+      toast({
+        title: "Missing Data",
+        description: "Some invoice data is incomplete.",
+        variant: "destructive",
+      });
+      return;
+    }
+    console.log("Selected Invoice for Details:", printPayload);
+
+    return (
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-indigo-600" />
+              ID- {printPayload.invoiceDetails.invoiceId}
+              <div className="text-right">
+                <Badge
+                  className={
+                    printPayload.paymentDetails.status === "PAID"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }
+                >
+                  {printPayload.paymentDetails.status === "PAID" ? (
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                  ) : (
+                    <Clock className="h-3 w-3 mr-1" />
+                  )}
+                  {printPayload.paymentDetails.status}
+                </Badge>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Patient and Invoice Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-indigo-600" />
+                    Patient Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-500">Patient Name</p>
+                    <p className="font-semibold">
+                      {printPayload.patientInfo.patientName || ""}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Patient ID</p>
+                    <p className="font-semibold">
+                      {printPayload.patientInfo.id}
+                    </p>
+                  </div>
+                  {printPayload.patientInfo.phone && (
+                    <div>
+                      <p className="text-sm text-gray-500">Phone</p>
+                      <p className="font-semibold">
+                        {printPayload.patientInfo.phone}
+                      </p>
+                    </div>
+                  )}
+                  {printPayload.patientInfo.email && (
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-semibold">
+                        {printPayload.patientInfo.email}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-indigo-600" />
+                    Invoice Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-500">Invoice Date</p>
+                    <p className="font-semibold">
+                      {new Date(
+                        printPayload.invoiceDetails.date
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Payment Method</p>
+                    <p className="font-semibold capitalize">
+                      {printPayload.paymentDetails.paymentMethod ||
+                        "Not specified"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Created By</p>
+                    <p className="font-semibold">
+                      {printPayload.invoiceDetails.createdBy || "System"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Services/Items Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-indigo-600" />
+                  Services & Items
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead>Service/Item</TableHead>
+                      <TableHead className="text-center">Quantity</TableHead>
+                      <TableHead className="text-right">Rate (₹)</TableHead>
+                      <TableHead className="text-right">Amount (₹)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {printPayload.selectedServices?.map(
+                      (item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{item.name}</p>
+                              {item.description && (
+                                <p className="text-sm text-gray-500">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            ₹{item.price}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            ₹
+                            {(item.price * item.quantity).toLocaleString(
+                              "en-IN"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    ) || (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center py-4 text-gray-500"
+                        >
+                          No items found for this invoice
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Payment Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <IndianRupee className="h-4 w-4 text-indigo-600" />
+                  Payment Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>
+                      ₹
+                      {printPayload.paymentDetails.subTotal?.toLocaleString(
+                        "en-IN"
+                      ) || "0"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>offer:</span>
+                    <span>
+                      {printPayload.paymentDetails.offer?.toLocaleString(
+                        "en-IN"
+                      ) || "0"}
+                      %
+                    </span>
+                  </div>
+                  {printPayload.paymentDetails.subTotal > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount:</span>
+                      <span>
+                        -₹
+                        {printPayload.paymentDetails.discount.toLocaleString(
+                          "en-IN"
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total Amount:</span>
+                    <span>
+                      ₹
+                      {printPayload.paymentDetails.totalAmount?.toLocaleString(
+                        "en-IN"
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-green-600">
+                    <span>Amount Paid:</span>
+                    <span>
+                      ₹
+                      {printPayload.paymentDetails.amountPaid?.toLocaleString(
+                        "en-IN"
+                      ) || "0"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-red-600 font-semibold">
+                    <span>Balance Due:</span>
+                    <span>
+                      ₹
+                      {printPayload.paymentDetails.balance.toLocaleString(
+                        "en-IN"
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notes */}
+            {printPayload.invoiceDetails.notes && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700">
+                    {printPayload.invoiceDetails.notes}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setIsDetailsModalOpen(false)}
+            >
+              Close
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => handlePrintInvoice()}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   return (
@@ -618,7 +822,7 @@ export function InvoicesSection() {
                                   <div className="relative mt-0.5">
                                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
-                                      value={patientInfo.name}
+                                      value={patientInfo.patientName}
                                       readOnly
                                       className="pl-10 bg-gray-50 h-9 text-sm"
                                     />
@@ -645,19 +849,6 @@ export function InvoicesSection() {
                                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
                                       value={patientInfo.phone}
-                                      readOnly
-                                      className="pl-10 bg-gray-50 h-9 text-sm"
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Gender */}
-                                <div>
-                                  <Label className="text-xs">Gender</Label>
-                                  <div className="relative mt-0.5">
-                                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <Input
-                                      value={patientInfo.gender}
                                       readOnly
                                       className="pl-10 bg-gray-50 h-9 text-sm"
                                     />
@@ -1719,18 +1910,21 @@ export function InvoicesSection() {
                           <div className="space-y-2">
                             <div className="flex justify-between">
                               <span>Subtotal:</span>
-                              <span>₹{calculateSubtotal()}</span>
+                              <span>₹{paymentDetails.subTotal}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span>
-                                Offer applied ({paymentDetails.offer})%:
-                              </span>
-                              <span>₹{calculateOffer()}</span>
-                            </div>
+                            {paymentDetails.offer > 0 && (
+                              <div className="flex justify-between">
+                                <span>
+                                  Offer applied ({paymentDetails.offer} %):
+                                </span>
+                                <span>₹{paymentDetails.discount}</span>
+                              </div>
+                            )}
+
                             <Separator />
                             <div className="flex justify-between text-lg font-bold">
                               <span>Total:</span>
-                              <span>₹{calculateTotal()}</span>
+                              <span>₹{paymentDetails.totalAmount}</span>
                             </div>
                             <div className="flex justify-between text-green-600">
                               <span>Amount Paid:</span>
@@ -1738,7 +1932,7 @@ export function InvoicesSection() {
                             </div>
                             <div className="flex justify-between text-red-600 font-semibold">
                               <span>Balance Due:</span>
-                              <span>₹{calculateBalance()}</span>
+                              <span>₹{paymentDetails.balance}</span>
                             </div>
                           </div>
                         </div>
@@ -1753,7 +1947,7 @@ export function InvoicesSection() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={handlePrintInvoice}
+                    onClick={() => handlePrintInvoice(createPrintPayload())}
                     className="flex items-center gap-2"
                   >
                     <Printer className="h-4 w-4" />
@@ -1773,44 +1967,48 @@ export function InvoicesSection() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4 flex items-center">
-              <div className="bg-teal-50 p-3 rounded-full mr-4">
-                <CreditCard className="h-6 w-6 text-teal-500" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Revenue</p>
-                <h3 className="text-2xl font-bold">₹2,85,000</h3>
-                <p className="text-xs text-green-600">+12% from last month</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center">
-              <div className="bg-green-50 p-3 rounded-full mr-4">
-                <DollarSign className="h-6 w-6 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Paid Invoices</p>
-                <h3 className="text-2xl font-bold">₹2,28,000</h3>
-                <p className="text-xs text-green-600">80% of total</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center">
-              <div className="bg-amber-50 p-3 rounded-full mr-4">
-                <Clock className="h-6 w-6 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Pending Payments</p>
-                <h3 className="text-2xl font-bold">₹57,000</h3>
-                <p className="text-xs text-amber-600">20% of total</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {user?.role == "admin" ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4 flex items-center">
+                <div className="bg-teal-50 p-3 rounded-full mr-4">
+                  <CreditCard className="h-6 w-6 text-teal-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Total Revenue</p>
+                  <h3 className="text-2xl font-bold">₹2,85,000</h3>
+                  <p className="text-xs text-green-600">+12% from last month</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center">
+                <div className="bg-green-50 p-3 rounded-full mr-4">
+                  <IndianRupee className="h-6 w-6 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Paid Invoices</p>
+                  <h3 className="text-2xl font-bold">₹2,28,000</h3>
+                  <p className="text-xs text-green-600">80% of total</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center">
+                <div className="bg-amber-50 p-3 rounded-full mr-4">
+                  <Clock className="h-6 w-6 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Pending Payments</p>
+                  <h3 className="text-2xl font-bold">₹57,000</h3>
+                  <p className="text-xs text-amber-600">20% of total</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          ""
+        )}
 
         {/* Invoices Table */}
         <div className="bg-white rounded-lg overflow-hidden mb-6 shadow-sm">
@@ -1842,20 +2040,26 @@ export function InvoicesSection() {
                     <TableCell className="font-medium">{invoice.id}</TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{invoice.patientName}</p>
+                        <p className="font-medium">
+                          {invoice.patient.patientName}
+                        </p>
                       </div>
                     </TableCell>
-                    <TableCell>{invoice.date}</TableCell>
+                    <TableCell>
+                      {new Date(invoice.date).toLocaleString()}
+                    </TableCell>
                     <TableCell className="font-semibold">
                       {invoice.totalAmount}
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          invoice.status === "Paid" ? "default" : "secondary"
+                        className={
+                          invoice.status === "PAID"
+                            ? "bg-green-100 text-green-700 hover:bg-green-100"
+                            : "bg-red-100 text-red-700 hover:bg-red-100"
                         }
                       >
-                        {invoice.status === "Paid" ? (
+                        {invoice.status === "PAID" ? (
                           <CheckCircle className="h-3 w-3 mr-1" />
                         ) : (
                           <Clock className="h-3 w-3 mr-1" />
@@ -1876,47 +2080,28 @@ export function InvoicesSection() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => {
-                              toast({
-                                title: "Invoice details",
-                                description: `Viewing details for invoice ${invoice.id}`,
-                              });
-                            }}
+                            onClick={() => handleViewDetails(invoice)}
                           >
+                            <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => {
-                              handlePrintInvoice();
-                              toast({
-                                title: "Invoice printed",
-                                description: `Invoice ${invoice.id} sent to printer`,
-                              });
-                            }}
+                            onClick={() => handleViewDetails(invoice)}
                           >
                             <Printer className="h-4 w-4 mr-2" />
                             Print
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              toast({
-                                title: "Invoice downloaded",
-                                description: `Invoice ${invoice.id} downloaded as PDF`,
-                              });
-                            }}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </DropdownMenuItem>
+
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
                               toast({
                                 title: "Payment reminder sent",
-                                description: `Reminder sent to ${invoice.id} for payment`,
+                                description: `Reminder sent to ${invoice.patient.patientName} for payment`,
                               });
                             }}
                           >
+                            <Send className="h-4 w-4 mr-2" />
                             Send Reminder
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -1989,6 +2174,7 @@ export function InvoicesSection() {
           </div>
         </div>
       </div>
+      <InvoiceDetailsModal />
     </>
   );
 }

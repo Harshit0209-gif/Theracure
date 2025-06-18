@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { patientSchema } from "@/lib/validations/patient";
 
 const createInvoiceSchema = z.object({
   id: z.string().optional(),
@@ -63,7 +64,17 @@ export async function GET(request: NextRequest) {
               phone: true,
             },
           },
+          invoiceItems: {
+            select: {
+              invoiceId: true,
+              serviceId: true,
+              serviceName: true,
+              priceAtPurchase: true,
+              quantity: true,
+            },
+          },
         },
+
         orderBy: {
           [sortBy]: sortOrder as "asc" | "desc",
         },
@@ -105,15 +116,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     console.log("Creating invoice with data:", body);
-
-    // Validate request body
-    const validatedData = createInvoiceSchema.parse(body);
-
-    console.log("Validated invoice data:", validatedData);
+    const {
+      patientInfo,
+      invoiceDetails,
+      selectedServices,
+      paymentDetails,
+      createdBy,
+    } = body;
 
     // Check if patient exists
     const patient = await prisma.patient.findUnique({
-      where: { id: validatedData.patientId },
+      where: { id: patientInfo.id },
     });
 
     if (!patient) {
@@ -127,19 +140,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine status based on payment
-    let status = validatedData.status;
-    if (validatedData.amountPaid >= validatedData.totalAmount) {
-      status = "PAID";
-    } else {
-      status = "DUE";
-    }
+    const status = paymentDetails?.balance > 0 ? "DUE" : "PAID";
 
     // Create invoice
     const invoice = await prisma.invoice.create({
       data: {
-        ...validatedData,
+        id: invoiceDetails.invoiceId || undefined, // Use provided ID or let Prisma generate one
+        patientId: patientInfo?.id,
         status,
-        date: new Date(validatedData.date),
+        totalAmount: paymentDetails?.totalAmount,
+        subTotal: paymentDetails?.subTotal || 0,
+        offer: paymentDetails?.offer || 0,
+        amountPaid: paymentDetails?.amountPaid || 0,
+        paymentMethod: paymentDetails?.paymentMethod || "CASH",
+        createdBy: createdBy,
+        notes: invoiceDetails.notes || "",
       },
       include: {
         patient: {
@@ -153,10 +168,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    //insert data for each selected service into invoice_service table
+    if (selectedServices && selectedServices.length > 0) {
+      await prisma.invoiceItem.createMany({
+        data: selectedServices.map((service: any) => ({
+          invoiceId: invoiceDetails.invoiceId,
+          serviceId: service.id,
+          serviceName: service.name,
+          priceAtPurchase: service.price,
+          quantity: service.quantity || 1,
+        })),
+      });
+    }
+
     return NextResponse.json(
       {
         success: true,
-        data: invoice,
+        data: { invoice, selectedServices },
         message: "Invoice created successfully",
       },
       { status: 201 }

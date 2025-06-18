@@ -26,19 +26,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      patient: {
-        id: patient.id,
-        name: patient.patientName,
-        age: patient.age,
-        gender: patient.gender,
-        height: patient.height,
-        weight: patient.weight,
-        phone: patient.phone,
-        email: patient.email,
-        address: patient.address,
-        createdBy: patient.createdById,
-        medicalHistory: patient.medicalHistory,
-      },
+      patient,
     });
   } catch (error) {
     return NextResponse.json(

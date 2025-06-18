@@ -27,7 +27,7 @@ const dashboardLinks = {
   admin: "/admin",
   therapist: "/therapist",
   "content-manager": "/content-manager",
-  receptionist: "/reception",
+  receptionist: "/receptionist",
 };
 
 export function Sidebar({

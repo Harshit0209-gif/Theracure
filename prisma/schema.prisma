@@ -221,23 +221,26 @@ model Prescription {
 }
 
 model Invoice {
-  id              String    @id @default(cuid()) @map("invoice_id")
+  id              String    @id @map("invoice_id")
   patientId       String    @map("patient_id")
-  patientName     String    @map("patient_name")
-  date            DateTime  
+  date            DateTime  @default(now())
+  subTotal        Float     @map("sub_total")  
   totalAmount     Float     @map("total_amount")
   amountPaid      Float    @default(0) @map("amount_paid")
   status          InvoiceStatus @default(DUE) 
   paymentMethod   String?   @map("payment_method")
   notes           String?
+  offer           Float?
+
   
   // Metadata
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  createdBy       String  
+  createdBy       String   
 
   // Relations
   patient         Patient  @relation(fields: [patientId], references: [id])
+  invoiceItems     InvoiceItem[] @relation("InvoiceToItems")
 
 
   @@index([patientId])
@@ -246,6 +249,21 @@ model Invoice {
   @@index([date])
   @@map("invoices")
 }
+
+model InvoiceItem {
+  id String @id @default(uuid())
+  invoiceId     String
+  serviceId     String  
+  serviceName   String   
+  priceAtPurchase Float  
+  quantity      Int
+  createdAt     DateTime @default(now())
+
+  invoice       Invoice  @relation("InvoiceToItems",fields: [invoiceId], references: [id])
+
+  @@map("invoice_items")
+}
+
 
 model TherapySession {
   id              String    @id @default(uuid()) @map("session_id")

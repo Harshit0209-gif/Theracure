@@ -137,7 +137,7 @@ export default function LoginPage() {
                 <div className="relative">
                   <div className="flex items-center justify-center w-12 h-12">
                     <img
-                      src="/fabicon.png"
+                      src="/favicon.png"
                       alt="Thera-Cure Logo"
                       className="w-18 h-18 object-cover rounded-full"
                     />
@@ -297,9 +297,20 @@ export default function LoginPage() {
               </div>
 
               {/* Footer */}
-              <div className="text-center">
+              <div className="text-center space-y-1">
                 <p className="text-xs text-gray-400">
                   © 2025 THERA-CURE • All rights reserved
+                </p>
+                <p className="text-xs text-gray-400">
+                  Powered by{" "}
+                  <a
+                    href="https://golicit.in"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-500 hover:text-indigo-600 transition-colors"
+                  >
+                    <b>Golicit</b>
+                  </a>
                 </p>
               </div>
             </CardFooter>

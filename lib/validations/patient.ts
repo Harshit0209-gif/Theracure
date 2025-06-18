@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const patientSchema = z.object({
+  id: z.string().optional(),
   patientName: z.string().min(3, "Name is required"),
   email: z.string().email("Invalid email address"),
   phone: z
