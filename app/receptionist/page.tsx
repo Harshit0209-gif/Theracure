@@ -1,8 +1,3 @@
-// ====================================================================
-// RECEPTIONIST DASHBOARD COMPONENT
-// ====================================================================
-// File: app/dashboard/receptionist/page.tsx
-
 "use client";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -32,10 +27,8 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { useReceptionistDashboardData } from "@/hooks/use-receptionist-dashboard-data";
+import { getGreeting } from "@/lib/utils/utils";
 
-// ====================================================================
-// TYPES
-// ====================================================================
 interface TodayAppointment {
   id: string;
   patientName: string;
@@ -79,9 +72,6 @@ interface ReceptionistStats {
   totalPatientsToday: number;
 }
 
-// ====================================================================
-// UTILITY FUNCTIONS
-// ====================================================================
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -321,9 +311,6 @@ const AppointmentsTable: React.FC<{
   );
 };
 
-// ====================================================================
-// MAIN COMPONENT
-// ====================================================================
 export default function ReceptionistDashboard() {
   const { user } = useAuth();
   const {
@@ -334,13 +321,6 @@ export default function ReceptionistDashboard() {
     lastUpdated,
     refreshAll,
   } = useReceptionistDashboardData();
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
-  };
 
   return (
     <DashboardLayout>

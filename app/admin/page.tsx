@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAdminDashboardData } from "@/hooks/use-admin-dashboard-data";
+import { useAuth } from "@/contexts/auth-context";
+import { getGreeting } from "@/lib/utils/utils";
 
 interface StatsCardProps {
   title: string;
@@ -292,12 +294,14 @@ export default function AdminDashboard() {
     patientStats,
     therapyStats,
     todayAppointments,
-    revenue,
+    revenueStatus: revenueStats,
     isLoading,
     error,
     lastUpdated,
     refreshAll,
   } = useAdminDashboardData();
+
+  const { user } = useAuth();
 
   return (
     <DashboardLayout>
@@ -306,7 +310,7 @@ export default function AdminDashboard() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              Admin Dashboard
+              {getGreeting()}, {user?.name || "User"}!
             </h1>
             <p className="text-sm text-gray-600">
               Real-time clinic management overview
@@ -354,12 +358,16 @@ export default function AdminDashboard() {
 
           <StatsCard
             title="Monthly Revenue"
-            value={revenue ? formatCurrency(revenue.thisMonth) : "₹0"}
+            value={
+              revenueStats?.revenue
+                ? formatCurrency(revenueStats.revenue.thisMonth)
+                : "₹0"
+            }
             subtitle={
-              revenue
+              revenueStats?.revenue
                 ? formatGrowthPercentage(
-                    revenue.growthPercentage,
-                    revenue.isGrowthPositive
+                    revenueStats.revenue.growthPercentage,
+                    revenueStats.revenue.isGrowthPositive
                   )
                 : "Loading..."
             }
@@ -368,7 +376,6 @@ export default function AdminDashboard() {
             isLoading={isLoading.revenue}
             error={error.revenue}
           />
-
           <StatsCard
             title="Today's Consultations"
             value={therapyStats?.todayConsultations.total || 0}

@@ -84,17 +84,17 @@ model User {
 }
 
 model Patient {
-  id             String   @id @default(dbgenerated("generate_patient_id()")) @db.VarChar(20) @map("patient_id")
+  id              String   @id @db.VarChar(20) @map("patient_id")
   patientName     String    @map("patient_name")
   age             Int
-  height          String?
-  weight          String?
+  height          Float?    
+  weight          Float?
   gender          String
   address         String?
   phone           String?
   email           String?
   referenceDoctor String?   @map("reference_doctor")
-  createdById     String    @map("created_by")
+  createdBy       String    @map("created_by")
   medicalHistory  String?
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")

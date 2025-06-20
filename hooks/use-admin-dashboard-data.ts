@@ -51,11 +51,38 @@ interface TherapyStats {
   };
 }
 
-interface Revenue {
-  thisMonth: number;
-  lastMonth: number;
-  growthPercentage: number;
-  isGrowthPositive: boolean;
+interface RevenueStatus {
+  totalInvoices: number;
+  paidInvoices: number;
+  dueInvoices: number;
+  totalRevenue: number;
+  totalPaid: number;
+  totalDue: number;
+
+  revenue: {
+    thisMonth: number;
+    lastMonth: number;
+    growthPercentage: number;
+    isGrowthPositive: boolean;
+  };
+  paidRevenue: {
+    thisMonth: number;
+    lastMonth: number;
+    growthPercentage: number;
+    isGrowthPositive: boolean;
+  };
+  dueAmount: {
+    thisMonth: number;
+    lastMonth: number;
+    growthPercentage: number;
+    isGrowthPositive: boolean;
+  };
+  period: {
+    start: string;
+    end: string;
+    previousStart: string;
+    previousEnd: string;
+  };
 }
 
 interface TodayAppointment {
@@ -112,19 +139,23 @@ export const useAdminDashboardData = () => {
     isLoading: appointmentsLoading,
     mutate: mutateAppointments,
   } = useSWR<TodayAppointment[]>("/api/appointments/today", fetcher, {
-    refreshInterval: 15000, // 15 seconds
+    refreshInterval: 15000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     onSuccess: () => setLastUpdated(new Date()),
   });
 
-  // Mock revenue data (replace with real API)
-  const revenue: Revenue = {
-    thisMonth: 245000,
-    lastMonth: 226850,
-    growthPercentage: 8.0,
-    isGrowthPositive: true,
-  };
+  const {
+    data: revenueStatus,
+    error: revenueError,
+    isLoading: revenueLoading,
+    mutate: mutateRevenue,
+  } = useSWR<RevenueStatus>("/api/invoices/stats", fetcher, {
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    onSuccess: () => setLastUpdated(new Date()),
+  });
 
   // Manual refresh function
   const refreshAll = useCallback(async () => {
@@ -132,9 +163,10 @@ export const useAdminDashboardData = () => {
       mutatePatients(),
       mutateTherapy(),
       mutateAppointments(),
+      mutateRevenue(),
     ]);
     setLastUpdated(new Date());
-  }, [mutatePatients, mutateTherapy, mutateAppointments]);
+  }, [mutatePatients, mutateTherapy, mutateAppointments, mutateRevenue]);
 
   // Set initial last updated time
   useEffect(() => {
@@ -148,14 +180,14 @@ export const useAdminDashboardData = () => {
     patientStats,
     therapyStats,
     todayAppointments,
-    revenue,
+    revenueStatus,
 
     // Loading states
     isLoading: {
       patients: patientLoading,
       therapy: therapyLoading,
       appointments: appointmentsLoading,
-      revenue: false, // Mock data, so never loading
+      revenue: revenueLoading,
       refreshing: patientLoading || therapyLoading || appointmentsLoading,
     },
 
@@ -164,7 +196,7 @@ export const useAdminDashboardData = () => {
       patients: !!patientError,
       therapy: !!therapyError,
       appointments: !!appointmentsError,
-      revenue: false, // Mock data, so never error
+      revenue: !!revenueError,
     },
 
     // Meta
