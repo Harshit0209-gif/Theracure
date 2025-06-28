@@ -9,13 +9,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  devIndicators: {
-    buildActivity: false
-  },
-  // Disable Next.js Dev Tools
-  experimental: {
-    devOverlay: false,
-  }
-}
+};
 
-export default nextConfig
+export default nextConfig;
