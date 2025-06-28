@@ -289,28 +289,54 @@ export default function LoginPage() {
               </form>
             </CardContent>
 
-            <CardFooter className="flex flex-col space-y-2 pt-3 pb-4 px-4">
+            <CardFooter className="flex flex-col space-y-3 pt-3 pb-4 px-4">
               {/* Security Badge */}
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <Shield className="w-3 h-3 text-green-500" />
                 <span>Secured with encryption</span>
               </div>
 
-              {/* Footer */}
-              <div className="text-center space-y-1">
-                <p className="text-xs text-gray-400">
-                  © 2025 THERA-CURE • All rights reserved
-                </p>
-                <p className="text-xs text-gray-400">
-                  Powered by{" "}
+              {/* Powered by Section with Logo */}
+              <div className="flex flex-col items-center space-y-2 pt-2 border-t border-gray-200">
+                {/* Alternative Design Option - Horizontal Layout */}
+                <div className="flex items-center space-x-2">
                   <a
                     href="https://golicit.in"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-indigo-500 hover:text-indigo-600 transition-colors"
+                    className="group flex items-center space-x-3 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:border-indigo-300 transition-all duration-200 hover:shadow-md"
                   >
-                    <b>Golicit</b>
+                    <img
+                      src="company_logo.png"
+                      alt="Golicit Logo"
+                      className="w-5 h-5 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                        (
+                          (e.target as HTMLImageElement)
+                            .nextElementSibling as HTMLElement
+                        ).style.display = "inline";
+                      }}
+                    />
+                    <div className="hidden w-5 h-5 bg-indigo-600 rounded text-white text-xs flex items-center justify-center font-bold">
+                      G
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-gray-600 group-hover:text-indigo-600">
+                        Powered by
+                      </span>
+                      <span className="text-xs font-bold text-indigo-600 group-hover:text-indigo-700">
+                        Golicit
+                      </span>
+                    </div>
                   </a>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center">
+                <p className="text-xs text-gray-400">
+                  © 2025 THERA-CURE • All rights reserved
                 </p>
               </div>
             </CardFooter>

@@ -119,24 +119,6 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // 11. PATIENTS WITH INCOMPLETE PROFILES
-    const incompleteProfiles = await prisma.patient.count({
-      where: {
-        OR: [
-          { phone: { equals: null } },
-          { phone: { equals: "" } },
-          { email: { equals: null } },
-          { email: { equals: "" } },
-          { address: { equals: null } },
-          { address: { equals: "" } },
-          { height: { equals: null } },
-          { height: { equals: "" } },
-          { weight: { equals: null } },
-          { weight: { equals: "" } },
-        ],
-      },
-    });
-
     // 12. PATIENTS WITH INVOICES (Revenue generating patients)
     const patientsWithInvoices = await prisma.patient.count({
       where: {
@@ -199,11 +181,7 @@ export async function GET(req: NextRequest) {
         ageGroups,
 
         profileCompleteness: {
-          complete: totalPatients - incompleteProfiles,
-          incomplete: incompleteProfiles,
-          completionRate: Math.round(
-            ((totalPatients - incompleteProfiles) / totalPatients) * 100
-          ),
+          complete: totalPatients,
         },
 
         revenuePatients: {
