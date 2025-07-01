@@ -39,6 +39,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { AddPatientDialog } from "./add-patient-dialog";
 import { toast } from "@/hooks/use-toast";
+import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
 
 interface Patient {
   id: string;
@@ -80,7 +81,7 @@ export function PatientManagementSection() {
     total: 0,
     pages: 0,
     page: 1,
-    limit: 5,
+    limit: 20,
   });
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -165,7 +166,7 @@ export function PatientManagementSection() {
   }: {
     icon: React.ComponentType<any>;
     label: string;
-    value: string | number | undefined;
+    value: React.ReactNode;
     className?: string;
   }) => (
     <div
@@ -195,6 +196,10 @@ export function PatientManagementSection() {
     //   }
     // };
     console.log("deatils view..", patient);
+    const bmiResult = calculateSimpleBMI(
+      patient.weight || 0,
+      patient.height || 0
+    );
 
     return (
       <Card className="w-full max-w-4xl mx-auto">
@@ -234,7 +239,14 @@ export function PatientManagementSection() {
               <InfoCard
                 icon={User}
                 label="Full Name"
-                value={patient.patientName}
+                value={
+                  <span
+                    className="break-words whitespace-pre-wrap"
+                    title={patient.patientName}
+                  >
+                    {patient.patientName}
+                  </span>
+                }
               />
               <InfoCard
                 icon={Calendar}
@@ -291,6 +303,14 @@ export function PatientManagementSection() {
                 label="Weight"
                 value={patient.weight ? `${patient.weight} kg` : "0.0"}
                 className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200"
+              />
+              <InfoCard
+                icon={Heart}
+                label="BMI"
+                value={
+                  bmiResult ? `${bmiResult.bmi} (${bmiResult.status})` : "0.0"
+                }
+                className="bg-gradient-to-br from-orange-50 to-yellow-50 border-yellow-200"
               />
             </div>
           </div>

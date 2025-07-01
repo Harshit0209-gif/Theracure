@@ -8,6 +8,10 @@ export function calculateSimpleBMI(
   weight: number,
   height: number
 ): SimpleBMIResult {
+  // Check for invalid zero height
+  if (height === 0 || weight === 0) {
+    return null as any;
+  }
   // Convert height from cm to meters
   const heightInMeters = height / 100;
 
