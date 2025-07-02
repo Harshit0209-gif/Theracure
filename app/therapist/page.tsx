@@ -309,7 +309,7 @@ export default function TherapistDashboard() {
               <Badge variant="outline" className="text-blue-600">
                 {assignedPatients?.length || 0} patients
               </Badge>
-              <Link href="/patients">
+              <Link href="/appointments" className="ml-auto">
                 <Button variant="ghost" size="sm">
                   View All
                 </Button>

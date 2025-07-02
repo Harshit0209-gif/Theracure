@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     // Query parameters for filtering and pagination
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
-    const search = searchParams.get("search"); // Search by patient name, ID, or therapist
+    const search = searchParams.get("search");
     const patientId = searchParams.get("patientId");
     const therapistId = searchParams.get("therapistId");
     const sessionId = searchParams.get("sessionId");

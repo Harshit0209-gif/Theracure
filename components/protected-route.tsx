@@ -66,7 +66,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         "/services",
         "/prescriptions",
       ],
-      therapist: ["/therapist", "/patients", "/prescriptions"],
+      therapist: ["/therapist", "/patients", "/prescriptions", "/appointments"],
     };
 
     if (user?.role) {

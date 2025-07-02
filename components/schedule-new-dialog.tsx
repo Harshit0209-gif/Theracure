@@ -682,9 +682,6 @@ export function ScheduleNewDialog({
                                 {formatTime(period.endTime)}
                               </span>
                             </div>
-                            {!period.available && period.reason && (
-                              <span className="text-xs">{period.reason}</span>
-                            )}
                           </div>
                         ))}
                       </div>

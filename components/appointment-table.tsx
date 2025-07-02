@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Service {
   id: string;
@@ -131,6 +132,10 @@ export function AppointmentTable({
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const { user } = useAuth();
+  const isTherapist = user?.role === "therapist";
+  const hasFullControl =
+    user?.role === "admin" || user?.role === "receptionist";
 
   // Form states
   const [editData, setEditData] = useState<EditAppointmentData>({
@@ -568,43 +573,77 @@ export function AppointmentTable({
                         <DropdownMenuContent align="end">
                           {appointment.status !== "cancelled" && (
                             <>
-                              <DropdownMenuItem
-                                onClick={() => openEditDialog(appointment)}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Appointment
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  openRescheduleDialog(appointment)
-                                }
-                              >
-                                <Calendar className="mr-2 h-4 w-4" />
-                                Reschedule
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {appointment.status === "confirmed" && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleStatusUpdate(
-                                      appointment.id,
-                                      "completed"
-                                    )
-                                  }
-                                >
-                                  <Clock className="mr-2 h-4 w-4" />
-                                  Mark as Completed
-                                </DropdownMenuItem>
+                              {hasFullControl && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => openEditDialog(appointment)}
+                                  >
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Appointment
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      openRescheduleDialog(appointment)
+                                    }
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Reschedule
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {appointment.status === "confirmed" && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        handleStatusUpdate(
+                                          appointment.id,
+                                          "completed"
+                                        )
+                                      }
+                                    >
+                                      <Clock className="mr-2 h-4 w-4" />
+                                      Mark as Completed
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() =>
+                                      openCancelDialog(appointment)
+                                    }
+                                  >
+                                    <X className="mr-2 h-4 w-4" />
+                                    Cancel Appointment
+                                  </DropdownMenuItem>
+                                </>
                               )}
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => openCancelDialog(appointment)}
-                              >
-                                <X className="mr-2 h-4 w-4" />
-                                Cancel Appointment
-                              </DropdownMenuItem>
+
+                              {isTherapist && (
+                                <>
+                                  {appointment.status === "confirmed" && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        handleStatusUpdate(
+                                          appointment.id,
+                                          "completed"
+                                        )
+                                      }
+                                    >
+                                      <Clock className="mr-2 h-4 w-4" />
+                                      Mark as Completed
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() =>
+                                      openCancelDialog(appointment)
+                                    }
+                                  >
+                                    <X className="mr-2 h-4 w-4" />
+                                    Cancel Appointment
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </>
                           )}
+
                           {appointment.status === "cancelled" && (
                             <DropdownMenuItem disabled>
                               <X className="mr-2 h-4 w-4" />

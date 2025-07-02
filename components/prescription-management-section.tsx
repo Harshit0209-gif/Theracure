@@ -89,6 +89,7 @@ export function PrescriptionManagementSection() {
         page: page.toString(),
         limit: pagination.limit.toString(),
         ...(search && { search }),
+        ...(user?.role === "therapist" && { therapistId: user.id }),
       });
 
       const response = await fetch(`/api/prescriptions?${params}`);
@@ -217,47 +218,6 @@ export function PrescriptionManagementSection() {
               Prescribed By
             </label>
             <p className="text-gray-900">{prescription.prescribedBy}</p>
-          </div>
-        </div>
-
-        {/* Prescription Details */}
-        <div className="border-t pt-4">
-          <h4 className="font-medium text-gray-900 mb-3">
-            Prescription Information
-          </h4>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">
-                Medicines
-              </label>
-              <div className="mt-1 p-3 bg-gray-50 rounded-lg">
-                <p className="text-gray-900 whitespace-pre-wrap">
-                  {prescription.medicines}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-600">
-                Dosage
-              </label>
-              <div className="mt-1 p-3 bg-gray-50 rounded-lg">
-                <p className="text-gray-900 whitespace-pre-wrap">
-                  {prescription.dosage}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-600">
-                Instructions
-              </label>
-              <div className="mt-1 p-3 bg-gray-50 rounded-lg">
-                <p className="text-gray-900 whitespace-pre-wrap">
-                  {prescription.instructions}
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 

@@ -7,16 +7,8 @@ import { toast } from "@/components/ui/use-toast";
 import { AppointmentHeader } from "@/components/appointment-header";
 import { AppointmentTable } from "@/components/appointment-table";
 import { ScheduleNewDialog } from "@/components/schedule-new-dialog";
-import { ManageAppointmentsDialog } from "@/components/manage-appointments-dialog";
 import { CalendarViewDialog } from "@/components/calendar-view-dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useAuth } from "@/contexts/auth-context";
 export interface Appointment {
   id: string;
   therapistId: string;
@@ -74,6 +66,7 @@ const AppointmentPage = () => {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
+  const { user } = useAuth();
 
   // Fetch appointments from API
   const fetchAppointments = async (page: number = 1, search: string = "") => {
@@ -83,6 +76,7 @@ const AppointmentPage = () => {
         page: page.toString(),
         limit: pagination.limit.toString(),
         ...(search && { search }),
+        ...(user?.role === "therapist" && { therapistId: user.id }),
       });
 
       const response = await fetch(`/api/appointments?${params}`);
@@ -165,6 +159,7 @@ const AppointmentPage = () => {
         <CalendarViewDialog
           open={calendarDialogOpen}
           onOpenChange={setCalendarDialogOpen}
+          appointments={appointments}
         />
       </div>
     </DashboardLayout>

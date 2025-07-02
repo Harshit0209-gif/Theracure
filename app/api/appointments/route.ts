@@ -7,25 +7,30 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const search = url.searchParams.get("search") || "";
     const page = parseInt(url.searchParams.get("page") || "1");
-    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const limit = parseInt(url.searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
+    const therapistId = url.searchParams.get("therapistId");
 
-    const where = search
-      ? {
-          OR: [
-            {
-              patient: {
-                patientName: { contains: search, mode: "insensitive" as const },
-              },
-            },
-            {
-              patient: {
-                id: { contains: search, mode: "insensitive" as const },
-              },
-            },
-          ],
-        }
-      : {};
+    const where: any = {};
+
+    if (therapistId) {
+      where.therapistId = therapistId;
+    }
+
+    if (search) {
+      where.OR = [
+        {
+          patient: {
+            patientName: { contains: search, mode: "insensitive" as const },
+          },
+        },
+        {
+          patient: {
+            id: { contains: search, mode: "insensitive" as const },
+          },
+        },
+      ];
+    }
 
     const [appointments, total] = await Promise.all([
       prisma.therapistAssignment.findMany({
