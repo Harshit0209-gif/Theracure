@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    console.log("paramm--", id);
+
     const patient = await prisma.patient.findUnique({
       where: { id },
     });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
@@ -42,6 +42,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
+import { z } from "zod";
+import { passwordSchema } from "@/lib/validations/user";
 
 export interface User {
   id: string;
@@ -76,7 +78,6 @@ export function EmployeeTable({
   onPageChange,
   onUserUpdated,
 }: EmployeeTableProps) {
-  // State for different modals/dialogs
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
@@ -84,6 +85,7 @@ export function EmployeeTable({
   const [isLoading, setIsLoading] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -193,6 +195,15 @@ export function EmployeeTable({
   // Handle password reset submission
   const handleSubmitPasswordReset = async () => {
     if (!selectedUser || !newPassword) return;
+
+    const result = passwordSchema.safeParse(newPassword);
+
+    if (!result.success) {
+      setError(result.error.errors[0].message);
+      return;
+    }
+
+    setError("");
 
     try {
       setIsLoading(true);
@@ -484,6 +495,7 @@ export function EmployeeTable({
 
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
+
                 <div className="relative">
                   <Input
                     id="newPassword"
@@ -511,6 +523,7 @@ export function EmployeeTable({
                   </Button>
                 </div>
               </div>
+              {error && <p style={{ color: "red" }}>{error}</p>}
 
               <div className="flex space-x-2 pt-4">
                 <Button
@@ -557,7 +570,38 @@ interface EmployeeProfileCardProps {
   user: User;
 }
 
+interface TherapistStats {
+  assignedPatients: number;
+  todayAppointments: number;
+  completedSessions: number;
+}
+
 function EmployeeProfileCard({ user }: EmployeeProfileCardProps) {
+  const [stats, setStats] = useState<TherapistStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (user.role !== "therapist") return;
+
+      try {
+        setLoadingStats(true);
+        const res = await fetch(`/api/therapist/${user.id}/stats`);
+        if (!res.ok) {
+          throw new Error("Failed to fetch therapist stats");
+        }
+        const data = await res.json();
+        setStats(data);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [user.id, user.role]);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -727,144 +771,26 @@ function EmployeeProfileCard({ user }: EmployeeProfileCardProps) {
             </h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">12</p>
-                <p className="text-sm text-blue-600">Active Patients</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {loadingStats ? "..." : stats?.assignedPatients ?? 0}
+                </p>
+                <p className="text-sm text-blue-600">Assign Patients</p>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">8</p>
-                <p className="text-sm text-green-600">Today's Sessions</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {loadingStats ? "..." : stats?.todayAppointments ?? 0}
+                </p>
+                <p className="text-sm text-green-600">Today's Appointment</p>
               </div>
               <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-2xl font-bold text-amber-600">95%</p>
-                <p className="text-sm text-amber-600">Success Rate</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {loadingStats ? "..." : stats?.completedSessions ?? 0}
+                </p>
+                <p className="text-sm text-amber-600">Completed Session</p>
               </div>
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ====================================================================
-// COMPONENT: Employee Schedule Card
-// ====================================================================
-
-function EmployeeScheduleCard({ user }: EmployeeProfileCardProps) {
-  // Mock schedule data - replace with real API call
-  const scheduleData = [
-    {
-      time: "09:00 AM",
-      patient: "John Doe",
-      type: "Physical Therapy",
-      status: "confirmed",
-    },
-    {
-      time: "10:00 AM",
-      patient: "Jane Smith",
-      type: "Consultation",
-      status: "completed",
-    },
-    { time: "11:00 AM", patient: "Break", type: "Break Time", status: "break" },
-    {
-      time: "11:30 AM",
-      patient: "Bob Johnson",
-      type: "Follow-up",
-      status: "confirmed",
-    },
-    {
-      time: "02:00 PM",
-      patient: "Alice Wilson",
-      type: "Initial Assessment",
-      status: "pending",
-    },
-    {
-      time: "03:00 PM",
-      patient: "Charlie Brown",
-      type: "Physical Therapy",
-      status: "confirmed",
-    },
-    {
-      time: "04:00 PM",
-      patient: "Available",
-      type: "Open Slot",
-      status: "available",
-    },
-  ];
-
-  const getStatusBadge = (status: string) => {
-    const statusStyles = {
-      confirmed: "bg-blue-100 text-blue-800",
-      completed: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      available: "bg-gray-100 text-gray-800",
-      break: "bg-purple-100 text-purple-800",
-    };
-
-    return (
-      <Badge className={statusStyles[status as keyof typeof statusStyles]}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3">
-          <Calendar className="h-6 w-6 text-indigo-600" />
-          <div>
-            <h2 className="text-xl font-bold">Schedule for {user.name}</h2>
-            <p className="text-sm text-gray-500">
-              Today's appointments and availability
-            </p>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {scheduleData.map((appointment, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="text-center">
-                  <p className="font-medium text-indigo-600">
-                    {appointment.time}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium">{appointment.patient}</p>
-                  <p className="text-sm text-gray-500">{appointment.type}</p>
-                </div>
-              </div>
-              <div>{getStatusBadge(appointment.status)}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
-          <h4 className="font-medium text-indigo-900 mb-2">Schedule Summary</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-indigo-600 font-medium">Total Appointments</p>
-              <p className="text-2xl font-bold text-indigo-900">6</p>
-            </div>
-            <div>
-              <p className="text-green-600 font-medium">Completed</p>
-              <p className="text-2xl font-bold text-green-900">1</p>
-            </div>
-            <div>
-              <p className="text-blue-600 font-medium">Upcoming</p>
-              <p className="text-2xl font-bold text-blue-900">4</p>
-            </div>
-            <div>
-              <p className="text-gray-600 font-medium">Available Slots</p>
-              <p className="text-2xl font-bold text-gray-900">1</p>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

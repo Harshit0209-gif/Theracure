@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { createUserSchema, updateUserSchema, deleteUserSchema } from "@/lib/validations/user";
+import { createUserSchema, deleteUserSchema } from "@/lib/validations/user";
 
 // GET all users
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url)
-    const search = url.searchParams.get("search") || ""
-    const page = parseInt(url.searchParams.get("page") || "1")
-    const limit = parseInt(url.searchParams.get("limit") || "10")
-    const role = url.searchParams.get("role") || "" // Filter by role if needed
-    const skip = (page - 1) * limit
- 
+    const url = new URL(req.url);
+    const search = url.searchParams.get("search") || "";
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const role = url.searchParams.get("role") || ""; // Filter by role if needed
+    const skip = (page - 1) * limit;
+
     const where = {
       ...(search && {
         OR: [
@@ -21,9 +21,9 @@ export async function GET(req: Request) {
           { phone: { contains: search, mode: "insensitive" as const } },
         ],
       }),
-      ...(role && { role: role as any }), 
-    }
- 
+      ...(role && { role: role as any }),
+    };
+
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -39,12 +39,11 @@ export async function GET(req: Request) {
           status: true,
           createdAt: true,
           updatedAt: true,
-         
         },
       }),
       prisma.user.count({ where }),
-    ])
- 
+    ]);
+
     return NextResponse.json({
       success: true,
       users,
@@ -54,15 +53,15 @@ export async function GET(req: Request) {
         page,
         limit,
       },
-    })
+    });
   } catch (error) {
-    console.error("Error fetching users:", error)
+    console.error("Error fetching users:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch users" },
       { status: 500 }
-    )
+    );
   }
- }
+}
 
 // POST create new user
 export async function POST(req: Request) {
@@ -123,62 +122,6 @@ export async function POST(req: Request) {
   }
 }
 
-// PUT update user
-export async function PUT(req: Request) {
-  try {
-    const body = await req.json();
-
-    // Validate input
-    const result = updateUserSchema.safeParse(body);
-    if (!result.success) {
-      return NextResponse.json(
-        { error: "Invalid input", details: result.error.format() },
-        { status: 400 }
-      );
-    }
-
-    const { id, ...updateData } = result.data;
-
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
-
-    if (!existingUser) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // Hash password if provided
-    if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, 10);
-    }
-
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        updatedAt: true,
-      },
-    });
-
-    return NextResponse.json(updatedUser);
-  } catch (error) {
-    console.error("Error updating user:", error);
-    return NextResponse.json(
-      { error: "Failed to update user" },
-      { status: 500 }
-    );
-  }
-}
-
 // DELETE user
 export async function DELETE(req: Request) {
   try {
@@ -201,10 +144,7 @@ export async function DELETE(req: Request) {
     });
 
     if (!existingUser) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Delete user
@@ -224,4 +164,3 @@ export async function DELETE(req: Request) {
     );
   }
 }
-

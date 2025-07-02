@@ -96,7 +96,7 @@ export function Sidebar({
       title: "Analytics",
       icon: <TrendingUp className="h-6 w-6" />,
       href: "/analytics",
-      roles: ["admin"],
+      roles: [""],
     },
     {
       title: "Profile",
