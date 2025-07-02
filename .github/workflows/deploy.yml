@@ -18,7 +18,7 @@ jobs:
         with:
           host: 157.20.214.173
           username: root
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.UTHO_INSTANCE_PRIVAT_KEY }}
           script: |
             cd /var/www/html/Theracure-Dashboard
             git pull origin main
