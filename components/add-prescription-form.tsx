@@ -27,7 +27,7 @@ import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
 
 interface PatientInfo {
   id: string;
-  name: string;
+  patientName: string;
   age: number;
   gender: string;
   height: string;
@@ -129,6 +129,7 @@ export function AddAssessmentDialog({
       setFormData((prev) => ({ ...prev, patientId: "" }));
       return;
     }
+    value = value.toUpperCase().trim();
 
     // Debounce the API call
     const timeoutId = setTimeout(() => {
@@ -274,7 +275,7 @@ export function AddAssessmentDialog({
                       id="patientId"
                       value={patientId}
                       onChange={(e) => handlePatientIdChange(e.target.value)}
-                      placeholder="Enter Patient ID (e.g., THRC000001)"
+                      placeholder="Enter Patient ID (e.g., THRC256)"
                       className="pl-10"
                       disabled={loading}
                     />
@@ -299,7 +300,7 @@ export function AddAssessmentDialog({
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
                     <div>
                       <span className="font-medium text-gray-600">Name:</span>
-                      <p className="text-gray-900">{patientInfo.name}</p>
+                      <p className="text-gray-900">{patientInfo.patientName}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">ID:</span>

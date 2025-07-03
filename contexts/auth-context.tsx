@@ -29,6 +29,7 @@ interface AuthContextType {
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
   getRoleBasedRoute: (role: UserRole) => string;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -130,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         getRoleBasedRoute,
+        setUser,
       }}
     >
       {children}

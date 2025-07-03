@@ -101,8 +101,8 @@ export function Sidebar({
     {
       title: "Profile",
       icon: <UserIcon className="h-6 w-6" />,
-      href: "/therapist/profile",
-      roles: ["therapist"],
+      href: "/profile",
+      roles: ["therapist", "admin", "content-manager", "receptionist"],
     },
     {
       title: "Services",
@@ -115,12 +115,12 @@ export function Sidebar({
       title: "Settings",
       icon: <Settings className="h-6 w-6" />,
       href: "/settings",
-      roles: ["admin", "content-manager", "receptionist", "therapist"],
+      roles: [],
     },
     {
       title: "Need Help?",
       icon: <HelpCircle className="h-6 w-6" />,
-      href: "/help",
+      href: "/support",
       roles: ["receptionist", "admin", "content-manager", "therapist"],
     },
   ];

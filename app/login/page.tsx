@@ -326,7 +326,7 @@ export default function LoginPage() {
                         Powered by
                       </span>
                       <span className="text-xs font-bold text-indigo-600 group-hover:text-indigo-700">
-                        Golicit
+                        Golicit Services Pvt. Ltd.
                       </span>
                     </div>
                   </a>

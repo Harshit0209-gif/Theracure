@@ -75,7 +75,7 @@ export function PrescriptionManagementSection() {
     totalCount: 0,
     totalPages: 0,
     currentPage: 1,
-    limit: 5,
+    limit: 10,
   });
   const [selectedPrescription, setSelectedPrescription] =
     useState<Prescription | null>(null);
@@ -248,10 +248,10 @@ export function PrescriptionManagementSection() {
           Prescription Management System
         </h2>
         <div className="flex gap-2">
-          <div className="relative w-64">
+          <div className="relative w-80">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-indigo-400 h-4 w-4" />
             <Input
-              placeholder="Search by patient name, ID, or medicine"
+              placeholder="Search by patient ID, or prescribed by"
               className="bg-white pl-10 border border-indigo-300 rounded-lg text-sm placeholder:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

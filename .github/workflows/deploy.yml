@@ -22,7 +22,9 @@ jobs:
           script: |
             cd /var/www/html/Theracure-Dashboard
             git pull origin main
+            export DATABASE_URL="postgresql://theracure:theracure%40123@157.20.214.173:5432/theracuredb"
             pnpm install
             pnpm build
+            pnpm prisma migrate deploy
             pm2 startOrRestart /var/www/html/ecosystem.config.js --only dashboard
             pm2 status

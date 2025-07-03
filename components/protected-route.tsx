@@ -45,16 +45,24 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
     // Define allowed routes for each role
     const allowedRoutes = {
-      "content-manager": ["/content", "/blogs", "/announcement"],
+      "content-manager": [
+        "/content",
+        "/blogs",
+        "/announcement",
+        "/profile",
+        "/support",
+      ],
       receptionist: [
         "/receptionist",
         "/appointments",
         "/patients",
         "/invoices",
+        "/profile",
+        "/support",
       ],
       admin: [
         "/admin",
-        "/settings",
+
         "/appointments",
         "/patients",
         "/invoices",
@@ -65,8 +73,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         "/analytics",
         "/services",
         "/prescriptions",
+        "/profile",
+        "/support",
       ],
-      therapist: ["/therapist", "/patients", "/prescriptions", "/appointments"],
+      therapist: [
+        "/therapist",
+        "/patients",
+        "/prescriptions",
+        "/appointments",
+        "/profile",
+        "support",
+      ],
     };
 
     if (user?.role) {

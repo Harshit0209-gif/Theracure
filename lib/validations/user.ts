@@ -37,7 +37,6 @@ export const createUserSchema = z.object({
 
 // Schema for updating a user
 export const updateUserSchema = z.object({
-  id: z.string().min(1, "User ID is required"),
   name: z
     .string()
     .min(2, "Name must be at least 2 characters")

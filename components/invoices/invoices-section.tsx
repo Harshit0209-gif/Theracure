@@ -67,7 +67,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { debounce } from "lodash";
 import { useCallback, useEffect } from "react";
@@ -794,7 +794,7 @@ export function InvoicesSection() {
                               id="id"
                               value={patientInfo.id}
                               onChange={handleidChange}
-                              placeholder="e.g., PT-0258"
+                              placeholder="e.g., THRC258"
                               className="pl-10"
                             />
                           </div>
@@ -2118,9 +2118,6 @@ export function InvoicesSection() {
                     <div className="flex flex-col items-center space-y-2">
                       <FileText className="h-12 w-12 text-gray-300" />
                       <p className="text-lg font-medium">No invoices found</p>
-                      <p className="text-sm">
-                        Create your first invoice to get started
-                      </p>
                     </div>
                   </TableCell>
                 </TableRow>

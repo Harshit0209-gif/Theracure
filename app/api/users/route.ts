@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const search = url.searchParams.get("search") || "";
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
-    const role = url.searchParams.get("role") || ""; // Filter by role if needed
+    const role = url.searchParams.get("role") || "";
     const skip = (page - 1) * limit;
 
     const where = {
