@@ -27,7 +27,7 @@ import {
   Plus,
   Trash2,
   Edit2Icon,
-  User,
+  User2,
   Check,
   X,
 } from "lucide-react";
@@ -46,6 +46,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AllRoles, RoleColors } from "@/lib/userRoles";
+import { UserRole } from "@prisma/client";
+import { updateUserSchema, UserUpdateFormData } from "@/lib/validations/user";
+import { User } from "@/types/user";
 
 const availabilitySchema = z
   .object({
@@ -71,30 +75,13 @@ const availabilitySchema = z
 
 type AvailabilityFormData = z.infer<typeof availabilitySchema>;
 
-const userSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  phone: z.string().optional(),
-});
-
 const therapistSchema = z.object({
   specialization: z.string().min(3, "Specialization is required"),
   qualification: z.string().optional(),
   experiences: z.string().optional(),
 });
 
-type UserFormData = z.infer<typeof userSchema>;
 type TherapistFormData = z.infer<typeof therapistSchema>;
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  phone?: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface Therapist {
   id: string;
@@ -129,11 +116,11 @@ export default function UserProfile() {
   const [isEditingTherapist, setIsEditingTherapist] = useState(false);
   const [isAddAvailabilityOpen, setIsAddAvailabilityOpen] = useState(false);
 
-  const userForm = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+  const userForm = useForm<UserUpdateFormData>({
+    resolver: zodResolver(updateUserSchema),
     defaultValues: {
-      name: "",
-      phone: "",
+      name: authUser?.name,
+      email: authUser?.email || "",
     },
   });
 
@@ -169,7 +156,7 @@ export default function UserProfile() {
   useEffect(() => {
     if (authUser?.id) {
       fetchUserProfile();
-      if (authUser.role === "therapist") {
+      if (authUser.role === UserRole.THERAPIST) {
         fetchTherapistProfile();
         fetchAvailabilities();
       }
@@ -227,7 +214,7 @@ export default function UserProfile() {
     }
   };
 
-  const onSubmitUserProfile = async (data: UserFormData) => {
+  const onSubmitUserProfile = async (data: UserUpdateFormData) => {
     try {
       setIsUserLoading(true);
       const response = await fetch(`/api/users/${authUser?.id}`, {
@@ -412,15 +399,18 @@ export default function UserProfile() {
     return daysOfWeek.find((d) => d.value === dayOfWeek)?.label || "";
   };
 
-  const isTherapist = user?.role === "therapist";
+  const isTherapist = user?.role === UserRole.THERAPIST;
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900"></h1>
-          <Badge variant="outline" className="px-3 py-1 text-sm">
-            {user?.status || "Active"}
+          <Badge
+            variant="outline"
+            className="px-3 py-1 text-sm capitalize bg-green-100 text-green-800"
+          >
+            {user?.status || "Inactive"}
           </Badge>
         </div>
 
@@ -429,26 +419,45 @@ export default function UserProfile() {
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <User className="h-5 w-5 text-indigo-600" />
-                  Basic Information
-                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <User2 className="h-5 w-5 text-indigo-600" />
+                    Basic Information
+                  </CardTitle>
+                  <Badge
+                    className={`${
+                      RoleColors[authUser?.role || UserRole.THERAPIST]
+                    } capitalize font-medium`}
+                  >
+                    {user?.role || "User"}
+                  </Badge>
+                  <span className="text-sm text-gray-500">
+                    Register:{" "}
+                    {user?.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : "N/A"}
+                  </span>
+                </div>
                 <Button
                   onClick={() => setIsEditingUser(!isEditingUser)}
                   variant={isEditingUser ? "outline" : "ghost"}
+                  className="bg-indigo-600 hover:bg-indigo-700"
                   size="sm"
-                  className="h-8"
                 >
                   {isEditingUser ? (
-                    <>
+                    <span className="flex items-center text-white">
                       <X className="h-4 w-4 mr-1" />
                       Cancel
-                    </>
+                    </span>
                   ) : (
-                    <>
+                    <span className="flex items-center text-white">
                       <Edit2Icon className="h-4 w-4 mr-1" />
                       Edit
-                    </>
+                    </span>
                   )}
                 </Button>
               </div>
@@ -458,7 +467,7 @@ export default function UserProfile() {
                 onSubmit={userForm.handleSubmit(onSubmitUserProfile)}
                 className="space-y-4"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-sm font-medium">
                       Name
@@ -483,8 +492,9 @@ export default function UserProfile() {
                     </Label>
                     <Input
                       id="email"
+                      {...userForm.register("email")}
                       value={user?.email || ""}
-                      disabled
+                      disabled={!isEditingUser}
                       className="bg-gray-50 border-gray-200"
                     />
                   </div>
@@ -500,38 +510,6 @@ export default function UserProfile() {
                         !isEditingUser ? "bg-gray-50 border-gray-200" : ""
                       }`}
                       placeholder="Enter phone number"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role" className="text-sm font-medium">
-                      Role
-                    </Label>
-                    <Input
-                      id="role"
-                      value={user?.role || ""}
-                      disabled
-                      className="bg-gray-50 border-gray-200 capitalize"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="memberSince"
-                      className="text-sm font-medium"
-                    >
-                      Member Since
-                    </Label>
-                    <Input
-                      id="memberSince"
-                      value={
-                        user?.createdAt
-                          ? new Date(user.createdAt).toLocaleDateString()
-                          : ""
-                      }
-                      disabled
-                      className="bg-gray-50 border-gray-200"
                     />
                   </div>
                 </div>
@@ -574,18 +552,18 @@ export default function UserProfile() {
                     onClick={() => setIsEditingTherapist(!isEditingTherapist)}
                     variant={isEditingTherapist ? "outline" : "ghost"}
                     size="sm"
-                    className="h-8"
+                    className="bg-indigo-600 hover:bg-indigo-700"
                   >
-                    {isEditingTherapist ? (
-                      <>
+                    {isEditingUser ? (
+                      <span className="flex items-center text-white">
                         <X className="h-4 w-4 mr-1" />
                         Cancel
-                      </>
+                      </span>
                     ) : (
-                      <>
+                      <span className="flex items-center text-white">
                         <Edit2Icon className="h-4 w-4 mr-1" />
                         Edit
-                      </>
+                      </span>
                     )}
                   </Button>
                 </div>

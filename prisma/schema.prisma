@@ -9,10 +9,10 @@ generator client {
 
 // Enums
 enum UserRole {
-  admin
-  therapist
-  receptionist
-  user
+  ADMIN
+  THERAPIST
+  RECEPTIONIST
+  CONTENT_MANAGER
 }
 
 enum UserStatus {

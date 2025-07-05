@@ -16,19 +16,19 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-200"
               >
-                Golicit
+                Golicit Services Pvt. Ltd.
               </a>{" "}
             </p>
           </div>
           <div className="flex flex-wrap justify-center md:justify-end space-x-6">
             <a
-              href="#"
+              href="/privacy-policy"
               className="text-sm text-gray-600 hover:text-indigo-600 transition-colors duration-200"
             >
               Privacy Policy
             </a>
             <a
-              href="#"
+              href="/support"
               className="text-sm text-gray-600 hover:text-indigo-600 transition-colors duration-200"
             >
               Help Center

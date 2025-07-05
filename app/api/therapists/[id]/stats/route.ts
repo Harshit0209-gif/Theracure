@@ -5,9 +5,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  console.log("Stats API Route called");
   try {
     const { id } = await params;
-    console.log("Stats API Route called with therapist ID:", id);
+
     const now = new Date();
     const startOfDay = new Date(
       now.getFullYear(),

@@ -40,6 +40,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { AddPatientDialog } from "./add-patient-dialog";
 import { toast } from "@/hooks/use-toast";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
+import { UserRole } from "@prisma/client";
 
 interface Patient {
   id: string;
@@ -72,7 +73,7 @@ interface ApiResponse {
 
 export function PatientManagementSection() {
   const { user } = useAuth();
-  const isTherapist = user?.role === "therapist";
+  const isTherapist = user?.role === UserRole.THERAPIST;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);

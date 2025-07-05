@@ -28,17 +28,8 @@ import {
 import Link from "next/link";
 import { useAdminDashboardData } from "@/hooks/use-admin-dashboard-data";
 import { useAuth } from "@/contexts/auth-context";
-import { getGreeting } from "@/lib/utils/utils";
-
-interface StatsCardProps {
-  title: string;
-  value: string | number;
-  subtitle: React.ReactNode;
-  icon: React.ReactNode;
-  bgColor: string;
-  isLoading?: boolean;
-  error?: boolean;
-}
+import { formatCurrency, getGreeting } from "@/lib/utils/utils";
+import { StatsCard } from "@/components/stats/stats-section";
 
 interface PatientStatusItemProps {
   title: string;
@@ -63,18 +54,10 @@ interface TodayAppointment {
   status: "confirmed" | "completed" | "cancelled" | "in-progress" | "pending";
 }
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
 const formatGrowthPercentage = (
   percentage: number,
-  isPositive: boolean
+  isPositive: boolean,
+  label = "from last month"
 ): React.ReactNode => {
   const Icon = isPositive ? TrendingUp : TrendingDown;
   const color = isPositive ? "text-green-500" : "text-red-500";
@@ -83,7 +66,7 @@ const formatGrowthPercentage = (
   return (
     <p className={`text-xs ${color} mt-1 flex items-center gap-1`}>
       <Icon className="h-3 w-3" />
-      {prefix} {Math.abs(percentage).toFixed(1)}% from last month
+      {prefix} {Math.abs(percentage).toFixed(1)}% {label}
     </p>
   );
 };
@@ -97,77 +80,6 @@ const getStatusConfig = (status: string) => {
     cancelled: "bg-red-100 text-red-700",
   };
   return configs[status as keyof typeof configs] || "bg-gray-100 text-gray-700";
-};
-
-const StatsCard: React.FC<StatsCardProps> = ({
-  title,
-  value,
-  subtitle,
-  icon,
-  bgColor,
-  isLoading = false,
-  error = false,
-}) => {
-  if (isLoading) {
-    return (
-      <Card className="bg-white shadow-sm animate-pulse">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2 mb-1"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-            </div>
-            <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="bg-red-50 border-red-200 shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-red-500">{title}</p>
-              <h3 className="text-2xl font-bold mt-1 text-red-700">--</h3>
-              <p className="text-xs text-red-500 mt-1">Error loading data</p>
-            </div>
-            <div
-              className={`h-12 w-12 ${bgColor} rounded-full flex items-center justify-center opacity-50`}
-            >
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="bg-white shadow-sm">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <h3 className="text-2xl font-bold mt-1">
-              {typeof value === "number"
-                ? value.toLocaleString("en-IN")
-                : value}
-            </h3>
-            <div className="mt-1">{subtitle}</div>
-          </div>
-          <div
-            className={`h-12 w-12 ${bgColor} rounded-full flex items-center justify-center`}
-          >
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 };
 
 const PatientStatusItem: React.FC<PatientStatusItemProps> = ({

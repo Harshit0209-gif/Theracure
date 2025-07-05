@@ -18,3 +18,12 @@ export const generatePatientId = () => {
   const slice = now.slice(-4);
   return `${prefix}${slice}`;
 };
+
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};

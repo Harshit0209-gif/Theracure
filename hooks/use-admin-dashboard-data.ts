@@ -108,14 +108,13 @@ const fetcher = async (url: string) => {
 export const useAdminDashboardData = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // SWR hooks for different data sources
   const {
     data: patientStats,
     error: patientError,
     isLoading: patientLoading,
     mutate: mutatePatients,
   } = useSWR<PatientStats>("/api/patients/stats", fetcher, {
-    refreshInterval: 60000, // 1 minute
+    refreshInterval: 60000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     onSuccess: () => setLastUpdated(new Date()),
@@ -157,7 +156,6 @@ export const useAdminDashboardData = () => {
     onSuccess: () => setLastUpdated(new Date()),
   });
 
-  // Manual refresh function
   const refreshAll = useCallback(async () => {
     await Promise.all([
       mutatePatients(),
@@ -168,7 +166,6 @@ export const useAdminDashboardData = () => {
     setLastUpdated(new Date());
   }, [mutatePatients, mutateTherapy, mutateAppointments, mutateRevenue]);
 
-  // Set initial last updated time
   useEffect(() => {
     if (!lastUpdated && (patientStats || therapyStats || todayAppointments)) {
       setLastUpdated(new Date());
@@ -176,13 +173,11 @@ export const useAdminDashboardData = () => {
   }, [patientStats, therapyStats, todayAppointments, lastUpdated]);
 
   return {
-    // Data
     patientStats,
     therapyStats,
     todayAppointments,
     revenueStatus,
 
-    // Loading states
     isLoading: {
       patients: patientLoading,
       therapy: therapyLoading,
@@ -191,7 +186,6 @@ export const useAdminDashboardData = () => {
       refreshing: patientLoading || therapyLoading || appointmentsLoading,
     },
 
-    // Error states
     error: {
       patients: !!patientError,
       therapy: !!therapyError,
@@ -199,7 +193,6 @@ export const useAdminDashboardData = () => {
       revenue: !!revenueError,
     },
 
-    // Meta
     lastUpdated,
     refreshAll,
   };

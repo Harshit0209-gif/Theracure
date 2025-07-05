@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, useEffect } from "react";
 import { createUserSchema } from "@/lib/validations/user";
 import { z } from "zod";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -13,18 +11,8 @@ import { EmployeeStats } from "@/components/employee-stats";
 import { AddEmployeeDialog } from "@/components/add-employee-dialog";
 import { EmployeeTable } from "@/components/employee-table";
 import { EmployeeTableHeader } from "@/components/employee-table-header";
-
-// Types
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "therapist" | "receptionist" | "content_manager";
-  phone?: string;
-  status: "active" | "inactive";
-  createdAt: string;
-  updatedAt: string;
-}
+import { User } from "@/types/user";
+import { UserRole } from "@prisma/client";
 
 export interface PaginationInfo {
   total: number;
@@ -122,11 +110,15 @@ export default function EmployeePage() {
   // Calculate stats from users data
   const stats = {
     total: pagination.total,
-    therapists: users.filter((u) => u.role === "therapist").length,
-    admins: users.filter((u) => u.role === "admin").length,
-    receptionists: users.filter((u) => u.role === "receptionist").length,
+    therapists: users.filter((u) => u.role === UserRole.THERAPIST).length,
+    admins: users.filter((u) => u.role === UserRole.ADMIN).length,
+    receptionists: users.filter((u) => u.role === UserRole.RECEPTIONIST).length,
+    content_managers: users.filter((u) => u.role === UserRole.CONTENT_MANAGER)
+      .length,
+    active: users.filter((u) => u.status === "active").length,
     support: users.filter(
-      (u) => u.role === "admin" || u.role === "receptionist"
+      (u) =>
+        u.role === UserRole.RECEPTIONIST || u.role === UserRole.CONTENT_MANAGER
     ).length,
   };
 

@@ -44,24 +44,11 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/validations/user";
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "therapist" | "receptionist" | "content_manager";
-  phone?: string;
-  status: "active" | "inactive";
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PaginationInfo {
-  total: number;
-  pages: number;
-  page: number;
-  limit: number;
-}
+import { RoleColors, UserRoleLabel } from "@/lib/userRoles";
+import { UserRole } from "@prisma/client";
+import { User } from "@/types/user";
+import { PaginationInfo } from "@/types";
+import { EmployeeProfileCard } from "./employee-profile-card";
 
 interface EmployeeTableProps {
   users: User[];
@@ -95,28 +82,6 @@ export function EmployeeTable({
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getRoleBadge = (role: string) => {
-    const roleStyles = {
-      admin: "bg-red-100 text-red-800",
-      therapist: "bg-blue-100 text-blue-800",
-      receptionist: "bg-green-100 text-green-800",
-      content_manager: "bg-purple-100 text-purple-800",
-    };
-
-    const roleLabels = {
-      admin: "Administrator",
-      therapist: "Therapist",
-      receptionist: "Receptionist",
-      content_manager: "Content Manager",
-    };
-
-    return (
-      <Badge className={roleStyles[role as keyof typeof roleStyles]}>
-        {roleLabels[role as keyof typeof roleLabels]}
-      </Badge>
-    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -316,9 +281,15 @@ export function EmployeeTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
+                    <TableCell>
+                      {
+                        <Badge className={`${RoleColors[user.role]} `}>
+                          {UserRoleLabel[user.role]}
+                        </Badge>
+                      }
+                    </TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone || "N/A"}</TableCell>
+                    <TableCell>{user.phone || "No Caller ID"}</TableCell>
                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {formatDate(user.createdAt)}
@@ -565,233 +536,3 @@ export function EmployeeTable({
 // ====================================================================
 // COMPONENT: Employee Profile Card
 // ====================================================================
-
-interface EmployeeProfileCardProps {
-  user: User;
-}
-
-interface TherapistStats {
-  assignedPatients: number;
-  todayAppointments: number;
-  completedSessions: number;
-}
-
-function EmployeeProfileCard({ user }: EmployeeProfileCardProps) {
-  const [stats, setStats] = useState<TherapistStats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(false);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (user.role !== "therapist") return;
-
-      try {
-        setLoadingStats(true);
-        const res = await fetch(`/api/therapist/${user.id}/stats`);
-        if (!res.ok) {
-          throw new Error("Failed to fetch therapist stats");
-        }
-        const data = await res.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setLoadingStats(false);
-      }
-    };
-
-    fetchStats();
-  }, [user.id, user.role]);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getRoleInfo = (role: string) => {
-    const roleInfo = {
-      admin: {
-        title: "Administrator",
-        description: "Full system access and user management",
-        color: "text-red-600 bg-red-50",
-      },
-      therapist: {
-        title: "Therapist",
-        description: "Patient care and treatment management",
-        color: "text-blue-600 bg-blue-50",
-      },
-      receptionist: {
-        title: "Receptionist",
-        description: "Patient registration and appointment scheduling",
-        color: "text-green-600 bg-green-50",
-      },
-      content_manager: {
-        title: "Content Manager",
-        description: "Blog posts and content management",
-        color: "text-purple-600 bg-purple-50",
-      },
-    };
-    return roleInfo[role as keyof typeof roleInfo] || roleInfo.therapist;
-  };
-
-  const roleInfo = getRoleInfo(user.role);
-
-  return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-3">
-          <Avatar className="h-16 w-16">
-            <AvatarFallback className="text-lg">
-              {user.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
-            <div
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${roleInfo.color}`}
-            >
-              <Shield className="w-4 h-4 mr-1" />
-              {roleInfo.title}
-            </div>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Basic Information */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            Basic Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-3">
-              <UserIcon className="h-5 w-5 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Full Name</p>
-                <p className="text-gray-900">{user.name}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Mail className="h-5 w-5 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Email Address
-                </p>
-                <p className="text-gray-900">{user.email}</p>
-              </div>
-            </div>
-
-            {user.phone && (
-              <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-gray-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-500">
-                    Phone Number
-                  </p>
-                  <p className="text-gray-900">{user.phone}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-3">
-              <Badge
-                variant={user.status === "active" ? "default" : "secondary"}
-                className={
-                  user.status === "active"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-                }
-              >
-                {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-              </Badge>
-            </div>
-          </div>
-        </div>
-
-        {/* Role Information */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            Role & Permissions
-          </h3>
-          <div className={`p-4 rounded-lg ${roleInfo.color}`}>
-            <h4 className="font-medium">{roleInfo.title}</h4>
-            <p className="text-sm mt-1">{roleInfo.description}</p>
-          </div>
-        </div>
-
-        {/* Account Information */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            Account Information
-          </h3>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <Calendar className="h-5 w-5 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Account Created
-                </p>
-                <p className="text-gray-900">{formatDate(user.createdAt)}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Clock className="h-5 w-5 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Last Updated
-                </p>
-                <p className="text-gray-900">{formatDate(user.updatedAt)}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Key className="h-5 w-5 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">User ID</p>
-                <p className="text-gray-900 font-mono text-sm">{user.id}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Stats (if user is therapist) */}
-        {user.role === "therapist" && (
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Quick Stats
-            </h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">
-                  {loadingStats ? "..." : stats?.assignedPatients ?? 0}
-                </p>
-                <p className="text-sm text-blue-600">Assign Patients</p>
-              </div>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">
-                  {loadingStats ? "..." : stats?.todayAppointments ?? 0}
-                </p>
-                <p className="text-sm text-green-600">Today's Appointment</p>
-              </div>
-              <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-2xl font-bold text-amber-600">
-                  {loadingStats ? "..." : stats?.completedSessions ?? 0}
-                </p>
-                <p className="text-sm text-amber-600">Completed Session</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}

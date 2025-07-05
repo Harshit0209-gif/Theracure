@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -73,7 +74,7 @@ export async function PUT(
       );
     }
 
-    if (user.role !== "therapist") {
+    if (user.role !== UserRole.THERAPIST) {
       return NextResponse.json(
         {
           success: false,

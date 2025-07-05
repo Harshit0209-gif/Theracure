@@ -48,6 +48,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { UserRole } from "@prisma/client";
 
 interface Service {
   id: string;
@@ -133,9 +134,9 @@ export function AppointmentTable({
     useState<Appointment | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const { user } = useAuth();
-  const isTherapist = user?.role === "therapist";
+  const isTherapist = user?.role === UserRole.THERAPIST;
   const hasFullControl =
-    user?.role === "admin" || user?.role === "receptionist";
+    user?.role === UserRole.ADMIN || user?.role === UserRole.RECEPTIONIST;
 
   // Form states
   const [editData, setEditData] = useState<EditAppointmentData>({

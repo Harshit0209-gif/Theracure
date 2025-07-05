@@ -5,6 +5,7 @@ import type React from "react";
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { RoleAllowedRoutes, RoleRoutes } from "@/lib/userRoles";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,81 +21,24 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       if (!user) {
         router.push("/login");
       } else {
-        switch (user.role) {
-          case "content-manager":
-            router.push("/content");
-            break;
-          case "receptionist":
-            router.push("/receptionist");
-            break;
-          case "admin":
-            router.push("/admin");
-            break;
-          case "therapist":
-            router.push("/therapist");
-            break;
-        }
+        const defaultRoute = RoleRoutes[user.role] ?? "/login";
+        router.push(defaultRoute);
       }
       return;
     }
 
-    // Handle other routes
     if (!isLoading && !user && pathname !== "/login") {
       router.push("/login");
     }
 
-    // Define allowed routes for each role
-    const allowedRoutes = {
-      "content-manager": [
-        "/content",
-        "/blogs",
-        "/announcement",
-        "/profile",
-        "/support",
-      ],
-      receptionist: [
-        "/receptionist",
-        "/appointments",
-        "/patients",
-        "/invoices",
-        "/profile",
-        "/support",
-      ],
-      admin: [
-        "/admin",
-
-        "/appointments",
-        "/patients",
-        "/invoices",
-        "/blogs",
-        "/announcement",
-        "/employees",
-        "/consultation",
-        "/analytics",
-        "/services",
-        "/prescriptions",
-        "/profile",
-        "/support",
-      ],
-      therapist: [
-        "/therapist",
-        "/patients",
-        "/prescriptions",
-        "/appointments",
-        "/profile",
-        "support",
-      ],
-    };
-
     if (user?.role) {
-      const userAllowedRoutes =
-        allowedRoutes[user.role as keyof typeof allowedRoutes];
-      const hasAccess = userAllowedRoutes.some((route) =>
+      const allowedRoutes = RoleAllowedRoutes[user.role];
+      const hasAccess = allowedRoutes.some((route) =>
         pathname.startsWith(route)
       );
 
       if (!hasAccess && pathname !== "/login") {
-        router.push(userAllowedRoutes[0]);
+        router.push(allowedRoutes[0]);
       }
     }
   }, [user, isLoading, router, pathname]);
@@ -107,11 +51,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // If on login page or authenticated, show children
   if (pathname === "/login" || user) {
     return <>{children}</>;
   }
 
-  // Otherwise show nothing while redirecting
   return null;
 }

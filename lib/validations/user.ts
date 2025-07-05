@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UserRoleSchema } from "@/lib/userRoles";
 
 const phoneRegex =
   /^\+?[1-9]\d{0,2}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/;
@@ -28,11 +29,11 @@ export const createUserSchema = z.object({
     .max(15, "Phone number must be less than 15 digits")
     .regex(
       phoneRegex,
-      "Please enter a valid phone number (e.g., +1 234-567-890)"
+      "Please enter a valid phone number (e.g., +91 234-567-8909)"
     )
-    .transform((val) => val.replace(/[-.\s]/g, "")) // Remove formatting for storage
+    .transform((val) => val.replace(/[-.\s]/g, ""))
     .optional(),
-  role: z.enum(["admin", "user", "therapist", "receptionist"]).default("user"),
+  role: UserRoleSchema,
 });
 
 // Schema for updating a user
@@ -57,16 +58,17 @@ export const updateUserSchema = z.object({
       "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     )
     .optional(),
-  role: z.enum(["admin", "user", "therapist", "receptionist"]).optional(),
   phone: z
     .string()
     .min(10, "Phone number must be at least 10 digits")
     .max(15, "Phone number must be less than 15 digits")
     .regex(
       phoneRegex,
-      "Please enter a valid phone number (e.g., +1 234-567-890)"
+      "Please enter a valid phone number (e.g., +91 234-567-8909)"
     )
-    .transform((val) => val.replace(/[-.\s]/g, "")),
+    .transform((val) => val.replace(/[-.\s]/g, ""))
+    .optional()
+    .or(z.literal("")),
 });
 
 // Schema for deleting a user
@@ -82,3 +84,7 @@ export const passwordSchema = z
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
     "Password must contain at least one uppercase letter, one lowercase letter, and one number"
   );
+
+export type UserUpdateFormData = z.infer<typeof updateUserSchema>;
+export type CreateUserFormData = z.infer<typeof createUserSchema>;
+export type PasswordFormData = z.infer<typeof passwordSchema>;

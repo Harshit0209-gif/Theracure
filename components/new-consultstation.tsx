@@ -282,7 +282,7 @@ export function AddConsultationDialog({ onAdd }: AddConsultationDialogProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label
-                    htmlFor="therapist"
+                    htmlFor="consultationwith"
                     className="text-sm font-medium text-gray-700"
                   >
                     Consultation With *

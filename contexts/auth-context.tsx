@@ -8,34 +8,22 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-
-export type UserRole =
-  | "receptionist"
-  | "content-manager"
-  | "admin"
-  | "therapist";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  avatar?: string;
-}
+import { UserRole } from "@prisma/client";
+import { LoginUser } from "@/types/user";
+import { RoleRoutes } from "@/lib/userRoles";
 
 interface AuthContextType {
-  user: User | null;
+  user: LoginUser | null;
   isLoading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
-  getRoleBasedRoute: (role: UserRole) => string;
-  setUser: (user: User | null) => void;
+  setUser: (user: LoginUser | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<LoginUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -52,23 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Get role-based route
-  const getRoleBasedRoute = (role: UserRole): string => {
-    switch (role) {
-      case "receptionist":
-        return "/receptionist";
-      case "content-manager":
-        return "/content";
-      case "admin":
-        return "/admin";
-      case "therapist":
-        return "/therapist";
-      default:
-        return "/login";
-    }
-  };
-
-  // Check if user is already logged in on mount
+  // Initial user load from localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -78,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string, role: UserRole) => {
-    setIsLoading(true);
+    console.log("Logging in with:", { email, role, password });
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -94,26 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || "Failed to login");
       }
 
-      // Create user object from API response
-      const newUser: User = {
+      const loginUser: LoginUser = {
         id: data.id,
         name: data.name,
         email: data.email,
         role: data.role,
-        avatar: "/placeholder.svg?height=40&width=40", // Default avatar
+        avatar: "/placeholder.svg?height=40&width=40",
       };
 
-      // Save user to state and localStorage
-      setUser(newUser);
-      localStorage.setItem("user", JSON.stringify(newUser));
+      setUser(loginUser);
+      localStorage.setItem("user", JSON.stringify(loginUser));
 
-      // Redirect based on role using the centralized function
-      router.push(getRoleBasedRoute(role));
+      router.push(RoleRoutes[role] ?? "/login");
     } catch (error) {
-      console.error("Login failed:", error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -130,7 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         logout,
-        getRoleBasedRoute,
         setUser,
       }}
     >

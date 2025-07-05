@@ -20,7 +20,7 @@ export default function Support() {
   const supportTeam = [
     {
       id: 1,
-      name: "Ms. Himalaya Mukherjee",
+      name: "Mr. Himalaya Mukherjee",
       role: "Managing Director",
       phone: "+91 6289203262",
       email: "support@golicit.in",

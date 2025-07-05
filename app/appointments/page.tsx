@@ -9,6 +9,7 @@ import { AppointmentTable } from "@/components/appointment-table";
 import { ScheduleNewDialog } from "@/components/schedule-new-dialog";
 import { CalendarViewDialog } from "@/components/calendar-view-dialog";
 import { useAuth } from "@/contexts/auth-context";
+import { UserRole } from "@prisma/client";
 export interface Appointment {
   id: string;
   therapistId: string;
@@ -76,7 +77,7 @@ const AppointmentPage = () => {
         page: page.toString(),
         limit: pagination.limit.toString(),
         ...(search && { search }),
-        ...(user?.role === "therapist" && { therapistId: user.id }),
+        ...(user?.role === UserRole.THERAPIST && { therapistId: user.id }),
       });
 
       const response = await fetch(`/api/appointments?${params}`);

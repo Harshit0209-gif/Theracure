@@ -17,21 +17,16 @@ import {
   UserIcon,
   Bed,
 } from "lucide-react";
+import { AllRoles, RoleRoutes } from "@/lib/userRoles";
+import { UserRole } from "@prisma/client";
 
 interface SidebarProps {
-  userRole?: "receptionist" | "admin" | "content-manager" | "therapist";
+  userRole?: (typeof AllRoles)[number];
   collapsed: boolean;
 }
 
-const dashboardLinks = {
-  admin: "/admin",
-  therapist: "/therapist",
-  "content-manager": "/content-manager",
-  receptionist: "/receptionist",
-};
-
 export function Sidebar({
-  userRole = "receptionist",
+  userRole = UserRole.RECEPTIONIST,
   collapsed,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -41,56 +36,61 @@ export function Sidebar({
     {
       title: "Dashboard",
       icon: <BarChart3 className="h-6 w-6" />,
-      href: dashboardLinks[userRole],
-      roles: ["receptionist", "admin", "content-manager", "therapist"],
+      href: RoleRoutes[userRole],
+      roles: [
+        UserRole.RECEPTIONIST,
+        UserRole.ADMIN,
+        UserRole.CONTENT_MANAGER,
+        UserRole.THERAPIST,
+      ],
     },
     {
       title: "Appointments",
       icon: <Calendar className="h-6 w-6" />,
       href: "/appointments",
-      roles: ["receptionist", "admin", "therapist"],
+      roles: [UserRole.RECEPTIONIST, UserRole.ADMIN, UserRole.THERAPIST],
     },
     {
       title: "Consultation",
       icon: <Handshake className="h-6 w-6" />,
       href: "/consultation",
-      roles: ["receptionist", "admin"],
+      roles: [UserRole.RECEPTIONIST, UserRole.ADMIN],
     },
     {
       title: "Invoices",
       icon: <FileText className="h-6 w-6" />,
       href: "/invoices",
-      roles: ["receptionist", "admin"],
+      roles: [UserRole.RECEPTIONIST, UserRole.ADMIN],
     },
     {
       title: "Patients",
       icon: <Users className="h-6 w-6" />,
       href: "/patients",
-      roles: ["receptionist", "admin", "therapist"],
+      roles: [UserRole.RECEPTIONIST, UserRole.ADMIN, UserRole.THERAPIST],
     },
     {
       title: "Prescriptions",
       icon: <FileText className="h-6 w-6" />,
       href: "/prescriptions",
-      roles: ["therapist", "admin"],
+      roles: [UserRole.THERAPIST, UserRole.ADMIN],
     },
     {
       title: "Blog Management",
       icon: <FileEdit className="h-6 w-6" />,
       href: "/blogs",
-      roles: ["content-manager", "admin"],
+      roles: [UserRole.CONTENT_MANAGER, UserRole.ADMIN],
     },
     {
       title: "Announcement",
       icon: <Bell className="h-6 w-6" />,
       href: "/announcement",
-      roles: ["content-manager", "admin"],
+      roles: [UserRole.CONTENT_MANAGER, UserRole.ADMIN],
     },
     {
       title: "Employees",
       icon: <UserCog className="h-6 w-6" />,
       href: "/employees",
-      roles: ["admin"],
+      roles: [UserRole.ADMIN],
     },
     {
       title: "Analytics",
@@ -102,13 +102,18 @@ export function Sidebar({
       title: "Profile",
       icon: <UserIcon className="h-6 w-6" />,
       href: "/profile",
-      roles: ["therapist", "admin", "content-manager", "receptionist"],
+      roles: [
+        UserRole.THERAPIST,
+        UserRole.CONTENT_MANAGER,
+        UserRole.RECEPTIONIST,
+        UserRole.ADMIN,
+      ],
     },
     {
       title: "Services",
       icon: <Bed className="h-6 w-6" />,
       href: "/services",
-      roles: ["admin"],
+      roles: [UserRole.ADMIN],
     },
 
     {
@@ -121,7 +126,12 @@ export function Sidebar({
       title: "Need Help?",
       icon: <HelpCircle className="h-6 w-6" />,
       href: "/support",
-      roles: ["receptionist", "admin", "content-manager", "therapist"],
+      roles: [
+        UserRole.RECEPTIONIST,
+        UserRole.ADMIN,
+        UserRole.CONTENT_MANAGER,
+        UserRole.THERAPIST,
+      ],
     },
   ];
 

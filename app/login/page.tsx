@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, type UserRole } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,11 +29,14 @@ import {
   FileText,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { AllRoles, RoleOptionsMap } from "@/lib/userRoles";
+import { UserRole } from "@prisma/client";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("receptionist");
+  const [role, setRole] = useState<UserRole>("THERAPIST");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,21 +49,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password, role }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to login");
-      }
-
-      // Call the login function from auth context
       await login(email, password, role);
 
       toast({
@@ -68,11 +56,6 @@ export default function LoginPage() {
         description: "Welcome back!",
       });
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Invalid credentials. Please try again."
-      );
       toast({
         title: "Login failed",
         description:
@@ -86,33 +69,6 @@ export default function LoginPage() {
     }
   };
 
-  const roleOptions = [
-    {
-      value: "receptionist",
-      label: "Receptionist",
-      icon: User,
-      description: "Front desk and patient management",
-    },
-    {
-      value: "content-manager",
-      label: "Content Manager",
-      icon: FileText,
-      description: "Content and resource management",
-    },
-    {
-      value: "admin",
-      label: "Administrator",
-      icon: Shield,
-      description: "Full system administration",
-    },
-    {
-      value: "therapist",
-      label: "Therapist",
-      icon: Stethoscope,
-      description: "Patient treatment and therapy",
-    },
-  ];
-
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800">
@@ -122,6 +78,7 @@ export default function LoginPage() {
         <div className="absolute top-1/4 right-20 w-32 h-32 bg-blue-300/20 rounded-full blur-2xl animate-bounce"></div>
         <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-purple-300/20 rounded-full blur-xl animate-pulse"></div>
         <div className="absolute bottom-1/3 right-10 w-16 h-16 bg-indigo-300/20 rounded-full blur-lg animate-bounce"></div>
+        <Toaster />
 
         {/* Grid Pattern */}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgIDwvcGF0dGVybj4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIgLz4KPC9zdmc+')] opacity-30"></div>
@@ -158,18 +115,6 @@ export default function LoginPage() {
 
             <CardContent className="space-y-4 px-4 sm:px-6">
               <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <Alert
-                    variant="destructive"
-                    className="border-red-200 bg-red-50 py-2"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="text-red-800 text-sm">
-                      {error}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
                 {/* Email Field */}
                 <div className="space-y-2">
                   <Label
@@ -233,18 +178,21 @@ export default function LoginPage() {
                     onValueChange={(value) => setRole(value as UserRole)}
                     className="grid grid-cols-2 gap-2"
                   >
-                    {roleOptions.map((option) => {
-                      const IconComponent = option.icon;
-                      const isSelected = role === option.value;
+                    {AllRoles.map((roleOption) => {
+                      const IconComponent = RoleOptionsMap[roleOption].icon;
+                      const isSelected = role === roleOption;
                       return (
-                        <div key={option.value} className="relative">
+                        <div
+                          key={RoleOptionsMap[roleOption].value}
+                          className="relative"
+                        >
                           <RadioGroupItem
-                            value={option.value}
-                            id={option.value}
+                            value={RoleOptionsMap[roleOption].value}
+                            id={RoleOptionsMap[roleOption].value}
                             className="sr-only"
                           />
                           <Label
-                            htmlFor={option.value}
+                            htmlFor={RoleOptionsMap[roleOption].value}
                             className={`flex flex-col items-center justify-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 min-h-[70px] ${
                               isSelected
                                 ? "border-indigo-500 bg-indigo-50 text-indigo-700"
@@ -259,7 +207,7 @@ export default function LoginPage() {
                               }`}
                             />
                             <span className="font-medium text-xs text-center">
-                              {option.label}
+                              {RoleOptionsMap[roleOption].label}
                             </span>
                           </Label>
                         </div>
@@ -326,7 +274,7 @@ export default function LoginPage() {
                         Powered by
                       </span>
                       <span className="text-xs font-bold text-indigo-600 group-hover:text-indigo-700">
-                        Golicit Services Pvt. Ltd.
+                        Golicit
                       </span>
                     </div>
                   </a>

@@ -25,6 +25,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Footer } from "@/components/layout/footer";
 import { useAuth } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/toaster";
+import { AllRoles } from "@/lib/userRoles";
 
 const capitalizeFirstLetter = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -32,7 +33,7 @@ const capitalizeFirstLetter = (str: string) => {
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  userRole?: "receptionist" | "admin" | "content-manager" | "therapist";
+  userRole?: (typeof AllRoles)[number];
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -53,16 +54,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             sidebarCollapsed ? "w-16" : "w-64"
           } transition-all duration-300 ease-in-out flex flex-col`}
         >
-          <Sidebar
-            collapsed={sidebarCollapsed}
-            userRole={
-              user?.role?.toLowerCase() as
-                | "receptionist"
-                | "admin"
-                | "content-manager"
-                | "therapist"
-            }
-          />
+          <Sidebar collapsed={sidebarCollapsed} userRole={user?.role} />
         </div>
         <div className="flex-1 flex flex-col overflow-hidden">
           <header className="bg-white border-b border-gray-200 z-10 shadow-sm">

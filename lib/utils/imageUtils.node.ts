@@ -30,8 +30,6 @@ export const getImagesAsBase64 = async (fileNames: string[] = []) => {
 
       const base64String = imageBuffer.toString("base64");
       imagesBase64[fileName] = `data:${mimeType};base64,${base64String}`;
-
-      console.log(` Loaded image: ${fileName}`);
     } catch (error) {
       console.warn(`Could not load image: ${fileName}`, error);
       imagesBase64[fileName] = null;

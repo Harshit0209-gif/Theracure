@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
 import { AddAssessmentDialog } from "./add-prescription-form";
+import { UserRole } from "@prisma/client";
 
 // Prescription interface
 interface Prescription {
@@ -89,7 +90,7 @@ export function PrescriptionManagementSection() {
         page: page.toString(),
         limit: pagination.limit.toString(),
         ...(search && { search }),
-        ...(user?.role === "therapist" && { therapistId: user.id }),
+        ...(user?.role === UserRole.THERAPIST && { therapistId: user.id }),
       });
 
       const response = await fetch(`/api/prescriptions?${params}`);

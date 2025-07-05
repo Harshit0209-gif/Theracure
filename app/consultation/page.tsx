@@ -47,6 +47,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { AddConsultationDialog } from "@/components/new-consultstation";
 import { useAuth } from "@/contexts/auth-context";
+import { UserRole } from "@prisma/client";
 
 interface Consultation {
   id: string;
@@ -139,7 +140,7 @@ export default function Consultation() {
 
   const { user } = useAuth();
 
-  const isTherapist = user?.role === "therapist";
+  const isTherapist = user?.role === UserRole.THERAPIST;
 
   // Fetch consultations from API
   const loadConsultations = async () => {
