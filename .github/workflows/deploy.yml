@@ -23,51 +23,48 @@ jobs:
             echo "Starting Theracure-Dashboard Deployment on Utho Cloud..."
             echo "--------------------------------------------------------"
 
-            # Step 1: Navigate to project directory
+
             echo "Step 1/8: Navigating to project directory..."
             cd /var/www/html/Theracure-Dashboard || { echo "Error: Failed to change directory. Exiting."; exit 1; }
             echo "Current directory on server: $(pwd)"
 
-            # Step 2: Pull latest code from main branch
+
             echo "Step 2/8: Pulling latest code from 'main' branch..."
             git pull origin main || { echo "Error: Failed to pull latest code. Exiting."; exit 1; }
             echo "Code updated successfully."
 
-            # Step 3: Set DATABASE_URL environment variable
+
             echo "Step 3/8: Setting DATABASE_URL environment variable..."
             export DATABASE_URL="postgresql://theracure:theracure%40123@157.20.214.173:5432/theracuredb"
             echo "DATABASE_URL set."
 
-            # Step 4: Install project dependencies using pnpm
+
             echo "Step 4/8: Installing project dependencies with pnpm..."
-            # Note: You'll also need to ensure pnpm is installed on your Utho Cloud server.
-            # If not, add an installation step for pnpm before this (e.g., `npm install -g pnpm`).
             pnpm install || { echo "Error: Failed to install pnpm dependencies. Exiting."; exit 1; }
             echo "Project dependencies installed."
 
-            # Step 5: Install Chrome for Puppeteer
+
             echo "Step 5/8: Installing Chrome for Puppeteer (required for PDF generation)..."
-            # This command needs to run on the target server.
-            # It will download the Chromium browser into the Puppeteer cache on your Utho server.
+
             pnpm exec puppeteer browsers install chrome || { echo "Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
             echo "Chrome for Puppeteer installed successfully."
 
-            # Step 6: Build the application
-            echo "Step 6/8: Building the application (pnpm build)..."
-            pnpm build || { echo "Error: Failed to build the application. Exiting."; exit 1; }
-            echo "Application built successfully."
-
-            # Step 7: Apply Prisma database migrations
-            echo "Step 7/8: Applying Prisma database migrations..."
+             echo "Step 6/8: Applying Prisma database migrations..."
             pnpm prisma migrate deploy || { echo "Error: Failed to deploy Prisma migrations. Exiting."; exit 1; }
             echo "Prisma migrations applied."
 
-            # Step 8: Start or restart the PM2 process for 'dashboard'
+
+            echo "Step 7/8: Building the application (pnpm build)..."
+            pnpm build || { echo "Error: Failed to build the application. Exiting."; exit 1; }
+            echo "Application built successfully."
+
+
+
             echo "Step 8/8: Starting or restarting 'dashboard' process via PM2..."
             pm2 startOrRestart /var/www/html/ecosystem.config.js --only dashboard || { echo "Error: Failed to start/restart PM2 process. Exiting."; exit 1; }
             echo "'dashboard' process managed by PM2."
 
-            # Final PM2 status check
+
             echo "--------------------------------------------------------"
             echo "Deployment process completed."
             echo "Current PM2 status:"
