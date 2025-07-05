@@ -20,54 +20,12 @@ jobs:
           username: root
           key: ${{ secrets.UTHO_INSTANCE_PRIVAT_KEY }}
           script: |
-            echo "Starting Theracure-Dashboard Deployment on Utho Cloud..."
-            echo "--------------------------------------------------------"
-
-
-            echo "Step 1/8: Navigating to project directory..."
-            cd /var/www/html/Theracure-Dashboard || { echo "Error: Failed to change directory. Exiting."; exit 1; }
-            echo "Current directory on server: $(pwd)"
-
-
-            echo "Step 2/8: Pulling latest code from 'main' branch..."
-            git pull origin main || { echo "Error: Failed to pull latest code. Exiting."; exit 1; }
-            echo "Code updated successfully."
-
-
-            echo "Step 3/8: Setting DATABASE_URL environment variable..."
+            cd /var/www/html/Theracure-Dashboard
+            git pull origin main
             export DATABASE_URL="postgresql://theracure:theracure%40123@157.20.214.173:5432/theracuredb"
-            echo "DATABASE_URL set."
-
-
-            echo "Step 4/8: Installing project dependencies with pnpm..."
-            pnpm install || { echo "Error: Failed to install pnpm dependencies. Exiting."; exit 1; }
-            echo "Project dependencies installed."
-
-
-            echo "Step 5/8: Installing Chrome for Puppeteer (required for PDF generation)..."
-
-            pnpm exec puppeteer browsers install chrome || { echo "Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
-            echo "Chrome for Puppeteer installed successfully."
-
-             echo "Step 6/8: Applying Prisma database migrations..."
+            pnpm install
+            pnpm build
             pnpm prisma migrate deploy || { echo "Error: Failed to deploy Prisma migrations. Exiting."; exit 1; }
-            echo "Prisma migrations applied."
-
-
-            echo "Step 7/8: Building the application (pnpm build)..."
-            pnpm build || { echo "Error: Failed to build the application. Exiting."; exit 1; }
-            echo "Application built successfully."
-
-
-
-            echo "Step 8/8: Starting or restarting 'dashboard' process via PM2..."
-            pm2 startOrRestart /var/www/html/ecosystem.config.js --only dashboard || { echo "Error: Failed to start/restart PM2 process. Exiting."; exit 1; }
-            echo "'dashboard' process managed by PM2."
-
-
-            echo "--------------------------------------------------------"
-            echo "Deployment process completed."
-            echo "Current PM2 status:"
+            pnpm exec puppeteer browsers install chrome || { echo "Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }         
+            pm2 startOrRestart /var/www/html/ecosystem.config.js --only dashboard
             pm2 status
-
-            echo "Deployment finished."
