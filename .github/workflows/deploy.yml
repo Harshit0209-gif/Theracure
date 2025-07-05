@@ -21,6 +21,7 @@ jobs:
           key: ${{ secrets.UTHO_INSTANCE_PRIVAT_KEY }}
           script: |
             cd /var/www/html/Theracure-Dashboard
+            nc -zv 157.20.214.173 5432
             git pull origin main
             export DATABASE_URL="postgresql://theracure:theracure%40123@157.20.214.173:5432/theracuredb"
             pnpm install
