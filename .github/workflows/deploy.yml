@@ -27,10 +27,6 @@ jobs:
             echo "🎯 Switching to project directory"
             cd /var/www/html/Theracure-Dashboard
 
-            echo "✅ Checking PostgreSQL service status"
-            systemctl status postgresql || { echo "❌ Error: PostgreSQL is not running. Exiting."; exit 1; }
-
-
             echo "📥 Pulling latest code from Git"
             git pull origin main
 
