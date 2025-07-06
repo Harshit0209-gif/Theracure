@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createUserSchema, deleteUserSchema } from "@/lib/validations/user";
+import { UserRole } from "@prisma/client";
 
 // GET all users
 export async function GET(req: Request) {
@@ -10,8 +11,10 @@ export async function GET(req: Request) {
     const search = url.searchParams.get("search") || "";
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
-    const role = url.searchParams.get("role") || "";
     const skip = (page - 1) * limit;
+    const possibleRoles = Object.values(UserRole);
+    const roleParam = url.searchParams.get("role") || "";
+    const normalizedRole = roleParam.toUpperCase();
 
     const where = {
       ...(search && {
@@ -21,7 +24,9 @@ export async function GET(req: Request) {
           { phone: { contains: search, mode: "insensitive" as const } },
         ],
       }),
-      ...(role && { role: role as any }),
+      ...(possibleRoles.includes(normalizedRole as UserRole) && {
+        role: normalizedRole as UserRole,
+      }),
     };
 
     const [users, total] = await Promise.all([

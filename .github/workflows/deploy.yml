@@ -10,11 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ✅ Checkout your code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # ✅ Deploy to Utho Cloud via SSH
       - name: Deploy to Utho Cloud via SSH
         uses: appleboy/ssh-action@master
         with:
