@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { patientSchema } from "@/lib/validations/patient";
 
 const createInvoiceSchema = z.object({
   id: z.string().optional(),

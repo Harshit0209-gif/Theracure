@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { patientSchema, patientUpdateSchema } from "@/lib/validations/patient";
+import {
+  createPatientSchema,
+  patientUpdateSchema,
+} from "@/lib/validations/patient";
 import { generatePatientId } from "@/lib/utils/utils";
 
 // GET all patients
@@ -56,8 +59,12 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     console.log("create patient body:", body);
-    // Validate input
-    const result = patientSchema.safeParse(body);
+
+    const patientId = generatePatientId();
+    body.id = patientId;
+    console.log("Generated id..", patientId);
+
+    const result = createPatientSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid input", details: result.error.format() },
@@ -77,9 +84,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const patientId = generatePatientId();
-
-    console.log("Generated id..", patientId);
     const { data } = result;
 
     // Create patient
@@ -104,94 +108,6 @@ export async function POST(req: Request) {
     console.error("Error creating patient:", error);
     return NextResponse.json(
       { error: "Failed to create patient" },
-      { status: 500 }
-    );
-  }
-}
-
-// PUT update patient
-export async function PUT(req: Request) {
-  try {
-    const body = await req.json();
-
-    const { id, ...data } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Patient ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate input
-    const result = patientUpdateSchema.safeParse(data);
-    if (!result.success) {
-      return NextResponse.json(
-        { error: "Invalid input", details: result.error.format() },
-        { status: 400 }
-      );
-    }
-
-    // Check if patient exists
-    const existingPatient = await prisma.patient.findUnique({
-      where: { id },
-    });
-
-    if (!existingPatient) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
-    }
-
-    // Update patient
-    const patient = await prisma.patient.update({
-      where: { id },
-      data: result.data,
-    });
-
-    return NextResponse.json(patient);
-  } catch (error) {
-    console.error("Error updating patient:", error);
-    return NextResponse.json(
-      { error: "Failed to update patient" },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE patient
-export async function DELETE(req: Request) {
-  try {
-    const body = await req.json();
-    const { id } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Patient ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Check if patient exists
-    const existingPatient = await prisma.patient.findUnique({
-      where: { id },
-    });
-
-    if (!existingPatient) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
-    }
-
-    // Delete patient
-    await prisma.patient.delete({
-      where: { id },
-    });
-
-    return NextResponse.json(
-      { message: "Patient deleted successfully" },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error deleting patient:", error);
-    return NextResponse.json(
-      { error: "Failed to delete patient" },
       { status: 500 }
     );
   }

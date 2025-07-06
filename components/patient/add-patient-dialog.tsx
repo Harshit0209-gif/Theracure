@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +11,10 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/contexts/auth-context";
-import { patientSchema, type PatientFormData } from "@/lib/validations/patient";
+import {
+  createPatientSchema,
+  type PatientFormData,
+} from "@/lib/validations/patient";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { DialogFooter } from "@/components/ui/dialog";
 
 type AddPatientDialogProps = {
   fetchPatients: () => void;
@@ -43,7 +43,7 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
     formState: { errors },
     reset,
   } = useForm<PatientFormData>({
-    resolver: zodResolver(patientSchema),
+    resolver: zodResolver(createPatientSchema),
   });
 
   const onSubmit = async (data: PatientFormData) => {
