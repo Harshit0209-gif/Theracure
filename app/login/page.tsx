@@ -36,7 +36,7 @@ import { Toaster } from "@/components/ui/toaster";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("THERAPIST");
+  const [role, setRole] = useState<UserRole>(UserRole.THERAPIST);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

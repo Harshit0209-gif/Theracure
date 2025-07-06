@@ -7,7 +7,7 @@ import { UserRoleSchema } from "@/lib/userRoles";
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
-  role: UserRoleSchema.default("THERAPIST"),
+  role: UserRoleSchema.default(UserRoleSchema.enum.THERAPIST),
 });
 
 export async function POST(req: Request) {

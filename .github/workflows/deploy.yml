@@ -7,14 +7,14 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # This will run on a fresh Ubuntu environment in GitHub's data center
+    runs-on: ubuntu-latest
 
     steps:
+      # ✅ Checkout your code
       - name: Checkout code
         uses: actions/checkout@v3
-        env:
-          PRIVATE_KEY: ${{ secrets.UTHO_INSTANCE_PRIVAT_KEY }}
 
+      # ✅ Deploy to Utho Cloud via SSH
       - name: Deploy to Utho Cloud via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -22,14 +22,37 @@ jobs:
           username: root
           key: ${{ secrets.UTHO_INSTANCE_PRIVAT_KEY }}
           script: |
+            set -e
+
+            echo "🎯 Switching to project directory"
             cd /var/www/html/Theracure-Dashboard
-            systemctl status postgresql || { echo "Error: PostgreSQL service is not running. Exiting."; exit 1; }
-            nc -zv 157.20.214.173 5432
+
+            echo "✅ Checking PostgreSQL service status"
+            systemctl status postgresql || { echo "❌ Error: PostgreSQL is not running. Exiting."; exit 1; }
+
+
+            echo "📥 Pulling latest code from Git"
             git pull origin main
-            export DATABASE_URL="postgresql://theracure:theracure%40123@157.20.214.173:5432/theracuredb"
+
+            echo "🔐 Setting DATABASE_URL "
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+
+            echo "📦 Installing dependencies"
             pnpm install
+
+            echo "⚙️ Building the application"
             pnpm build
-            pnpm prisma migrate deploy || { echo "Error: Failed to deploy Prisma migrations. Exiting."; exit 1; }
-            pnpm exec puppeteer browsers install chrome || { echo "Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }         
+
+            echo "🗄️ Running Prisma migrations"
+            pnpm prisma migrate deploy || { echo "❌ Error: Failed to deploy Prisma migrations. Exiting."; exit 1; }
+
+            echo "🧑‍💻 Installing Puppeteer Chrome"
+            pnpm exec puppeteer browsers install chrome || { echo "❌ Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
+
+            echo "🚀 Restarting application with PM2"
             pm2 startOrRestart /var/www/html/ecosystem.config.js --only dashboard
+
+            echo "✅ PM2 status check"
             pm2 status
+
+            echo "🎉 Deployment complete!"
