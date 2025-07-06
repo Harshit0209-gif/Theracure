@@ -18,10 +18,10 @@ import {
   Bed,
 } from "lucide-react";
 import { AllRoles, RoleRoutes } from "@/lib/userRoles";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 
 interface SidebarProps {
-  userRole?: (typeof AllRoles)[number];
+  userRole?: UserRole;
   collapsed: boolean;
 }
 

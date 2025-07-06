@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Consultation } from "@prisma/client";
+import { Consultation } from "@/lib/generated/userRoles";
 
 type AddConsultationDialogProps = {
   onAdd: (consultation: Consultation) => void;

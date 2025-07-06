@@ -9,7 +9,7 @@ import { AppointmentTable } from "@/components/appointment-table";
 import { ScheduleNewDialog } from "@/components/schedule-new-dialog";
 import { CalendarViewDialog } from "@/components/calendar-view-dialog";
 import { useAuth } from "@/contexts/auth-context";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 export interface Appointment {
   id: string;
   therapistId: string;

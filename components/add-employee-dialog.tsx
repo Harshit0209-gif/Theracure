@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 import { AllRoles, UserRoleLabel } from "@/lib/userRoles";
 
 interface AddEmployeeDialogProps {

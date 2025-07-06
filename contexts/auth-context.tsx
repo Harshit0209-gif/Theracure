@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 import { LoginUser } from "@/types/user";
 import { RoleRoutes } from "@/lib/userRoles";
 

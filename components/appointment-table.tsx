@@ -48,7 +48,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 
 interface Service {
   id: string;

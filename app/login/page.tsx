@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { AllRoles, RoleOptionsMap } from "@/lib/userRoles";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 import { Toaster } from "@/components/ui/toaster";
 
 export default function LoginPage() {

@@ -5,14 +5,14 @@ import { createUserSchema } from "@/lib/validations/user";
 import { z } from "zod";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { toast } from "@/components/ui/use-toast";
+import { User } from "@/types/user";
+import { UserRole } from "@/lib/generated/userRoles";
 
 // Components
 import { EmployeeStats } from "@/components/employee-stats";
 import { AddEmployeeDialog } from "@/components/add-employee-dialog";
 import { EmployeeTable } from "@/components/employee-table";
 import { EmployeeTableHeader } from "@/components/employee-table-header";
-import { User } from "@/types/user";
-import { UserRole } from "@prisma/client";
 
 export interface PaginationInfo {
   total: number;

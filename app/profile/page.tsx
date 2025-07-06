@@ -23,7 +23,6 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   Calendar,
   Clock,
-  Save,
   Plus,
   Trash2,
   Edit2Icon,
@@ -46,8 +45,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { AllRoles, RoleColors } from "@/lib/userRoles";
-import { UserRole } from "@prisma/client";
+import { RoleColors } from "@/lib/userRoles";
+import { UserRole } from "@/lib/generated/userRoles";
 import { updateUserSchema, UserUpdateFormData } from "@/lib/validations/user";
 import { User } from "@/types/user";
 

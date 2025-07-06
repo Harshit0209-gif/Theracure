@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { CalendarCheck2, Plus, CalendarDays } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 
 interface AppointmentHeaderProps {
   onScheduleNew: () => void;

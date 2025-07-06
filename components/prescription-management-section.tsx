@@ -30,7 +30,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
 import { AddAssessmentDialog } from "./add-prescription-form";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 
 // Prescription interface
 interface Prescription {

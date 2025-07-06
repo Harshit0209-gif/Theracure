@@ -47,7 +47,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { AddConsultationDialog } from "@/components/new-consultstation";
 import { useAuth } from "@/contexts/auth-context";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 
 interface Consultation {
   id: string;

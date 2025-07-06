@@ -40,7 +40,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { AddPatientDialog } from "./add-patient-dialog";
 import { toast } from "@/hooks/use-toast";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 
 interface Patient {
   id: string;

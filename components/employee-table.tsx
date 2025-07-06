@@ -45,7 +45,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/validations/user";
 import { RoleColors, UserRoleLabel } from "@/lib/userRoles";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 import { User } from "@/types/user";
 import { PaginationInfo } from "@/types";
 import { EmployeeProfileCard } from "./employee-profile-card";

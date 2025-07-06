@@ -99,7 +99,7 @@ import { useAdminDashboardData } from "@/hooks/use-admin-dashboard-data";
 import { StatsCard } from "@/components/stats/stats-section";
 import { formatCurrency } from "@/lib/utils/utils";
 import { InvoiceDetailsModal } from "./InvoiceModel";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 
 export function InvoicesSection() {
   const { toast } = useToast();

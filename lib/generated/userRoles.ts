@@ -1,0 +1,9 @@
+// 🚨 AUTO-GENERATED FILE. DO NOT EDIT MANUALLY!
+// Generated from Prisma schema.
+
+export enum UserRole {
+  ADMIN = "ADMIN",
+  THERAPIST = "THERAPIST",
+  RECEPTIONIST = "RECEPTIONIST",
+  CONTENT_MANAGER = "CONTENT_MANAGER",
+}

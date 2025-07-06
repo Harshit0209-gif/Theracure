@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        env:
+          PRIVATE_KEY: ${{ secrets.UTHO_INSTANCE_PRIVAT_KEY }}
 
       - name: Deploy to Utho Cloud via SSH
         uses: appleboy/ssh-action@master

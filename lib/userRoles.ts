@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/generated/userRoles";
 import { z } from "zod";
 import { User, FileText, Shield, Stethoscope, LucideIcon } from "lucide-react";
 
@@ -66,28 +66,28 @@ export const RoleOptionsMap: Record<
     value: UserRole.RECEPTIONIST,
     label: UserRoleLabel[UserRole.RECEPTIONIST],
     icon: RoleIcons[UserRole.RECEPTIONIST],
-    description: "Front desk and patient management",
+    description: UserRoleDescription[UserRole.RECEPTIONIST],
     color: RoleColors[UserRole.RECEPTIONIST],
   },
   [UserRole.CONTENT_MANAGER]: {
     value: UserRole.CONTENT_MANAGER,
     label: UserRoleLabel[UserRole.CONTENT_MANAGER],
     icon: RoleIcons[UserRole.CONTENT_MANAGER],
-    description: "Content and resource management",
+    description: UserRoleDescription[UserRole.CONTENT_MANAGER],
     color: RoleColors[UserRole.CONTENT_MANAGER],
   },
   [UserRole.ADMIN]: {
     value: UserRole.ADMIN,
     label: UserRoleLabel[UserRole.ADMIN],
     icon: RoleIcons[UserRole.ADMIN],
-    description: "Full system administration",
+    description: UserRoleDescription[UserRole.ADMIN],
     color: RoleColors[UserRole.ADMIN],
   },
   [UserRole.THERAPIST]: {
     value: UserRole.THERAPIST,
     label: UserRoleLabel[UserRole.THERAPIST],
     icon: RoleIcons[UserRole.THERAPIST],
-    description: "Patient treatment and therapy",
+    description: UserRoleDescription[UserRole.THERAPIST],
     color: RoleColors[UserRole.THERAPIST],
   },
 };
