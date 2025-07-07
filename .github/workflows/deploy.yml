@@ -22,8 +22,14 @@ jobs:
           script: |
             set -e
 
+            ssh-add -l
+
             echo "🎯 Switching to project directory"
             cd /var/www/html/Theracure-Dashboard
+
+            echo "🔑 Starting SSH agent and adding key"
+            eval "$(ssh-agent -s)"
+            ssh-add github_deploy_key
 
             echo "📥 Pulling latest code from Git"
             git pull origin main
