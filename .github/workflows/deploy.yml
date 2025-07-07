@@ -22,19 +22,17 @@ jobs:
           script: |
             set -e
 
-            ssh-add -l
+            echo "💾 Saving deploy private key for Git pull"
+            echo "${{ secrets.DEPLOY_KEY }}" > /root/.ssh/github_deploy_key
+            chmod 600 /root/.ssh/github_deploy_key
 
             echo "🎯 Switching to project directory"
             cd /var/www/html/Theracure-Dashboard
 
-            echo "🔑 Starting SSH agent and adding key"
-            eval "$(ssh-agent -s)"
-            ssh-add github_deploy_key
+            echo "📥 Pulling latest code from Git using GIT_SSH_COMMAND"
+            GIT_SSH_COMMAND="ssh -i /root/.ssh/github_deploy_key -o StrictHostKeyChecking=no" git pull origin main
 
-            echo "📥 Pulling latest code from Git"
-            git pull origin main
-
-            echo "🔐 Setting DATABASE_URL "
+            echo "🔐 Setting DATABASE_URL"
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 
             echo "📦 Installing dependencies"
