@@ -120,12 +120,17 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
           {Object.keys(errors).length > 0 && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
               <p className="text-sm font-medium">
-                Please correct the errors below to continue
+                Please correct the errors below to continue ,
               </p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+          <form
+            onSubmit={handleSubmit(onSubmit, (errors) => {
+              console.log("Form submission failed with errors:", errors);
+            })}
+            className="space-y-8"
+          >
             {/* Basic Information Section */}
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
@@ -194,9 +199,9 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     )}

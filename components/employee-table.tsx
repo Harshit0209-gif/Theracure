@@ -145,7 +145,7 @@ export function EmployeeTable({
         } successfully`,
       });
 
-      onUserUpdated(); // Refresh the users list
+      onUserUpdated();
     } catch (error) {
       toast({
         title: "Error",
@@ -275,9 +275,6 @@ export function EmployeeTable({
                         </Avatar>
                         <div>
                           <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-gray-500">
-                            ID: {user.id.slice(0, 8)}...
-                          </p>
                         </div>
                       </div>
                     </TableCell>

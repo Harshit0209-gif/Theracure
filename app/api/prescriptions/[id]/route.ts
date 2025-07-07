@@ -35,9 +35,8 @@ export async function GET(
           select: {
             id: true,
             sessionDate: true,
-            sessionType: true,
-            duration: true,
-            notes: true,
+            sessionData: true,
+            sessionNotes: true,
           },
         },
       },
@@ -197,7 +196,8 @@ export async function PATCH(
           select: {
             id: true,
             sessionDate: true,
-            sessionType: true,
+            sessionData: true,
+            sessionNotes: true,
           },
         },
       },

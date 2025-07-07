@@ -15,7 +15,9 @@ export const getGreeting = () => {
 export const generatePatientId = () => {
   const prefix = "THRC";
   const now = Date.now().toString();
+  console.log("Current timestamp:", now);
   const slice = now.slice(-4);
+  console.log("Last 4 digits of timestamp:", slice);
   return `${prefix}${slice}`;
 };
 
