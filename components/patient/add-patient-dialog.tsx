@@ -248,7 +248,9 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
                     type="number"
                     min="0"
                     max="120"
-                    {...register("age", { valueAsNumber: true })}
+                    {...register("age", {
+                      setValueAs: (v) => (v === "" ? undefined : Number(v)),
+                    })}
                     placeholder="Enter age"
                     className="w-full"
                   />
@@ -264,7 +266,9 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
                     type="number"
                     min="50"
                     max="250"
-                    {...register("height", { valueAsNumber: true })}
+                    {...register("height", {
+                      setValueAs: (v) => (v === "" ? undefined : Number(v)),
+                    })}
                     placeholder="Height in cm"
                     className="w-full"
                   />
@@ -283,7 +287,9 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
                     min="1"
                     max="300"
                     step="0.1"
-                    {...register("weight", { valueAsNumber: true })}
+                    {...register("weight", {
+                      setValueAs: (v) => (v === "" ? undefined : Number(v)),
+                    })}
                     placeholder="Weight in kg"
                     className="w-full"
                   />
