@@ -1,17 +1,17 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('admin', 'therapist', 'receptionist', 'user');
+CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'THERAPIST', 'RECEPTIONIST', 'CONTENT_MANAGER');
 
 -- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('active', 'inactive', 'suspended');
+CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED');
 
 -- CreateEnum
-CREATE TYPE "AssignmentStatus" AS ENUM ('confirmed', 'cancelled', 'completed', 'no_show');
+CREATE TYPE "AssignmentStatus" AS ENUM ('CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
 
 -- CreateEnum
-CREATE TYPE "SessionStatus" AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled', 'no_show');
+CREATE TYPE "SessionStatus" AS ENUM ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
 
 -- CreateEnum
-CREATE TYPE "AppointmentStatus" AS ENUM ('confirmed', 'completed', 'cancelled', 'rescheduled');
+CREATE TYPE "AppointmentStatus" AS ENUM ('CONFIRMED', 'RESCHEDULED', 'COMPLETED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('DUE', 'PAID', 'CANCELLED');
@@ -30,7 +30,7 @@ CREATE TABLE "users" (
     "password_hash" TEXT NOT NULL,
     "role" "UserRole" NOT NULL,
     "phone" TEXT,
-    "status" "UserStatus" NOT NULL DEFAULT 'active',
+    "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -53,7 +53,7 @@ CREATE TABLE "patients" (
     "medicalHistory" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "status" "UserStatus" NOT NULL DEFAULT 'active',
+    "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
 
     CONSTRAINT "patients_pkey" PRIMARY KEY ("patient_id")
 );
@@ -79,7 +79,8 @@ CREATE TABLE "therapists" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "qualification" TEXT,
-    "status" TEXT DEFAULT 'active',
+    "experiences" TEXT,
+    "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
 
     CONSTRAINT "therapists_pkey" PRIMARY KEY ("therapist_id")
 );
@@ -108,7 +109,7 @@ CREATE TABLE "therapist_assignments" (
     "appointment_end_time" TIMESTAMP(3) NOT NULL,
     "service_id" TEXT,
     "assigned_date" DATE NOT NULL,
-    "status" "AppointmentStatus" NOT NULL DEFAULT 'confirmed',
+    "status" "AppointmentStatus" NOT NULL DEFAULT 'CONFIRMED',
     "notes" TEXT,
     "created_by" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

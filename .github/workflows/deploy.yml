@@ -38,6 +38,9 @@ jobs:
             echo "📦 Installing dependencies"
             pnpm install
 
+            echo "⚙️ Generating Prisma client"
+            pnpm prisma generate
+
             echo "⚙️ Building the application"
             pnpm build
 
