@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { updateUserSchema } from "@/lib/validations/user";
+import { PrismaClient, UserStatus } from "@prisma/client";
+import { updateStatusSchema, updateUserSchema } from "@/lib/validations/user";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -151,12 +151,67 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const body = await req.json();
+    const { id } = await params;
+
+    console.log("Request body for updating user status:", body);
+
+    const result = updateStatusSchema.safeParse(body);
+    console.log("Validation result:", result);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: result.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { status } = result.data;
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Update user status
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { status },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        updatedAt: true,
+      },
+    });
+
+    return NextResponse.json({ success: true, updatedUser }, { status: 200 });
+  } catch (error) {
+    console.error("Error updating user status:", error);
+    return NextResponse.json(
+      { error: "Failed to update user status" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    console.log("User delete request", id);
 
     // Validate ID format
     if (!id || typeof id !== "string") {
@@ -184,11 +239,11 @@ export async function DELETE(
       );
     }
 
-    // Instead of hard delete, you might want to soft delete by updating status
+    // Instead of hard delete, soft delete by updating status
     const deletedUser = await prisma.user.update({
       where: { id },
       data: {
-        status: "inactive",
+        status: UserStatus.INACTIVE,
         updatedAt: new Date(),
       },
       select: {

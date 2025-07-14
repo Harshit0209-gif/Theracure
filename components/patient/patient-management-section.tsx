@@ -89,6 +89,7 @@ export function PatientManagementSection() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pagination.limit.toString(),
+        ...(user?.role === UserRole.THERAPIST && { therapistId: user.id }),
         ...(search && { search }),
       });
 

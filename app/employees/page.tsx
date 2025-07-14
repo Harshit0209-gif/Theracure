@@ -13,6 +13,7 @@ import { EmployeeStats } from "@/components/employee-stats";
 import { AddEmployeeDialog } from "@/components/add-employee-dialog";
 import { EmployeeTable } from "@/components/employee-table";
 import { EmployeeTableHeader } from "@/components/employee-table-header";
+import { UserStatus } from "@/lib/generated/userEnums";
 
 export interface PaginationInfo {
   total: number;
@@ -115,7 +116,7 @@ export default function EmployeePage() {
     receptionists: users.filter((u) => u.role === UserRole.RECEPTIONIST).length,
     content_managers: users.filter((u) => u.role === UserRole.CONTENT_MANAGER)
       .length,
-    active: users.filter((u) => u.status === "active").length,
+    active: users.filter((u) => u.status === UserStatus.ACTIVE).length,
     support: users.filter(
       (u) =>
         u.role === UserRole.RECEPTIONIST || u.role === UserRole.CONTENT_MANAGER

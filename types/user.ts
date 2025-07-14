@@ -1,3 +1,4 @@
+import { UserStatus } from "@/lib/generated/userEnums";
 import { UserRole } from "@/lib/generated/userRoles";
 
 export interface LoginUser {
@@ -14,7 +15,15 @@ export interface User {
   email: string;
   role: UserRole;
   phone?: string;
-  status: string;
+  status: UserStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface EditUserFormData {
+  name: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  status: UserStatus;
 }

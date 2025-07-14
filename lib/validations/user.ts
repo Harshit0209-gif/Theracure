@@ -1,5 +1,6 @@
-import { z } from "zod";
+import { TypeOf, z } from "zod";
 import { UserRoleSchema } from "@/lib/userRoles";
+import { UserStatus } from "@prisma/client";
 
 const phoneRegex =
   /^\+?[1-9]\d{0,2}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/;
@@ -61,7 +62,7 @@ export const updateUserSchema = z.object({
   phone: z
     .string()
     .min(10, "Phone number must be at least 10 digits")
-    .max(15, "Phone number must be less than 15 digits")
+    .max(10, "Phone number must be less than 15 digits")
     .regex(
       phoneRegex,
       "Please enter a valid phone number (e.g., +91 234-567-8909)"
@@ -71,7 +72,6 @@ export const updateUserSchema = z.object({
     .or(z.literal("")),
 });
 
-// Schema for deleting a user
 export const deleteUserSchema = z.object({
   id: z.string().min(1, "User ID is required"),
 });
@@ -85,6 +85,11 @@ export const passwordSchema = z
     "Password must contain at least one uppercase letter, one lowercase letter, and one number"
   );
 
+export const updateStatusSchema = z.object({
+  status: z.enum(Object.values(UserStatus) as [UserStatus, ...UserStatus[]]),
+});
+
 export type UserUpdateFormData = z.infer<typeof updateUserSchema>;
 export type CreateUserFormData = z.infer<typeof createUserSchema>;
+export type UpdateUserStatusData = z.infer<typeof updateStatusSchema>;
 export type PasswordFormData = z.infer<typeof passwordSchema>;

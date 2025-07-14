@@ -49,6 +49,7 @@ import { UserRole } from "@/lib/generated/userRoles";
 import { User } from "@/types/user";
 import { PaginationInfo } from "@/types";
 import { EmployeeProfileCard } from "./employee-profile-card";
+import { UserStatus } from "@/lib/generated/userEnums";
 
 interface EmployeeTableProps {
   users: User[];
@@ -122,7 +123,10 @@ export function EmployeeTable({
   const handleToggleStatus = async (user: User) => {
     try {
       setIsLoading(true);
-      const newStatus = user.status === "active" ? "inactive" : "active";
+      const newStatus =
+        user.status === UserStatus.ACTIVE
+          ? UserStatus.INACTIVE
+          : UserStatus.ACTIVE;
 
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
@@ -140,9 +144,7 @@ export function EmployeeTable({
 
       toast({
         title: "Success",
-        description: `User ${
-          newStatus === "active" ? "activated" : "deactivated"
-        } successfully`,
+        description: `User ${newStatus} successfully`,
       });
 
       onUserUpdated();
@@ -329,7 +331,7 @@ export function EmployeeTable({
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className={
-                                user.status === "active"
+                                user.status === UserStatus.ACTIVE
                                   ? "text-red-600"
                                   : "text-green-600"
                               }
@@ -340,7 +342,7 @@ export function EmployeeTable({
                               disabled={isLoading}
                             >
                               <Shield className="mr-2 h-4 w-4" />
-                              {user.status === "active"
+                              {user.status === UserStatus.ACTIVE
                                 ? "Deactivate"
                                 : "Activate"}
                             </DropdownMenuItem>
@@ -529,7 +531,3 @@ export function EmployeeTable({
     </>
   );
 }
-
-// ====================================================================
-// COMPONENT: Employee Profile Card
-// ====================================================================

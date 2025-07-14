@@ -141,7 +141,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               </Label>
               <Input
                 id="name"
-                placeholder="Dr. John Smith"
+                placeholder="Dr. Mahesh Kumar"
                 className="col-span-3"
                 {...form.register("name")}
               />

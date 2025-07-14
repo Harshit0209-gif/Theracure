@@ -1,6 +1,7 @@
 import { UserRole } from "@/lib/generated/userRoles";
 import { z } from "zod";
 import { User, FileText, Shield, Stethoscope, LucideIcon } from "lucide-react";
+import { UserStatus } from "@/lib/generated/userEnums";
 
 export const UserRoleLabel: Record<UserRole, string> = {
   ADMIN: "Admin",
@@ -15,6 +16,12 @@ export const AllRoles: UserRole[] = [
   UserRole.RECEPTIONIST,
   UserRole.CONTENT_MANAGER,
 ];
+
+export const UserStatusLabel: Record<UserStatus, string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  SUSPENDED: "Suspend",
+};
 
 export const UserRoleSchema = z.enum(AllRoles as [UserRole, ...UserRole[]]);
 

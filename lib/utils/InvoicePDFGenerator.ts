@@ -59,14 +59,14 @@ const getImageAsBase64 = async () => {
   try {
     // Construct the path to the image
     // Assuming this file is in /lib/ and image is in app/lib/utils/
-    const imagePath = path.resolve(__dirname, "../utils/apple-touch-icon.png");
+    const imagePath = path.resolve(__dirname, "./public/apple-touch-icon.png");
 
     // Alternative paths to try if the above doesn't work
     const alternativePaths = [
-      path.resolve(__dirname, "./utils/apple-touch-icon.png"),
-      path.resolve(__dirname, "../app/lib/utils/apple-touch-icon.png"),
-      path.resolve(process.cwd(), "app/lib/utils/apple-touch-icon.png"),
-      path.resolve(process.cwd(), "lib/utils/apple-touch-icon.png"),
+      path.resolve(__dirname, "./public/apple-touch-icon.png"),
+      path.resolve(__dirname, "./public/apple-touch-icon.png"),
+      path.resolve(process.cwd(), "./public/apple-touch-icon.png"),
+      path.resolve(process.cwd(), "./public/apple-touch-icon.png"),
     ];
 
     let imageBuffer;

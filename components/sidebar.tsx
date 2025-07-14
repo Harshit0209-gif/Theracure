@@ -143,8 +143,8 @@ export function Sidebar({
     <div className="bg-gradient-to-b from-indigo-800 to-indigo-900 text-white h-full flex flex-col">
       <div className="p-4 flex items-center justify-center">
         {!collapsed && (
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 relative">
+          <div className="flex items-center space-x-3">
+            <div className="h-12 w-12 relative">
               <Image
                 src="/logo.png"
                 alt="Theracure Logo"
@@ -153,11 +153,18 @@ export function Sidebar({
                 priority
               />
             </div>
-            <span className="font-bold text-lg">Theracure</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-bold text-2xl tracking-wide">
+                Theracure
+              </span>
+              <span className="text-[10px] text-white-500 -mt-0.5 italic font-light tracking-widest uppercase opacity-75">
+                Advanced Physiotherapy Clinic
+              </span>
+            </div>
           </div>
         )}
         {collapsed && (
-          <div className="h-8 w-8 relative mx-auto">
+          <div className="h-12 w-12 relative mx-auto">
             <Image
               src="/logo.png"
               alt="Theracure Logo"

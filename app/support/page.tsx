@@ -52,13 +52,6 @@ export default function Support() {
       action: "Send Email",
       color: "bg-purple-500",
     },
-    {
-      icon: FileText,
-      title: "Submit Ticket",
-      description: "Create a support ticket for complex issues",
-      action: "Create Ticket",
-      color: "bg-orange-500",
-    },
   ];
 
   const faqCategories = [

@@ -16,31 +16,31 @@ enum UserRole {
 }
 
 enum UserStatus {
-  active
-  inactive
-  suspended
+  ACTIVE         
+  INACTIVE        
+  SUSPENDED       
 }
 
 enum AssignmentStatus {
-  confirmed
-  cancelled
-  completed
-  no_show
+  CONFIRMED       
+  COMPLETED       
+  CANCELLED       
+  NO_SHOW         
 }
 
 enum SessionStatus {
-  scheduled
-  in_progress
-  completed
-  cancelled
-  no_show
+  SCHEDULED       
+  IN_PROGRESS     
+  COMPLETED       
+  CANCELLED       
+  NO_SHOW         
 }
 
 enum AppointmentStatus {
-  confirmed
-  completed
-  cancelled
-  rescheduled
+  CONFIRMED      
+  RESCHEDULED     
+  COMPLETED       
+  CANCELLED       
 }
 enum InvoiceStatus {
   DUE
@@ -69,7 +69,7 @@ model User {
   passwordHash  String      @map("password_hash")
   role          UserRole
   phone         String?
-  status        UserStatus  @default(active)
+  status        UserStatus  @default(ACTIVE)
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
@@ -98,7 +98,7 @@ model Patient {
   medicalHistory  String?
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
-  status          UserStatus    @default(active) @map("status")  
+  status          UserStatus @default(ACTIVE) @map("status")  
 
   // Relations
   therapistAssignments TherapistAssignment[] @relation("PatientAssignments")
@@ -136,7 +136,7 @@ model Therapist {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   qualification   String?
   experiences     String?
-  status          String?    @default("active") @map("status")
+  status          UserStatus    @default(ACTIVE) @map("status")
 
   // Relations
   user            User      @relation(fields: [id], references: [id], onDelete: Cascade)
@@ -176,7 +176,7 @@ model TherapistAssignment {
   appointmentEndTime    DateTime          @map("appointment_end_time")
   serviceId             String?           @map("service_id")
   assignedDate          DateTime          @map("assigned_date") @db.Date
-  status                AppointmentStatus @default(confirmed)
+  status                AppointmentStatus @default(CONFIRMED)
   notes                 String?           @db.Text
   createdById           String            @map("created_by")
   createdAt             DateTime          @default(now()) @map("created_at")

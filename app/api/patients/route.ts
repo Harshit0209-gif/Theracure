@@ -10,21 +10,47 @@ import { generatePatientId } from "@/lib/utils/utils";
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
+    const therapistId = url.searchParams.get("therapistId");
     const search = url.searchParams.get("search") || "";
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    const where = search
-      ? {
-          OR: [
-            { patientName: { contains: search, mode: "insensitive" as const } },
-            { email: { contains: search, mode: "insensitive" as const } },
-            { phone: { contains: search, mode: "insensitive" as const } },
-            { id: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
+    // Build the where clause
+    let where: any = {};
+
+    // If therapistId is provided, filter patients assigned to that therapist
+    if (therapistId) {
+      where.therapistAssignments = {
+        some: {
+          therapistId: therapistId,
+          // Optionally add active status filter
+          // isActive: true
+        },
+      };
+    }
+
+    // Add search functionality
+    if (search) {
+      const searchConditions = {
+        OR: [
+          { patientName: { contains: search, mode: "insensitive" as const } },
+          { email: { contains: search, mode: "insensitive" as const } },
+          { phone: { contains: search, mode: "insensitive" as const } },
+          { id: { contains: search, mode: "insensitive" as const } },
+        ],
+      };
+
+      // Combine therapist filter with search
+      if (therapistId) {
+        where.AND = [
+          { therapistAssignments: { some: { therapistId: therapistId } } },
+          searchConditions,
+        ];
+      } else {
+        where = searchConditions;
+      }
+    }
 
     const [patients, total] = await Promise.all([
       prisma.patient.findMany({
@@ -32,6 +58,19 @@ export async function GET(req: Request) {
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
+        include: {
+          therapistAssignments: {
+            include: {
+              therapist: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
       }),
       prisma.patient.count({ where }),
     ]);
@@ -47,6 +86,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
+    console.error("Error fetching patients:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch patients" },
       { status: 500 }

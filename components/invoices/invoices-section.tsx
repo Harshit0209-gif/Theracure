@@ -543,15 +543,6 @@ export function InvoicesSection() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1 border-teal-600 text-teal-700 hover:bg-teal-50"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-
             {/* Invoice Creation Dialog */}
             <Dialog
               open={isInvoiceDialogOpen}
@@ -645,30 +636,34 @@ export function InvoicesSection() {
                                 </div>
 
                                 {/* Email */}
-                                <div>
-                                  <Label className="text-xs">Email</Label>
-                                  <div className="relative mt-0.5">
-                                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <Input
-                                      value={patientInfo.email}
-                                      readOnly
-                                      className="pl-10 bg-gray-50 h-9 text-sm"
-                                    />
+                                {patientInfo.email ? (
+                                  <div>
+                                    <Label className="text-xs">Email</Label>
+                                    <div className="relative mt-0.5">
+                                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                      <Input
+                                        value={patientInfo.email}
+                                        readOnly
+                                        className="pl-10 bg-gray-50 h-9 text-sm"
+                                      />
+                                    </div>
                                   </div>
-                                </div>
+                                ) : null}
 
                                 {/* Phone */}
-                                <div>
-                                  <Label className="text-xs">Phone</Label>
-                                  <div className="relative mt-0.5">
-                                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <Input
-                                      value={patientInfo.phone}
-                                      readOnly
-                                      className="pl-10 bg-gray-50 h-9 text-sm"
-                                    />
+                                {patientInfo.phone ? (
+                                  <div>
+                                    <Label className="text-xs">Phone</Label>
+                                    <div className="relative mt-0.5">
+                                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                      <Input
+                                        value={patientInfo.phone}
+                                        readOnly
+                                        className="pl-10 bg-gray-50 h-9 text-sm"
+                                      />
+                                    </div>
                                   </div>
-                                </div>
+                                ) : null}
 
                                 {/* Address */}
                                 <div>

@@ -160,14 +160,37 @@ export const PatientDetailsCard = ({
               label="Weight"
               value={patient.weight ? `${patient.weight} kg` : "Not specified"}
             />
-            <InfoDisplay
-              label="BMI"
-              value={
-                bmiResult
-                  ? `${bmiResult.bmi} (${bmiResult.status})`
-                  : "Not calculated"
-              }
-            />
+            {/* BMI Calculation */}
+            {patient.height && patient.weight && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">BMI:</span>
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const bmiData = calculateSimpleBMI(
+                      patient.weight,
+                      patient.height
+                    );
+                    return (
+                      <>
+                        <span className="text-gray-900 font-medium">
+                          {bmiData.bmi}
+                        </span>
+                        <span
+                          className="px-2 py-1 rounded-full text-xs font-medium"
+                          style={{
+                            backgroundColor: bmiData.color + "20",
+                            color: bmiData.color,
+                            border: `1px solid ${bmiData.color}40`,
+                          }}
+                        >
+                          {bmiData.status}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -27,7 +27,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "lib/scripts/generate-user-role-enum.ts"
+    "lib/scripts/generate-user-enum.ts"
   ],
   "exclude": ["node_modules"]
 }
