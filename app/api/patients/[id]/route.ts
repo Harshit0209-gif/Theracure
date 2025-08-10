@@ -77,10 +77,13 @@ export async function PUT(
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
+    console.log("existing patient:", existingPatient);
+    const { therapistAppointments, ...safeData } = result.data;
+
     // Update patient
     const patient = await prisma.patient.update({
       where: { id },
-      data: result.data,
+      data: safeData,
     });
 
     return NextResponse.json(patient);

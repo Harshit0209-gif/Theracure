@@ -25,8 +25,19 @@ export interface Client {
 }
 
 export interface PaginationInfo {
-  total: number;
-  pages: number;
-  page: number;
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
   limit: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
+
+export const PaginationDefaultValue: PaginationInfo = {
+  currentPage: 1,
+  totalPages: 1,
+  totalCount: 0,
+  limit: 20,
+  hasNextPage: false,
+  hasPreviousPage: false,
+};

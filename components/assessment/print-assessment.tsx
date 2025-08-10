@@ -2,43 +2,14 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Printer, Eye, Download, Loader2 } from "lucide-react";
-
-interface PatientInfo {
-  id: string;
-  name?: string;
-  patientName?: string;
-  age?: number;
-  gender?: string;
-  patientId?: string;
-}
-
-interface AssessmentData {
-  assessmentDate?: string;
-  chiefComplaints?: string;
-  historyOfIllness?: string;
-  onObservation?: string;
-  onPalpation?: string;
-  onExaminations?: string;
-  differentialDiagnosis?: string;
-  investigations?: string;
-  specialTests?: string;
-  provisionalDiagnosis?: string;
-  physiotherapyMgmt?: string;
-}
+import { AssessmentFormData } from "@/types/assessment";
+import { Patient } from "@/types/patient";
 
 interface PrintAssessmentProps {
-  assessmentData: AssessmentData;
-  patientInfo: PatientInfo;
+  assessmentData: AssessmentFormData;
+  patientInfo: Patient;
   therapistId?: string;
   disabled?: boolean;
   variant?: string;

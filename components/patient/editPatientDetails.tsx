@@ -45,6 +45,8 @@ export const EditPatientDialog = ({
     e.preventDefault();
     if (!patient) return;
 
+    console.log("Update form data: ", JSON.stringify(formData));
+
     setLoading(true);
     try {
       const response = await fetch(`/api/patients/${patient.id}`, {

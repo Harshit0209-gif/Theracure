@@ -5,63 +5,22 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { toast } from "@/components/ui/use-toast";
 
 import { AppointmentHeader } from "@/components/appointment-header";
-import { AppointmentTable } from "@/components/appointment-table";
-import { ScheduleNewDialog } from "@/components/schedule-new-dialog";
+import { AppointmentTable } from "@/components/appointments/appointment-table";
+import { ScheduleNewDialog } from "@/components/appointments/schedule-new-appointment";
 import { CalendarViewDialog } from "@/components/calendar-view-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
-export interface Appointment {
-  id: string;
-  therapistId: string;
-  patientId: string;
-  appointmentStartTime: string;
-  appointmentEndTime: string;
-  therapyType: string;
-  status: "confirmed" | "cancelled" | "completed";
-  createdById: string;
-  createdAt: string;
-
-  // Populated fields
-  patient?: {
-    id: string;
-    patientName: string;
-  };
-  therapist?: {
-    id: string;
-    name: string;
-  };
-  createdBy?: {
-    name: string;
-  };
-}
-
-export interface TherapistAvailability {
-  id: string;
-  therapistId: string;
-  slotDate: string;
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-}
-
-export interface PaginationInfo {
-  total: number;
-  pages: number;
-  page: number;
-  limit: number;
-}
+import { Appointment } from "@/types/appointments";
+import { PaginationDefaultValue, PaginationInfo } from "@/types/index";
 
 const AppointmentPage = () => {
   // State management
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    total: 0,
-    pages: 0,
-    page: 1,
-    limit: 5,
-  });
+  const [pagination, setPagination] = useState<PaginationInfo>(
+    PaginationDefaultValue
+  );
 
   // Dialog states
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
@@ -125,7 +84,7 @@ const AppointmentPage = () => {
 
   // Handle successful appointment creation/update
   const handleAppointmentUpdated = () => {
-    fetchAppointments(pagination.page, searchQuery);
+    fetchAppointments(pagination.currentPage, searchQuery);
   };
 
   return (

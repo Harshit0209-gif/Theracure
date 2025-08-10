@@ -12,7 +12,7 @@ export async function GET() {
     const endOfDay = new Date(startOfDay);
     endOfDay.setDate(startOfDay.getDate() + 1);
 
-    const appointments = await prisma.therapistAssignment.findMany({
+    const appointments = await prisma.appointment.findMany({
       where: {
         assignedDate: {
           gte: startOfDay,

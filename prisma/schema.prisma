@@ -15,6 +15,12 @@ enum UserRole {
   CONTENT_MANAGER
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
 enum UserStatus {
   ACTIVE         
   INACTIVE        
@@ -55,11 +61,25 @@ enum ConsultationStatus {
   CANCELLED
 }
 
-enum Gender {
-  MALE
-  FEMALE
-  OTHER
+enum RecurringType {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
 }
+
+enum RecurringEndType {
+  COUNT
+  DATE
+}
+
+enum ServiceCategory {
+  MANUAL_THERAPY
+  CONSULTATION
+  ELECTROTHERAPY
+  EXERCISE_THERAPY
+  COMBO_TREATMENT
+}
+
 
 // Models
 model User {
@@ -74,8 +94,8 @@ model User {
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
   // Relations
-  assignmentsCreated TherapistAssignment[] @relation("CreatedBy")
-  therapistAssignments TherapistAssignment[] @relation("TherapistAssignments")
+  therapistAppointments Appointment[] @relation("TherapistAppointments")
+  createdAppointments       Appointment[]         @relation("CreatedBy")
   therapistTimeSlots TherapistTimeSlot[] @relation("TherapistTimeSlots")
   therapist          Therapist?
  
@@ -101,7 +121,7 @@ model Patient {
   status          UserStatus @default(ACTIVE) @map("status")  
 
   // Relations
-  therapistAssignments TherapistAssignment[] @relation("PatientAssignments")
+  therapistAppointments Appointment[] @relation("PatientAssignments")
   prescriptions   Prescription[] @relation("PatientPrescriptions")
   therapySessions TherapySession[] @relation("PatientTherapySessions")
   invoices          Invoice[]
@@ -114,14 +134,14 @@ model Service {
   id          String   @id @default(cuid())
   name        String
   price       Float
-  category    String
+  category    ServiceCategory
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   //relation
-  therapist_assignments TherapistAssignment[] @relation("ServiceTherapistAssignments")
+  therapistAppointments Appointment[] @relation("ServiceTherapistAssignments")
 
   @@map("services")
 }
@@ -141,7 +161,7 @@ model Therapist {
   // Relations
   user            User      @relation(fields: [id], references: [id], onDelete: Cascade)
   timeSlots       TherapistTimeSlot[] @relation("TherapistTimeSlots")
-  assignments     TherapistAssignment[] @relation("TherapistAssignments")
+  therapistAppointments     Appointment[] @relation("TherapistAppointments")
   prescriptions   Prescription[] @relation("TherapistPrescriptions")
   therapySessions TherapySession[] @relation("TherapistTherapySessions")
 
@@ -151,9 +171,9 @@ model Therapist {
 model TherapistTimeSlot {
   id            String    @id @default(uuid()) @map("slot_id")
   therapistId   String    @map("therapist_id")
-  weekDay       Int       @map("week_day") // 0-6 (Sunday-Saturday)
-  startTime     String    @map("start_time") // store time in "HH:mm" format
-  endTime       String    @map("end_time")   // store time in "HH:mm" format
+  weekDay       Int       @map("week_day") 
+  startTime     String    @map("start_time") 
+  endTime       String    @map("end_time")   
   isAvailable   Boolean   @default(true) @map("is_available")
   isRecurring   Boolean   @default(true) @map("is_recurring")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -168,28 +188,35 @@ model TherapistTimeSlot {
 }
 
 
-model TherapistAssignment {
-  id                    String            @id @default(uuid()) @map("assignment_id")
+model Appointment {
+  id                    String            @id @default(uuid()) @map("appointment_id")
   patientId             String            @map("patient_id") @db.VarChar(20)
   therapistId           String            @map("therapist_id")
   appointmentStartTime  DateTime          @map("appointment_start_time")
   appointmentEndTime    DateTime          @map("appointment_end_time")
-  serviceId             String?           @map("service_id")
+  serviceId             String            @map("service_id")
   assignedDate          DateTime          @map("assigned_date") @db.Date
   status                AppointmentStatus @default(CONFIRMED)
   notes                 String?           @db.Text
   createdById           String            @map("created_by")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
-
+  
+  isRecurring           Boolean           @default(false) @map("is_recurring")
+  recurringType         RecurringType?    @map("recurring_type")
+  recurringEndType      RecurringEndType? @map("recurring_end_type")
+  recurringCount        Int?              @map("recurring_count")
+  recurringEndDate      DateTime?         @map("recurring_end_date") @db.Date
+  
+  
   // Relations
   patient               Patient           @relation("PatientAssignments", fields: [patientId], references: [id], onDelete: Cascade)
-  therapist             User              @relation("TherapistAssignments", fields: [therapistId], references: [id], onDelete: Restrict, map: "therapist_assignments_user_fkey")
-  therapistInfo         Therapist         @relation("TherapistAssignments", fields: [therapistId], references: [id], map: "therapist_assignments_therapist_fkey")
+  therapist             User              @relation("TherapistAppointments", fields: [therapistId], references: [id], onDelete: Restrict, map: "therapist_assignments_user_fkey")
+  therapistInfo         Therapist         @relation("TherapistAppointments", fields: [therapistId], references: [id], map: "therapist_assignments_therapist_fkey")
   createdBy             User              @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   service               Service?          @relation("ServiceTherapistAssignments", fields: [serviceId], references: [id])
-
-  @@map("therapist_assignments")
+  
+  @@map("appointments")
   @@index([therapistId, appointmentStartTime])
   @@index([patientId, appointmentStartTime])
   @@index([appointmentStartTime])
@@ -201,10 +228,6 @@ model Prescription {
   sessionId         String         @map("session_id")
   patientId         String         @map("patient_id") @db.VarChar(20)
   therapistId       String         @map("therapist_id")
-  exercises         Json?          @map("exercises")
-  medications       Json?          @map("medications")
-  restrictions      String?        @map("restrictions") @db.Text
-  followUpDate      DateTime?      @map("follow_up_date") @db.Date
   pdfUrl            String?        @map("pdf_url")
   createdAt         DateTime       @default(now()) @map("created_at")
   updatedAt         DateTime       @updatedAt @map("updated_at")

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDay } from "date-fns";
-import {
-  generateAvailablePeriods,
-  generateStartTimes,
-} from "@/lib/utils/AppointmentAvailableTimeSlotGenerator";
+import { generateAvailablePeriods } from "@/lib/utils/AppointmentAvailableTimeSlotGenerator";
+import { AppointmentStatus } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
@@ -52,10 +50,10 @@ export async function GET(
     const startOfDay = new Date(`${date}T00:00:00`);
     const endOfDay = new Date(`${date}T23:59:59`);
 
-    const existingAppointments = await prisma.therapistAssignment.findMany({
+    const existingAppointments = await prisma.appointment.findMany({
       where: {
         therapistId: id,
-        status: { in: ["confirmed"] },
+        status: { in: [AppointmentStatus.CONFIRMED] },
         appointmentStartTime: {
           gte: startOfDay,
           lte: endOfDay,
@@ -78,13 +76,11 @@ export async function GET(
       date
     );
 
-    // 4. Generate start time options (15-minute intervals)
-    const availableStartTimes = generateStartTimes(availablePeriods);
+    console.log("Available Periods:", availablePeriods);
 
     return NextResponse.json({
       success: true,
       availablePeriods,
-      availableStartTimes,
       therapistSchedule: therapistSchedule.map((slot) => ({
         startTime: slot.startTime,
         endTime: slot.endTime,

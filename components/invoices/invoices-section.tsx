@@ -88,7 +88,6 @@ import { validateInvoice } from "@/lib/validations/invoiceValidator";
 import { saveInvoice, printInvoice } from "@/lib/utils/invoiceApi";
 
 import {
-  Service,
   Invoice,
   PatientInfo,
   PaymentDetails,
@@ -100,13 +99,14 @@ import { StatsCard } from "@/components/stats/stats-section";
 import { formatCurrency } from "@/lib/utils/utils";
 import { InvoiceDetailsModal } from "./InvoiceModel";
 import { UserRole } from "@/lib/generated/userRoles";
+import { PurchasedService } from "@/types/service";
 
 export function InvoicesSection() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSearching, setIsSearching] = useState(false);
   const [patientFound, setPatientFound] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<PurchasedService[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isServicesLoading, setIsServicesLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -117,7 +117,9 @@ export function InvoicesSection() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<PurchasedService[]>(
+    []
+  );
   const [printPayload, setPrintPayload] = useState<InvoicePayload | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -228,7 +230,7 @@ export function InvoicesSection() {
     debouncedSearch(value);
   };
 
-  const addService = (service: Service) => {
+  const addService = (service: PurchasedService) => {
     const existingService = selectedServices.find((s) => s.id === service.id);
     if (existingService) {
       setSelectedServices(
@@ -329,7 +331,7 @@ export function InvoicesSection() {
       setInvoices((prev) => [
         {
           ...invoice,
-          invoiceItems: selectedServices.map((i: Service) => ({
+          invoiceItems: selectedServices.map((i: PurchasedService) => ({
             serviceId: i.id,
             quantity: i.quantity,
             priceAtPurchase: i.price,

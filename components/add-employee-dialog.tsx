@@ -51,17 +51,16 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
   const formatPhoneNumber = useCallback((value: string) => {
     const digits = value.replace(/\D/g, "");
 
-    if (digits.length <= 3) {
-      return digits;
-    } else if (digits.length <= 6) {
-      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    } else if (digits.length <= 10) {
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    const limitedDigits = digits.slice(0, 10);
+    if (limitedDigits.length <= 3) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 6) {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
     } else {
-      return `+${digits.slice(0, 1)} ${digits.slice(1, 4)}-${digits.slice(
-        4,
-        7
-      )}-${digits.slice(7, 11)}`;
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(
+        3,
+        6
+      )}-${limitedDigits.slice(6)}`;
     }
   }, []);
 
@@ -69,7 +68,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const formatted = formatPhoneNumber(e.target.value);
       setPhoneValue(formatted);
-      form.setValue("phone", formatted);
+      form.setValue("phone", formatted.replace(/\D/g, ""));
     },
     [form, formatPhoneNumber]
   );
@@ -180,7 +179,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               <Input
                 id="email"
                 type="email"
-                placeholder="john.smith@physioplus.com"
+                placeholder="mahesh@theracure.com"
                 className="col-span-3"
                 {...form.register("email")}
               />
@@ -198,7 +197,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+1 234-567-890"
+                placeholder="+91 234-567-8902"
                 className="col-span-3"
                 value={phoneValue}
                 onChange={handlePhoneChange}

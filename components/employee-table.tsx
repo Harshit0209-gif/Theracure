@@ -44,7 +44,7 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { passwordSchema } from "@/lib/validations/user";
-import { RoleColors, UserRoleLabel } from "@/lib/userRoles";
+import { RoleColors, UserRoleLabel, UserStatusLabel } from "@/lib/userRoles";
 import { UserRole } from "@/lib/generated/userRoles";
 import { User } from "@/types/user";
 import { PaginationInfo } from "@/types";
@@ -55,7 +55,7 @@ interface EmployeeTableProps {
   users: User[];
   loading: boolean;
   pagination: PaginationInfo;
-  onPageChange: (page: number) => void;
+  onPageChange: (currentPage: number) => void;
   onUserUpdated: () => void;
 }
 
@@ -85,17 +85,17 @@ export function EmployeeTable({
     });
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: UserStatus) => {
     return (
       <Badge
-        variant={status === "active" ? "default" : "secondary"}
+        variant={status === UserStatus.ACTIVE ? "default" : "secondary"}
         className={
-          status === "active"
+          status === UserStatus.ACTIVE
             ? "bg-green-100 text-green-800"
             : "bg-gray-100 text-gray-800"
         }
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {UserStatusLabel[status]}
       </Badge>
     );
   };
@@ -360,17 +360,20 @@ export function EmployeeTable({
           {users.length > 0 && (
             <div className="flex justify-between items-center p-4 bg-white border-t">
               <span className="text-sm text-gray-700">
-                Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-                of {pagination.total} employees
+                Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
+                {Math.min(
+                  pagination.currentPage * pagination.limit,
+                  pagination.totalCount
+                )}{" "}
+                of {pagination.totalCount} employees
               </span>
               <div className="flex gap-2 items-center">
                 <Button
                   size="sm"
                   variant="outline"
                   className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                  disabled={pagination.page === 1}
-                  onClick={() => onPageChange(pagination.page - 1)}
+                  disabled={pagination.currentPage === 1}
+                  onClick={() => onPageChange(pagination.currentPage - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -378,15 +381,17 @@ export function EmployeeTable({
 
                 <div className="flex items-center space-x-1">
                   {Array.from(
-                    { length: pagination.pages },
+                    { length: pagination.totalPages },
                     (_, i) => i + 1
                   ).map((pg) => (
                     <Button
                       key={pg}
                       size="sm"
-                      variant={pg === pagination.page ? "default" : "outline"}
+                      variant={
+                        pg === pagination.currentPage ? "default" : "outline"
+                      }
                       className={
-                        pg === pagination.page
+                        pg === pagination.currentPage
                           ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600"
                           : "border-indigo-600 text-indigo-700 hover:bg-indigo-50"
                       }
@@ -401,8 +406,8 @@ export function EmployeeTable({
                   size="sm"
                   variant="outline"
                   className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                  disabled={pagination.page === pagination.pages}
-                  onClick={() => onPageChange(pagination.page + 1)}
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  onClick={() => onPageChange(pagination.currentPage + 1)}
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />

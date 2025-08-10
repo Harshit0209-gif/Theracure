@@ -8,19 +8,16 @@ export function calculateSimpleBMI(
   weight: number,
   height: number
 ): SimpleBMIResult {
-  // Check for invalid zero height
   if (height === 0 || weight === 0) {
     return null as any;
   }
-  // Convert height from cm to meters
+
   const heightInMeters = height / 100;
 
-  // Calculate BMI
   const bmi = parseFloat(
     (weight / (heightInMeters * heightInMeters)).toFixed(1)
   );
 
-  // Determine status and color
   let status: string;
   let color: string;
 
@@ -40,3 +37,13 @@ export function calculateSimpleBMI(
 
   return { bmi, status, color };
 }
+
+export const getBMIStatus = (bmi: number) => {
+  if (bmi < 18.5)
+    return { status: "Underweight", color: "text-orange-600 bg-orange-50" };
+  if (bmi < 25)
+    return { status: "Normal", color: "text-green-600 bg-green-50" };
+  if (bmi < 30)
+    return { status: "Overweight", color: "text-yellow-600 bg-yellow-50" };
+  return { status: "Obese", color: "text-red-600 bg-red-50" };
+};

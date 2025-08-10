@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { AppointmentStatus, Prisma } from "@prisma/client";
 import { getDay } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -49,7 +49,7 @@ export async function PATCH(
     const weekDay = getDay(startTime);
 
     // 1. Find therapist
-    const therapistAssignment = await prisma.therapistAssignment.findUnique({
+    const therapistAssignment = await prisma.appointment.findUnique({
       where: { id },
       select: { therapistId: true },
     });
@@ -83,10 +83,10 @@ export async function PATCH(
     }
 
     // 3. Check for existing appointments that overlap with the requested time
-    const existingAppointments = await prisma.therapistAssignment.findMany({
+    const existingAppointments = await prisma.appointment.findMany({
       where: {
         therapistId: therapistAssignment.therapistId,
-        status: { in: ["confirmed"] },
+        status: { in: [AppointmentStatus.CONFIRMED] },
         id: { not: id },
         OR: [
           {
@@ -116,7 +116,7 @@ export async function PATCH(
     }
 
     // 4. Update the appointment
-    const appointment = await prisma.therapistAssignment.update({
+    const appointment = await prisma.appointment.update({
       where: { id },
       data: {
         appointmentStartTime: startTime,

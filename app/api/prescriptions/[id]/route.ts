@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const prescription = await prisma.prescription.findUnique({
       where: { id },
@@ -37,6 +37,7 @@ export async function GET(
             sessionDate: true,
             sessionData: true,
             sessionNotes: true,
+            completed: true,
           },
         },
       },

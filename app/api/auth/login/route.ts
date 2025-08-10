@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
-import { UserRoleSchema } from "@/lib/userRoles";
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
-  role: UserRoleSchema.default(UserRoleSchema.enum.THERAPIST),
-});
+import { loginSchema } from "@/lib/validations/login";
 
 export async function POST(req: Request) {
   try {

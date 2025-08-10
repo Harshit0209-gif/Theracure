@@ -49,7 +49,7 @@ export async function GET() {
       }),
 
       // Today's consultations
-      prisma.therapistAssignment.count({
+      prisma.appointment.count({
         where: {
           appointmentStartTime: {
             gte: startOfDay,
@@ -59,7 +59,7 @@ export async function GET() {
       }),
 
       // This week's consultations
-      prisma.therapistAssignment.count({
+      prisma.appointment.count({
         where: {
           appointmentStartTime: {
             gte: startOfWeek,

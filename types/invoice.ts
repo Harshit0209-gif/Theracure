@@ -1,3 +1,5 @@
+import { PurchasedService } from "@/types/service";
+
 export interface InvoiceDetails {
   invoiceId: string;
   date: string;
@@ -9,20 +11,11 @@ export interface InvoicePayload {
   invoiceDetails: InvoiceDetails;
   patientInfo: PatientInfo;
   paymentDetails: PaymentDetails;
-  selectedServices: Service[];
+  selectedServices: PurchasedService[];
   createdBy?: string;
   type: "invoice";
 }
 
-export interface Service {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  isActive: boolean;
-  quantity: number;
-}
 export interface InvoiceItem {
   invoiceId: string;
   serviceId: string;

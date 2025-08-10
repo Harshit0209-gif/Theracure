@@ -21,11 +21,9 @@ export async function GET(req: Request) {
 
     // If therapistId is provided, filter patients assigned to that therapist
     if (therapistId) {
-      where.therapistAssignments = {
+      where.therapistAppointments = {
         some: {
           therapistId: therapistId,
-          // Optionally add active status filter
-          // isActive: true
         },
       };
     }
@@ -44,7 +42,7 @@ export async function GET(req: Request) {
       // Combine therapist filter with search
       if (therapistId) {
         where.AND = [
-          { therapistAssignments: { some: { therapistId: therapistId } } },
+          { therapistAppointments: { some: { therapistId: therapistId } } },
           searchConditions,
         ];
       } else {
@@ -59,7 +57,7 @@ export async function GET(req: Request) {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          therapistAssignments: {
+          therapistAppointments: {
             include: {
               therapist: {
                 select: {

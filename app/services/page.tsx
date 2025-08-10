@@ -1,20 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Activity,
-  Stethoscope,
-  Calculator,
-  Users,
-  Home,
-  Thermometer,
-  Waves,
-  Dumbbell,
-  Zap,
-  HandMetal,
-} from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   Dialog,
@@ -34,17 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-interface Service {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Service } from "@/types/service";
+import { ServiceCategory } from "@/lib/generated/serviceEnums";
+import {
+  AllServiceCatagory,
+  ServiceCategoryLabel,
+  ServiceCategoryOptionsMap,
+} from "@/lib/service";
 
 interface CategoryColors {
   bg: string;
@@ -56,10 +38,10 @@ interface CategoryColors {
 interface ServiceCardProps {
   service: Service;
   colors: CategoryColors;
-  editingService: number | null;
-  setEditingService: (id: number | null) => void;
-  onUpdate: (id: number, data: Partial<Service>) => void;
-  onDelete: (id: number) => void;
+  editingService: string | null;
+  setEditingService: (id: string | null) => void;
+  onUpdate: (id: string, data: Partial<Service>) => void;
+  onDelete: (id: string) => void;
   loading: boolean;
 }
 
@@ -67,94 +49,16 @@ const ServiceManagement = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [editingService, setEditingService] = useState<number | null>(null);
+  const [editingService, setEditingService] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Service>>({});
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
-    category: "Physical Therapy",
+    category: ServiceCategory.MANUAL_THERAPY,
     isActive: true,
   });
-
-  const serviceCategories = [
-    {
-      key: "manual-therapy",
-      label: "Manual Therapy",
-      icon: HandMetal,
-      colors: {
-        bg: "bg-blue-50",
-        border: "border-blue-200",
-        text: "text-blue-700",
-        accent: "blue",
-        gradient: "bg-gradient-to-r from-blue-50 to-blue-100",
-        hoverBg: "hover:bg-blue-100",
-        selectedBg: "bg-blue-500",
-      },
-      description: "Hands-on therapeutic techniques and manual manipulation",
-    },
-    {
-      key: "consultation",
-      label: "Consultation",
-      icon: Stethoscope,
-      colors: {
-        bg: "bg-green-50",
-        border: "border-green-200",
-        text: "text-green-700",
-        accent: "green",
-        gradient: "bg-gradient-to-r from-green-50 to-emerald-50",
-        hoverBg: "hover:bg-green-100",
-        selectedBg: "bg-green-500",
-      },
-      description: "Professional assessment and consultation services",
-    },
-    {
-      key: "electrotherapy",
-      label: "Electrotherapy",
-      icon: Zap,
-      colors: {
-        bg: "bg-yellow-50",
-        border: "border-yellow-200",
-        text: "text-yellow-700",
-        accent: "yellow",
-        gradient: "bg-gradient-to-r from-yellow-50 to-amber-50",
-        hoverBg: "hover:bg-yellow-100",
-        selectedBg: "bg-yellow-500",
-      },
-      description: "Electrical stimulation and therapeutic modalities",
-    },
-    {
-      key: "exercise-therapy",
-      label: "Exercise Therapy",
-      icon: Dumbbell,
-      colors: {
-        bg: "bg-orange-50",
-        border: "border-orange-200",
-        text: "text-orange-700",
-        accent: "orange",
-        gradient: "bg-gradient-to-r from-orange-50 to-red-50",
-        hoverBg: "hover:bg-orange-100",
-        selectedBg: "bg-orange-500",
-      },
-      description: "Therapeutic exercises and rehabilitation programs",
-    },
-    {
-      key: "combo-treatment",
-      label: "Combo Treatment",
-      icon: Calculator,
-      colors: {
-        bg: "bg-purple-50",
-        border: "border-purple-200",
-        text: "text-purple-700",
-        accent: "purple",
-        gradient: "bg-gradient-to-r from-purple-50 to-pink-50",
-        hoverBg: "hover:bg-purple-100",
-        selectedBg: "bg-purple-500",
-      },
-      description: "Combined therapy packages for comprehensive treatment",
-    },
-  ];
 
   // Fetch services
   const fetchServices = async () => {
@@ -198,7 +102,7 @@ const ServiceManagement = () => {
         name: "",
         description: "",
         price: "",
-        category: "Physical Therapy",
+        category: ServiceCategory.MANUAL_THERAPY,
         isActive: true,
       });
       setShowAddDialog(false);
@@ -212,7 +116,7 @@ const ServiceManagement = () => {
 
   // Update service
   const handleUpdateService = async (
-    id: number,
+    id: string,
     updatedData: Partial<Service>
   ) => {
     setLoading(true);
@@ -237,7 +141,7 @@ const ServiceManagement = () => {
   };
 
   // Handle edit dialog open
-  const handleEditDialogOpen = (serviceId: number) => {
+  const handleEditDialogOpen = (serviceId: string) => {
     const service = services.find((s) => s.id === serviceId);
     if (service) {
       setEditFormData({
@@ -262,7 +166,7 @@ const ServiceManagement = () => {
   };
 
   // Delete service
-  const handleDeleteService = async (id: number) => {
+  const handleDeleteService = async (id: string) => {
     if (!confirm("Are you sure you want to delete this service?")) return;
 
     setLoading(true);
@@ -337,7 +241,7 @@ const ServiceManagement = () => {
             <span
               className={`text-xs px-2 py-1 rounded ${colors.bg} ${colors.text}`}
             >
-              {service.category}
+              {ServiceCategoryLabel[service.category]}
             </span>
             {service.isActive ? (
               <span
@@ -397,7 +301,7 @@ const ServiceManagement = () => {
                 <Label htmlFor="category">Category</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(value) =>
+                  onValueChange={(value: ServiceCategory) =>
                     setFormData({ ...formData, category: value })
                   }
                 >
@@ -405,9 +309,9 @@ const ServiceManagement = () => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {serviceCategories.map((cat) => (
-                      <SelectItem key={cat.key} value={cat.key}>
-                        {cat.label}
+                    {AllServiceCatagory.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {ServiceCategoryLabel[cat]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -494,7 +398,7 @@ const ServiceManagement = () => {
                     <Label htmlFor="edit-category">Category</Label>
                     <Select
                       value={editFormData.category || ""}
-                      onValueChange={(value) =>
+                      onValueChange={(value: ServiceCategory) =>
                         setEditFormData({ ...editFormData, category: value })
                       }
                     >
@@ -502,9 +406,9 @@ const ServiceManagement = () => {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {serviceCategories.map((cat) => (
-                          <SelectItem key={cat.key} value={cat.key}>
-                            {cat.label}
+                        {AllServiceCatagory.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {ServiceCategoryLabel[cat]}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -575,9 +479,9 @@ const ServiceManagement = () => {
         </Dialog>
 
         {/* Services List */}
-        {serviceCategories.map((category) => {
+        {Object.entries(ServiceCategoryOptionsMap).map(([key, category]) => {
           const categoryServices = services.filter(
-            (s) => s.category === category.key
+            (s) => s.category === category.value
           );
 
           if (categoryServices.length === 0) return null;
@@ -587,7 +491,7 @@ const ServiceManagement = () => {
           console.log(services);
 
           return (
-            <div key={category.key} className="mb-8">
+            <div key={category.value} className="mb-8">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <IconComponent className="w-6 h-6" />
                 {category.label}

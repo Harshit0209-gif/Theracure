@@ -184,7 +184,7 @@ export async function PATCH(
     // Update user status
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: { status },
+      data: { status: status as UserStatus },
       select: {
         id: true,
         name: true,
@@ -243,7 +243,7 @@ export async function DELETE(
     const deletedUser = await prisma.user.update({
       where: { id },
       data: {
-        status: UserStatus.INACTIVE,
+        status: UserStatus.SUSPENDED,
         updatedAt: new Date(),
       },
       select: {

@@ -49,73 +49,16 @@ import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
-
-interface Service {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-}
-
-export interface Appointment {
-  id: string;
-  therapistId: string;
-  patientId: string;
-  appointmentStartTime: string;
-  appointmentEndTime: string;
-  status: "confirmed" | "cancelled" | "completed";
-  createdById: string;
-  createdAt: string;
-  notes?: string;
-
-  service?: Service;
-
-  patient?: {
-    id: string;
-    patientName: string;
-  };
-  therapist?: {
-    id: string;
-    name: string;
-  };
-  createdBy?: {
-    name: string;
-  };
-}
-
-export interface PaginationInfo {
-  total: number;
-  pages: number;
-  page: number;
-  limit: number;
-}
-
-interface AppointmentTableProps {
-  appointments: Appointment[];
-  loading: boolean;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  pagination: PaginationInfo;
-  onPageChange: (page: number) => void;
-  onAppointmentUpdated: () => void;
-}
-
-interface EditAppointmentData {
-  therapyType: string;
-  appointmentStartTime: string;
-  appointmentEndTime: string;
-  notes: string;
-}
-
-interface RescheduleData {
-  appointmentStartTime: string;
-  appointmentEndTime: string;
-  reason: string;
-}
-
-interface CancelData {
-  reason: string;
-}
+import { AppointmentStatus } from "@/lib/generated/bookingEnums";
+import { statusLabels, statusStyles } from "@/lib/appointment";
+import {
+  Appointment,
+  AppointmentTableProps,
+  CancelData,
+  EditAppointmentData,
+  RescheduleData,
+} from "@/types/appointments";
+import { ServiceCategoryLabel } from "@/lib/service";
 
 export function AppointmentTable({
   appointments,
@@ -183,18 +126,6 @@ export function AppointmentTable({
   };
 
   const getStatusBadge = (status: string) => {
-    const statusStyles = {
-      confirmed: "bg-blue-100 text-blue-800",
-      completed: "bg-green-100 text-green-800",
-      cancelled: "bg-red-100 text-red-800",
-    };
-
-    const statusLabels = {
-      confirmed: "Confirmed",
-      completed: "Completed",
-      cancelled: "Cancelled",
-    };
-
     return (
       <Badge className={statusStyles[status as keyof typeof statusStyles]}>
         {statusLabels[status as keyof typeof statusLabels]}
@@ -463,7 +394,7 @@ export function AppointmentTable({
             <Accessibility className="h-8 w-8 text-indigo-700" />
             <div className="flex flex-col items-center">
               <span className="text-2xl font-bold text-indigo-700">
-                {pagination.total}
+                {pagination.totalCount}
               </span>
               <span className="text-gray-700 text-sm">appointments</span>
             </div>
@@ -554,7 +485,9 @@ export function AppointmentTable({
                         {appointment.service?.name || "N/A"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {appointment.service?.category || "N/A"}
+                        {(appointment.service?.category &&
+                          ServiceCategoryLabel[appointment.service.category]) ||
+                          "N/A"}
                       </p>
                     </TableCell>
                     <TableCell className="bg-white">
@@ -572,7 +505,8 @@ export function AppointmentTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {appointment.status !== "cancelled" && (
+                          {appointment.status !==
+                            AppointmentStatus.CANCELLED && (
                             <>
                               {hasFullControl && (
                                 <>
@@ -591,12 +525,13 @@ export function AppointmentTable({
                                     Reschedule
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
-                                  {appointment.status === "confirmed" && (
+                                  {appointment.status ===
+                                    AppointmentStatus.CONFIRMED && (
                                     <DropdownMenuItem
                                       onClick={() =>
                                         handleStatusUpdate(
                                           appointment.id,
-                                          "completed"
+                                          AppointmentStatus.COMPLETED
                                         )
                                       }
                                     >
@@ -618,12 +553,13 @@ export function AppointmentTable({
 
                               {isTherapist && (
                                 <>
-                                  {appointment.status === "confirmed" && (
+                                  {appointment.status ===
+                                    AppointmentStatus.CONFIRMED && (
                                     <DropdownMenuItem
                                       onClick={() =>
                                         handleStatusUpdate(
                                           appointment.id,
-                                          "completed"
+                                          AppointmentStatus.COMPLETED
                                         )
                                       }
                                     >
@@ -645,7 +581,8 @@ export function AppointmentTable({
                             </>
                           )}
 
-                          {appointment.status === "cancelled" && (
+                          {appointment.status ===
+                            AppointmentStatus.CANCELLED && (
                             <DropdownMenuItem disabled>
                               <X className="mr-2 h-4 w-4" />
                               Appointment Cancelled
@@ -665,46 +602,52 @@ export function AppointmentTable({
         {appointments.length > 0 && (
           <div className="flex justify-between items-center p-4 bg-white border-t ">
             <span className="text-sm text-gray-700">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total} appointments
+              Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
+              {Math.min(
+                pagination.currentPage * pagination.limit,
+                pagination.totalCount
+              )}{" "}
+              of {pagination.totalCount} appointments
             </span>
             <div className="flex gap-2 items-center">
               <Button
                 size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.page === 1}
-                onClick={() => onPageChange(pagination.page - 1)}
+                disabled={pagination.currentPage === 1}
+                onClick={() => onPageChange(pagination.currentPage - 1)}
               >
                 <ChevronLeft className="h-8 w-8" />
                 Previous
               </Button>
 
-              {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(
-                (pg) => (
-                  <Button
-                    key={pg}
-                    size="sm"
-                    variant={pg === pagination.page ? "default" : "outline"}
-                    className={
-                      pg === pagination.page
-                        ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600"
-                        : "border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                    }
-                    onClick={() => onPageChange(pg)}
-                  >
-                    {pg}
-                  </Button>
-                )
-              )}
+              {Array.from(
+                { length: pagination.totalPages },
+                (_, i) => i + 1
+              ).map((pg) => (
+                <Button
+                  key={pg}
+                  size="sm"
+                  variant={
+                    pg === pagination.currentPage ? "default" : "outline"
+                  }
+                  className={
+                    pg === pagination.currentPage
+                      ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600"
+                      : "border-indigo-600 text-indigo-700 hover:bg-indigo-50"
+                  }
+                  onClick={() => onPageChange(pg)}
+                >
+                  {pg}
+                </Button>
+              ))}
 
               <Button
                 size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => onPageChange(pagination.page + 1)}
+                disabled={pagination.currentPage === pagination.totalPages}
+                onClick={() => onPageChange(pagination.currentPage + 1)}
               >
                 Next
                 <ChevronRight className="h-8 w-8" />

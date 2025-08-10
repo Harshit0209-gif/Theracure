@@ -26,13 +26,11 @@ export const createUserSchema = z.object({
     ),
   phone: z
     .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .max(15, "Phone number must be less than 15 digits")
     .regex(
-      phoneRegex,
-      "Please enter a valid phone number (e.g., +91 234-567-8909)"
+      /^\d{10}$/,
+      "Phone number must be exactly 10 digits (e.g., 9876543210)"
     )
-    .transform((val) => val.replace(/[-.\s]/g, ""))
+    .transform((val) => `+91${val}`)
     .optional(),
   role: UserRoleSchema,
 });
@@ -52,7 +50,7 @@ export const updateUserSchema = z.object({
     .optional(),
   password: z
     .string()
-    .min(6, "Password must be at least 6 characters")
+    .min(8, "Password must be at least 8 characters")
     .max(100, "Password must be less than 100 characters")
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
@@ -78,7 +76,7 @@ export const deleteUserSchema = z.object({
 
 export const passwordSchema = z
   .string()
-  .min(6, "Password must be at least 6 characters")
+  .min(8, "Password must be at least 8 characters")
   .max(100, "Password must be less than 100 characters")
   .regex(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
@@ -86,7 +84,10 @@ export const passwordSchema = z
   );
 
 export const updateStatusSchema = z.object({
-  status: z.enum(Object.values(UserStatus) as [UserStatus, ...UserStatus[]]),
+  status: z
+    .enum(Object.values(UserStatus) as [UserStatus, ...UserStatus[]])
+    .optional()
+    .or(z.literal("")),
 });
 
 export type UserUpdateFormData = z.infer<typeof updateUserSchema>;

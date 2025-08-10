@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getDay } from "date-fns";
+import { AppointmentStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,12 +33,12 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const [appointments, total] = await Promise.all([
-      prisma.therapistAssignment.findMany({
+    const [appointments, totalCount] = await Promise.all([
+      prisma.appointment.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "asc" },
         include: {
           patient: {
             select: {
@@ -72,17 +73,21 @@ export async function GET(req: NextRequest) {
           },
         },
       }),
-      prisma.therapistAssignment.count({ where }),
+      prisma.appointment.count({ where }),
     ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
       appointments,
       pagination: {
-        total,
-        pages: Math.ceil(total / limit),
-        page,
+        currentPage: page,
+        totalPages,
+        totalCount,
         limit,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
       },
     });
   } catch (error) {
@@ -213,10 +218,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Check for existing appointments that overlap with the requested time
-    const existingAppointments = await prisma.therapistAssignment.findMany({
+    const existingAppointments = await prisma.appointment.findMany({
       where: {
         therapistId,
-        status: { in: ["confirmed"] },
+        status: { in: [AppointmentStatus.CONFIRMED] },
         OR: [
           {
             AND: [
@@ -250,17 +255,30 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Create the appointment
-    const appointment = await prisma.therapistAssignment.create({
+    const appointment = await prisma.appointment.create({
       data: {
-        patientId,
-        therapistId,
         appointmentStartTime: startTime,
         appointmentEndTime: endTime,
-        serviceId,
         notes,
-        status: "confirmed",
-        createdById,
+        status: AppointmentStatus.CONFIRMED,
         assignedDate: new Date(appointmentDate),
+        patient: {
+          connect: { id: patientId },
+        },
+        therapist: {
+          connect: { id: therapistId },
+        },
+        therapistInfo: {
+          connect: { id: therapistId },
+        },
+        createdBy: {
+          connect: { id: createdById },
+        },
+        service: serviceId
+          ? {
+              connect: { id: serviceId },
+            }
+          : undefined,
       },
     });
 

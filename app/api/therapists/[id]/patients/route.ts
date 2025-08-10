@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { AppointmentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -11,11 +12,11 @@ export async function GET(
 
     console.log("Fetching assigned patients for therapist:", therapistId);
 
-    const assignments = await prisma.therapistAssignment.findMany({
+    const assignments = await prisma.appointment.findMany({
       where: {
         therapistId,
         status: {
-          in: ["confirmed", "completed"],
+          in: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED],
         },
       },
       include: {
@@ -47,7 +48,7 @@ export async function GET(
           },
         });
 
-        const nextAppointment = await prisma.therapistAssignment.findFirst({
+        const nextAppointment = await prisma.appointment.findFirst({
           where: {
             patientId: assignment.patientId,
             therapistId: assignment.therapistId,
@@ -55,7 +56,7 @@ export async function GET(
               gte: new Date(),
             },
             status: {
-              in: ["confirmed"],
+              in: [AppointmentStatus.CONFIRMED],
             },
           },
           orderBy: {

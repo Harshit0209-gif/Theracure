@@ -2,6 +2,19 @@
 // Generated from Prisma schema.
 
 
+export enum RecurringType {
+  WEEKLY = "WEEKLY",
+  BIWEEKLY = "BIWEEKLY",
+  MONTHLY = "MONTHLY",
+}
+
+
+export enum RecurringEndType {
+  COUNT = "COUNT",
+  DATE = "DATE",
+}
+
+
 export enum AssignmentStatus {
   CONFIRMED = "CONFIRMED",
   COMPLETED = "COMPLETED",

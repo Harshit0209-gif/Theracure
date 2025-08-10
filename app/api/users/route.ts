@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       }),
     };
 
-    const [users, total] = await Promise.all([
+    const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
         where,
         skip,
@@ -49,14 +49,18 @@ export async function GET(req: Request) {
       prisma.user.count({ where }),
     ]);
 
+    const totalPages = Math.ceil(totalCount / limit);
+
     return NextResponse.json({
       success: true,
       users,
       pagination: {
-        total,
-        pages: Math.ceil(total / limit),
-        page,
+        currentPage: page,
+        totalPages: totalPages,
+        totalCount: totalCount,
         limit,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
       },
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { AppointmentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -25,21 +26,21 @@ export async function GET(
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     // Get assigned patients count
-    const assignedPatients = await prisma.therapistAssignment.count({
+    const assignedPatients = await prisma.appointment.count({
       where: {
         therapistId: id,
         status: {
-          in: ["confirmed"],
+          in: [AppointmentStatus.CONFIRMED],
         },
       },
     });
 
     // Get today's appointments
-    const todayAppointments = await prisma.therapistAssignment.count({
+    const todayAppointments = await prisma.appointment.count({
       where: {
         therapistId: id,
         status: {
-          in: ["confirmed"],
+          in: [AppointmentStatus.CONFIRMED],
         },
         appointmentStartTime: {
           gte: startOfDay,

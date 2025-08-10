@@ -14,13 +14,7 @@ import { AddEmployeeDialog } from "@/components/add-employee-dialog";
 import { EmployeeTable } from "@/components/employee-table";
 import { EmployeeTableHeader } from "@/components/employee-table-header";
 import { UserStatus } from "@/lib/generated/userEnums";
-
-export interface PaginationInfo {
-  total: number;
-  pages: number;
-  page: number;
-  limit: number;
-}
+import { PaginationDefaultValue, PaginationInfo } from "@/types";
 
 export interface UsersApiResponse {
   success: boolean;
@@ -36,12 +30,9 @@ export default function EmployeePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    total: 0,
-    pages: 0,
-    page: 1,
-    limit: 5,
-  });
+  const [pagination, setPagination] = useState<PaginationInfo>(
+    PaginationDefaultValue
+  );
 
   // Fetch users from API
   const fetchUsers = async (
@@ -105,12 +96,12 @@ export default function EmployeePage() {
 
   // Handle successful user creation
   const handleUserCreated = () => {
-    fetchUsers(pagination.page, searchQuery, roleFilter);
+    fetchUsers(pagination.currentPage, searchQuery, roleFilter);
   };
 
   // Calculate stats from users data
   const stats = {
-    total: pagination.total,
+    total: pagination.totalPages,
     therapists: users.filter((u) => u.role === UserRole.THERAPIST).length,
     admins: users.filter((u) => u.role === UserRole.ADMIN).length,
     receptionists: users.filter((u) => u.role === UserRole.RECEPTIONIST).length,

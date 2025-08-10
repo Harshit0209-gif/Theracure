@@ -45,7 +45,7 @@ import { AddPatientDialog } from "./add-patient-dialog";
 import { toast } from "@/components/ui/use-toast";
 import { UserRole } from "@/lib/generated/userRoles";
 import { Patient } from "@/types/patient";
-import { PaginationInfo } from "@/types";
+import { PaginationDefaultValue, PaginationInfo } from "@/types";
 import { PatientDetailsCard } from "./patientDetailsCard";
 import { EditPatientDialog } from "./editPatientDetails";
 import {
@@ -70,12 +70,9 @@ export function PatientManagementSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    total: 0,
-    pages: 0,
-    page: 1,
-    limit: 20,
-  });
+  const [pagination, setPagination] = useState<PaginationInfo>(
+    PaginationDefaultValue
+  );
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
@@ -83,11 +80,14 @@ export function PatientManagementSection() {
   const [deletingPatient, setDeletingPatient] = useState<string | null>(null);
 
   // Fetch patients from API
-  const fetchPatients = async (page: number = 1, search: string = "") => {
+  const fetchPatients = async (
+    currentPage: number = 1,
+    search: string = ""
+  ) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        page: page.toString(),
+        currentPage: currentPage.toString(),
         limit: pagination.limit.toString(),
         ...(user?.role === UserRole.THERAPIST && { therapistId: user.id }),
         ...(search && { search }),
@@ -133,7 +133,7 @@ export function PatientManagementSection() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // Handle page change
+  // Handle currentPage change
   const handlePageChange = (newPage: number) => {
     fetchPatients(newPage, searchQuery);
   };
@@ -157,7 +157,7 @@ export function PatientManagementSection() {
       prev.map((p) => (p.id === updatedPatient.id ? updatedPatient : p))
     );
     setSelectedPatient(updatedPatient);
-    fetchPatients(pagination.page, searchQuery);
+    fetchPatients(pagination.currentPage, searchQuery);
   };
 
   // Handle patient delete
@@ -187,7 +187,7 @@ export function PatientManagementSection() {
       });
 
       // Refresh the patient list
-      fetchPatients(pagination.page, searchQuery);
+      fetchPatients(pagination.currentPage, searchQuery);
     } catch (error) {
       console.error("Error deleting patient:", error);
       toast({
@@ -266,7 +266,9 @@ export function PatientManagementSection() {
               patients.map((patient, index) => (
                 <TableRow key={patient.id} className="hover:bg-gray-50">
                   <TableCell>
-                    {(pagination.page - 1) * pagination.limit + index + 1}
+                    {(pagination.currentPage - 1) * pagination.limit +
+                      index +
+                      1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {patient.patientName}
@@ -363,17 +365,20 @@ export function PatientManagementSection() {
         {!loading && patients.length > 0 && (
           <div className="flex justify-between items-center p-4 bg-white border-t">
             <span className="text-sm text-gray-700">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total} patients
+              Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
+              {Math.min(
+                pagination.currentPage * pagination.limit,
+                pagination.totalCount
+              )}{" "}
+              of {pagination.totalCount} patients
             </span>
             <div className="flex items-center space-x-2">
               <Button
                 size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.page === 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.currentPage === 1}
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -381,31 +386,34 @@ export function PatientManagementSection() {
 
               {/* Page Numbers */}
               <div className="flex items-center space-x-1">
-                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(
-                  (pg) => (
-                    <Button
-                      key={pg}
-                      size="sm"
-                      variant={pg === pagination.page ? "default" : "outline"}
-                      className={
-                        pg === pagination.page
-                          ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 w-8 h-8 p-0"
-                          : "text-indigo-700 hover:bg-indigo-50 w-8 h-8 p-0"
-                      }
-                      onClick={() => handlePageChange(pg)}
-                    >
-                      {pg}
-                    </Button>
-                  )
-                )}
+                {Array.from(
+                  { length: pagination.totalPages },
+                  (_, i) => i + 1
+                ).map((pg) => (
+                  <Button
+                    key={pg}
+                    size="sm"
+                    variant={
+                      pg === pagination.currentPage ? "default" : "outline"
+                    }
+                    className={
+                      pg === pagination.currentPage
+                        ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 w-8 h-8 p-0"
+                        : "text-indigo-700 hover:bg-indigo-50 w-8 h-8 p-0"
+                    }
+                    onClick={() => handlePageChange(pg)}
+                  >
+                    {pg}
+                  </Button>
+                ))}
               </div>
 
               <Button
                 size="sm"
                 variant="outline"
                 className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.currentPage === pagination.totalPages}
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />

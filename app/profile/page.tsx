@@ -45,7 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { RoleColors } from "@/lib/userRoles";
+import { RoleColors, UserRoleLabel, UserStatusLabel } from "@/lib/userRoles";
 import { UserRole } from "@/lib/generated/userRoles";
 import { updateUserSchema, UserUpdateFormData } from "@/lib/validations/user";
 import { User } from "@/types/user";
@@ -409,7 +409,7 @@ export default function UserProfile() {
             variant="outline"
             className="px-3 py-1 text-sm capitalize bg-green-100 text-green-800"
           >
-            {user?.status || "Inactive"}
+            {user?.status ? UserStatusLabel[user.status] : "Inactive"}
           </Badge>
         </div>
 
@@ -428,7 +428,7 @@ export default function UserProfile() {
                       RoleColors[authUser?.role || UserRole.THERAPIST]
                     } capitalize font-medium`}
                   >
-                    {user?.role || "User"}
+                    {user?.role ? UserRoleLabel[user.role] : "User"}
                   </Badge>
                   <span className="text-sm text-gray-500">
                     Register:{" "}

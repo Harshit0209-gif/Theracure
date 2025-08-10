@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const appointment = await prisma.therapistAssignment.findUnique({
+    const appointment = await prisma.appointment.findUnique({
       where: { id },
       include: {
         patient: {
@@ -63,7 +63,7 @@ export async function PATCH(
     const body = await req.json();
     const { status, therapyType, notes } = body;
 
-    const appointment = await prisma.therapistAssignment.update({
+    const appointment = await prisma.appointment.update({
       where: { id },
       data: {
         ...(status && { status }),
@@ -108,7 +108,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.therapistAssignment.update({
+    await prisma.appointment.update({
       where: { id },
       data: { status: "cancelled" },
     });

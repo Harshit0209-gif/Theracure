@@ -5,30 +5,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-
-interface Appointment {
-  id: string;
-  therapistId: string;
-  patientId: string;
-  appointmentStartTime: string;
-  appointmentEndTime: string;
-  therapyType: string;
-  status: "confirmed" | "cancelled" | "completed";
-  createdById: string;
-  createdAt: string;
-  patient?: {
-    id: string;
-    patientName: string;
-  };
-  therapist?: {
-    id: string;
-    name: string;
-  };
-  createdBy?: {
-    name: string;
-  };
-}
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Appointment } from "@/types/appointments";
+import { AppointmentStatus } from "@/lib/generated/bookingEnums";
+import { statusLabels, statusStyles } from "@/lib/appointment";
 
 interface CalendarViewDialogProps {
   open: boolean;
@@ -41,6 +21,7 @@ export function CalendarViewDialog({
   onOpenChange,
   appointments = [],
 }: CalendarViewDialogProps) {
+  console.log("apppoinments args: ", appointments);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const today = new Date();
@@ -97,12 +78,24 @@ export function CalendarViewDialog({
 
   // Group appointments by date
   const appointmentsByDate = appointments.reduce((acc, appointment) => {
-    const startDate = new Date(appointment.appointmentStartTime);
-    const dateKey = startDate.toISOString().split("T")[0];
+    // Use assignedDate if available, otherwise fall back to appointmentStartTime
+    const rawDate =
+      appointment.assignedDate || appointment.appointmentStartTime;
 
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
+    if (!rawDate) {
+      console.warn("⛔ Missing date field:", appointment);
+      return acc;
     }
+
+    const parsedDate = new Date(rawDate);
+    if (isNaN(parsedDate.getTime())) {
+      console.warn("❌ Invalid date:", rawDate);
+      return acc;
+    }
+
+    const dateKey = parsedDate.toISOString().split("T")[0];
+
+    if (!acc[dateKey]) acc[dateKey] = [];
     acc[dateKey].push(appointment);
     return acc;
   }, {} as Record<string, Appointment[]>);
@@ -152,19 +145,6 @@ export function CalendarViewDialog({
     return "mixed";
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return "bg-green-500";
-      case "cancelled":
-        return "bg-red-500";
-      case "completed":
-        return "bg-blue-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -174,6 +154,7 @@ export function CalendarViewDialog({
   };
 
   const days = getDaysInMonth(currentDate);
+  console.log("Grouped by date:", appointmentsByDate);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,11 +212,14 @@ export function CalendarViewDialog({
                         isToday(day)
                           ? "bg-blue-600 text-white shadow-md"
                           : hasAppointment(day)
-                          ? getAppointmentStatus(day) === "confirmed"
+                          ? getAppointmentStatus(day) ===
+                            AppointmentStatus.CONFIRMED
                             ? "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
-                            : getAppointmentStatus(day) === "cancelled"
+                            : getAppointmentStatus(day) ===
+                              AppointmentStatus.CANCELLED
                             ? "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
-                            : getAppointmentStatus(day) === "completed"
+                            : getAppointmentStatus(day) ===
+                              AppointmentStatus.COMPLETED
                             ? "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
                             : "bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200"
                           : "text-gray-700 hover:bg-gray-50"
@@ -271,22 +255,24 @@ export function CalendarViewDialog({
           </div>
 
           {/* Today's Appointments */}
-          {appointmentsByDate[today.toISOString().split("T")[0]] && (
+          {appointmentsByDate[today.toLocaleDateString("en-CA")] && (
             <div className="mt-6 pt-4 border-t border-gray-100">
               <h3 className="text-sm font-medium text-gray-900 mb-3">
                 Today's Appointments
               </h3>
               <div className="space-y-3">
-                {appointmentsByDate[today.toISOString().split("T")[0]].map(
+                {appointmentsByDate[today.toLocaleDateString("en-CA")].map(
                   (appointment) => (
                     <div
                       key={appointment.id}
                       className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
                     >
                       <div
-                        className={`w-2 h-2 rounded-full mt-2 ${getStatusColor(
-                          appointment.status
-                        )}`}
+                        className={`w-2 h-2 rounded-full mt-2 ${
+                          statusStyles[
+                            appointment.status as keyof typeof statusStyles
+                          ]
+                        }`}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
@@ -301,7 +287,7 @@ export function CalendarViewDialog({
                                 "Unknown Therapist"}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {appointment.therapyType}
+                              {appointment.service?.name || "Unknown Service"}
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
@@ -310,16 +296,23 @@ export function CalendarViewDialog({
                             </div>
                             <div
                               className={`text-xs px-1.5 py-0.5 rounded-full mt-1 ${
-                                appointment.status === "confirmed"
+                                appointment.status ===
+                                AppointmentStatus.CONFIRMED
                                   ? "bg-green-100 text-green-700"
-                                  : appointment.status === "cancelled"
+                                  : appointment.status ===
+                                    AppointmentStatus.CANCELLED
                                   ? "bg-red-100 text-red-700"
-                                  : appointment.status === "completed"
+                                  : appointment.status ===
+                                    AppointmentStatus.COMPLETED
                                   ? "bg-blue-100 text-blue-700"
                                   : "bg-gray-100 text-gray-700"
                               }`}
                             >
-                              {appointment.status}
+                              {
+                                statusLabels[
+                                  appointment.status as keyof typeof statusLabels
+                                ]
+                              }
                             </div>
                           </div>
                         </div>

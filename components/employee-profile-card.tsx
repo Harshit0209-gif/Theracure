@@ -44,7 +44,7 @@ import {
   Trash2,
   AlertTriangle,
 } from "lucide-react";
-import { RoleOptionsMap } from "@/lib/userRoles";
+import { RoleOptionsMap, UserStatusLabel } from "@/lib/userRoles";
 import { toast } from "sonner";
 import { UserStatus } from "@/lib/generated/userEnums";
 
@@ -90,7 +90,8 @@ export function EmployeeProfileCard({
           throw new Error("Failed to fetch therapist stats");
         }
         const data = await res.json();
-        setStats(data);
+        console.log("Therapy stste data", data.data);
+        setStats(data.data);
       } catch (error) {
         console.error("Error fetching stats:", error);
       } finally {
@@ -458,28 +459,6 @@ export function EmployeeProfileCard({
                         {value.label}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Status
-                </Label>
-                <Select
-                  value={editFormData.status}
-                  onValueChange={(value) =>
-                    setEditFormData({
-                      ...editFormData,
-                      status: value as UserStatus,
-                    })
-                  }
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

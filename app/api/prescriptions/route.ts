@@ -172,8 +172,9 @@ export async function POST(request: NextRequest) {
       data: {
         patientId,
         therapistId,
-        sessionNotes: assessmentData?.sessionNotes || "",
+        sessionNotes: assessmentData?.notes || "",
         sessionData: JSON.stringify(assessmentData || {}),
+        completed: true,
       },
     });
     //2. create a prescription if it doesn't exist
@@ -199,7 +200,6 @@ export async function POST(request: NextRequest) {
         sessionId: newSession.id,
         patientId: patientId,
         therapistId: therapistId,
-        followUpDate: body.followUpDate ? new Date(body.followUpDate) : null,
       },
       include: {
         patient: {

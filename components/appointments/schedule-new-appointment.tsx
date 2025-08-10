@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +21,14 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -32,57 +39,29 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Repeat,
+  CalendarDays,
+  Info,
 } from "lucide-react";
-
-const MAX_YEAR = new Date().getFullYear() + 1;
-const appointmentSchema = z.object({
-  patientId: z.string().min(1, "Please select a patient"),
-  therapistId: z.string().min(1, "Please select a therapist"),
-  appointmentDate: z.string().refine(
-    (dateStr) => {
-      const date = new Date(dateStr);
-      const year = date.getFullYear();
-      return year <= MAX_YEAR && !isNaN(date.getTime());
-    },
-    {
-      message: "Please enter a valid date within the next year.",
-    }
-  ),
-  startTime: z.string().min(1, "Please select start time"),
-  endTime: z.string().min(1, "Please select end time"),
-  serviceCategory: z.string().min(1, "Please select a service category"),
-  serviceId: z.string().min(1, "Please select a service"),
-  notes: z.string().optional(),
-});
-
-type AppointmentFormData = z.infer<typeof appointmentSchema>;
+import { Service } from "@/types/service";
+import {
+  AvailablePeriod,
+  RecurringPreview,
+  TherapistAvailability,
+} from "@/types/appointments";
+import {
+  AppointmentFormData,
+  appointmentFormSchema,
+  appointmentFields,
+} from "@/lib/validations/appointment";
+import { RecurringEndType, RecurringType } from "@/lib/generated/bookingEnums";
+import { ServiceCategory } from "@/lib/generated/serviceEnums";
+import { ServiceCategoryLabel } from "@/lib/service";
 
 interface ScheduleNewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAppointmentCreated: () => void;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  description?: string;
-  isActive?: boolean;
-}
-
-interface AvailablePeriod {
-  startTime: string;
-  endTime: string;
-  available: boolean;
-  duration?: number;
-}
-
-interface TherapistAvailability {
-  dayOfWeek: number;
-  startTime: string;
-  endTime: string;
 }
 
 export function ScheduleNewDialog({
@@ -94,12 +73,13 @@ export function ScheduleNewDialog({
   const [patients, setPatients] = useState([]);
   const [therapists, setTherapists] = useState([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<string[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
+    []
+  );
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [availablePeriods, setAvailablePeriods] = useState<AvailablePeriod[]>(
     []
   );
-
   const [therapistSchedule, setTherapistSchedule] = useState<
     TherapistAvailability[]
   >([]);
@@ -107,23 +87,57 @@ export function ScheduleNewDialog({
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [recurringPreview, setRecurringPreview] = useState<RecurringPreview[]>(
+    []
+  );
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const { user } = useAuth();
 
   const form = useForm<AppointmentFormData>({
-    resolver: zodResolver(appointmentSchema),
+    resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
       patientId: "",
       therapistId: "",
       appointmentDate: "",
       startTime: "",
       endTime: "",
-      serviceCategory: "",
+      serviceCategory: undefined,
       serviceId: "",
       notes: "",
+      isRecurring: false,
+      recurringType: undefined,
+      recurringEndType: undefined,
+      recurringCount: undefined,
+      recurringEndDate: undefined,
     },
   });
 
   const watchedValues = form.watch();
+
+  // Generate recurring appointment preview
+  useEffect(() => {
+    if (
+      watchedValues.isRecurring &&
+      watchedValues.appointmentDate &&
+      watchedValues.recurringType &&
+      watchedValues.recurringEndType &&
+      ((watchedValues.recurringEndType === RecurringEndType.DATE &&
+        watchedValues.recurringEndDate) ||
+        (watchedValues.recurringEndType === RecurringEndType.COUNT &&
+          watchedValues.recurringCount))
+    ) {
+      generateRecurringPreview();
+    } else {
+      setRecurringPreview([]);
+    }
+  }, [
+    watchedValues.isRecurring,
+    watchedValues.appointmentDate,
+    watchedValues.recurringType,
+    watchedValues.recurringEndType,
+    watchedValues.recurringEndDate,
+    watchedValues.recurringCount,
+  ]);
 
   // Fetch initial data when dialog opens
   useEffect(() => {
@@ -144,7 +158,6 @@ export function ScheduleNewDialog({
     } else {
       setFilteredServices([]);
     }
-    // Reset service selection when category changes
     form.setValue("serviceId", "");
     setSelectedService(null);
   }, [watchedValues.serviceCategory, services]);
@@ -152,7 +165,10 @@ export function ScheduleNewDialog({
   // Update selected service details
   useEffect(() => {
     if (watchedValues.serviceId) {
-      const service = services.find((s) => s.id === watchedValues.serviceId);
+      const serviceId = watchedValues.serviceId;
+
+      const service = services.find((s) => s.id === serviceId);
+
       setSelectedService(service || null);
     } else {
       setSelectedService(null);
@@ -210,17 +226,12 @@ export function ScheduleNewDialog({
         );
 
         setServices(fetchedServices);
-        console.log("Fetched services: ", fetchedServices);
-        console.log("Asssign services data: ", services);
-
-        const categories: string[] = [
+        const categories: ServiceCategory[] = [
           ...new Set(
             fetchedServices.map((service: Service) => service.category)
           ),
         ];
-
         setServiceCategories(categories);
-        console.log("Service categories: ", categories);
       }
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -238,23 +249,11 @@ export function ScheduleNewDialog({
   ) => {
     setIsCheckingAvailability(true);
     try {
-      const appointmentDate =
-        appointmentSchema.shape.appointmentDate.safeParse(date);
-      console.log(
-        "Checking availability for therapist:",
-        therapistId,
-        "on date:",
-        date
-      );
-      // Fetch therapist's working schedule
+      const appointmentDate = appointmentFields.appointmentDate.safeParse(date);
       const therapistResponse = await fetch(
         `/api/therapists/${therapistId}/availability?date=${appointmentDate.data}`
       );
       const therapistData = await therapistResponse.json();
-      console.log(
-        "Therapist therapist's working schedule fetch from api: ",
-        therapistData
-      );
 
       if (!therapistData?.success) {
         throw new Error(
@@ -262,6 +261,7 @@ export function ScheduleNewDialog({
             "Failed to fetch therapist schedule and availability"
         );
       }
+
       const schedule: TherapistAvailability[] =
         therapistData.therapistSchedule?.map((slot: any) => ({
           dayOfWeek: slot.weekDay,
@@ -276,16 +276,80 @@ export function ScheduleNewDialog({
           endTime: period.endTime,
           available: period.available,
           duration: period.duration,
-          reason: period.reason || "",
         }));
       setAvailablePeriods(availablePeriods);
-
-      console.log("Available periods: ", availablePeriods);
-      console.log("Therapist schedule in weakday: ", therapistSchedule);
     } catch (error) {
       console.error("Error checking availability:", error);
     } finally {
       setIsCheckingAvailability(false);
+    }
+  };
+
+  const generateRecurringPreview = async () => {
+    setIsGeneratingPreview(true);
+
+    try {
+      const {
+        appointmentDate,
+        recurringType,
+        recurringEndType,
+        recurringEndDate,
+        recurringCount,
+      } = watchedValues;
+      const startDate = new Date(appointmentDate);
+      const preview: RecurringPreview[] = [];
+
+      // Determine end date
+      const endDate = (() => {
+        if (recurringEndType === RecurringEndType.DATE && recurringEndDate) {
+          return new Date(recurringEndDate);
+        }
+
+        if (recurringEndType === RecurringEndType.COUNT && recurringCount) {
+          const weeks =
+            recurringType === RecurringType.BIWEEKLY
+              ? recurringCount * 2
+              : recurringType === RecurringType.MONTHLY
+              ? recurringCount * 4
+              : recurringCount;
+
+          const temp = new Date(startDate);
+          temp.setDate(temp.getDate() + weeks * 7);
+          return temp;
+        }
+
+        return null;
+      })();
+
+      if (!endDate) return;
+
+      const dayIncrements = {
+        [RecurringType.WEEKLY]: 7,
+        [RecurringType.BIWEEKLY]: 14,
+        [RecurringType.MONTHLY]: 28,
+      };
+
+      // Generate preview
+      for (
+        let current = new Date(startDate);
+        current <= endDate;
+        current.setDate(
+          current.getDate() +
+            dayIncrements[recurringType ?? RecurringType.WEEKLY]
+        )
+      ) {
+        preview.push({
+          date: current.toISOString().split("T")[0],
+          dayName: current.toLocaleDateString("en-US", { weekday: "long" }),
+          formattedDate: current.toLocaleDateString("en-IN"),
+          status: "available",
+        });
+      }
+      setRecurringPreview(preview);
+    } catch (error) {
+      console.error("Error generating recurring preview:", error);
+    } finally {
+      setIsGeneratingPreview(false);
     }
   };
 
@@ -307,9 +371,117 @@ export function ScheduleNewDialog({
     return Math.round((end.getTime() - start.getTime()) / (1000 * 60));
   };
 
-  //create new appointment- POST api call
+  const generateRecurringAppointments = (baseData: AppointmentFormData) => {
+    const appointments = [];
+    const startDate = new Date(baseData.appointmentDate);
+
+    let currentDate = new Date(startDate);
+    let endDate: Date;
+
+    if (
+      baseData.recurringEndType === RecurringEndType.DATE &&
+      baseData.recurringEndDate
+    ) {
+      endDate = new Date(baseData.recurringEndDate);
+    } else if (
+      baseData.recurringEndType === RecurringEndType.COUNT &&
+      baseData.recurringCount
+    ) {
+      endDate = new Date(startDate);
+      const totalWeeks =
+        baseData.recurringType === RecurringType.WEEKLY
+          ? baseData.recurringCount
+          : baseData.recurringType === RecurringType.BIWEEKLY
+          ? baseData.recurringCount * 2
+          : baseData.recurringCount * 4;
+      endDate.setDate(endDate.getDate() + totalWeeks * 7);
+    } else {
+      return [];
+    }
+
+    let increment: number;
+    switch (baseData.recurringType) {
+      case RecurringType.WEEKLY:
+        increment = 7;
+        break;
+      case RecurringType.BIWEEKLY:
+        increment = 14;
+        break;
+      case RecurringType.MONTHLY:
+        increment = 28;
+        break;
+      default:
+        increment = 7;
+    }
+
+    while (currentDate <= endDate) {
+      appointments.push({
+        ...baseData,
+        appointmentDate: currentDate.toISOString().split("T")[0],
+        appointmentStartTime: new Date(
+          `${currentDate.toISOString().split("T")[0]}T${baseData.startTime}`
+        ).toISOString(),
+        appointmentEndTime: new Date(
+          `${currentDate.toISOString().split("T")[0]}T${baseData.endTime}`
+        ).toISOString(),
+        createdById: user?.id,
+        service: selectedService,
+        isRecurring: true,
+      });
+
+      currentDate.setDate(currentDate.getDate() + increment);
+      console.log("currentDate:", currentDate);
+    }
+
+    return appointments;
+  };
+
+  // Handle form submission with error feedback
+  const handleFormSubmit = async () => {
+    const formData = form.getValues();
+
+    // Debug: Log form data to console
+    console.log("Form data before validation:", formData);
+
+    // Validate form data
+    const validationResult = appointmentFormSchema.safeParse(formData);
+
+    if (!validationResult.success) {
+      // Show validation errors to user
+      const errors = validationResult.error.errors;
+      console.log("Form validation errors:", errors);
+
+      // Find the first error and show it to the user
+      const firstError = errors[0];
+      const fieldName = firstError.path.join(".");
+
+      toast({
+        title: "Validation Error",
+        description: `${fieldName}: ${firstError.message}`,
+        variant: "destructive",
+      });
+
+      // Set form errors for individual fields
+      errors.forEach((error) => {
+        const fieldName = error.path[0] as keyof AppointmentFormData;
+        if (fieldName) {
+          form.setError(fieldName, {
+            type: "manual",
+            message: error.message,
+          });
+        }
+      });
+
+      return;
+    }
+
+    console.log("Form validation passed, submitting:", validationResult.data);
+
+    // If validation passes, call the actual submit function
+    await onSubmit(validationResult.data);
+  };
+
   const onSubmit = async (data: AppointmentFormData) => {
-    console.log("Form data submitted--:", data);
     if (!user) {
       toast({
         title: "Error",
@@ -319,7 +491,6 @@ export function ScheduleNewDialog({
       return;
     }
 
-    // Validate time slot availability
     if (!watchedValues.startTime || !watchedValues.endTime) {
       toast({
         title: "Missing Time Selection",
@@ -338,8 +509,6 @@ export function ScheduleNewDialog({
         data.endTime <= period.endTime
     );
 
-    console.log("Is valid time: ", isValidTime);
-
     if (!isValidTime) {
       toast({
         title: "Invalid Time Selection",
@@ -354,39 +523,86 @@ export function ScheduleNewDialog({
       setIsLoading(true);
       setServerError(null);
 
-      const appointmentData = {
-        ...data,
-        appointmentStartTime: new Date(
-          `${data.appointmentDate}T${data.startTime}`
-        ).toISOString(),
-        appointmentEndTime: new Date(
-          `${data.appointmentDate}T${data.endTime}`
-        ).toISOString(),
-        createdById: user.id,
-        service: selectedService,
-      };
+      if (data.isRecurring) {
+        // Generate recurring appointments
+        const recurringAppointments = generateRecurringAppointments(data);
 
-      const response = await fetch("/api/appointments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(appointmentData),
-      });
+        if (recurringAppointments.length === 0) {
+          toast({
+            title: "Error",
+            description:
+              "No recurring appointments could be generated. Please check your settings.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      const result = await response.json();
+        // Create recurring appointments
+        const response = await fetch("/api/appointments/recurring", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            appointments: recurringAppointments,
+            recurringInfo: {
+              type: data.recurringType,
+              endType: data.recurringEndType,
+              endDate: data.recurringEndDate,
+              count: data.recurringCount,
+            },
+          }),
+        });
 
-      if (!response.ok) {
-        setServerError(result.error || "Failed to schedule appointment");
-        return;
+        const result = await response.json();
+
+        if (!response.ok) {
+          setServerError(
+            result.error || "Failed to schedule recurring appointments"
+          );
+          return;
+        }
+
+        toast({
+          title: "Success",
+          description: `${recurringAppointments.length} recurring appointments scheduled successfully`,
+        });
+      } else {
+        // Create single appointment
+        const appointmentData = {
+          ...data,
+          appointmentStartTime: new Date(
+            `${data.appointmentDate}T${data.startTime}`
+          ).toISOString(),
+          appointmentEndTime: new Date(
+            `${data.appointmentDate}T${data.endTime}`
+          ).toISOString(),
+          createdById: user.id,
+          service: selectedService,
+        };
+
+        const response = await fetch("/api/appointments", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(appointmentData),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          setServerError(result.error || "Failed to schedule appointment");
+          return;
+        }
+
+        toast({
+          title: "Success",
+          description: `Appointment scheduled successfully for ${formatTime(
+            data.startTime
+          )}`,
+        });
       }
-
-      toast({
-        title: "Success",
-        description: `Appointment scheduled successfully for ${formatTime(
-          data.startTime
-        )}`,
-      });
 
       form.reset();
       onOpenChange(false);
@@ -401,7 +617,7 @@ export function ScheduleNewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-indigo-600" />
@@ -409,7 +625,8 @@ export function ScheduleNewDialog({
           </DialogTitle>
           <DialogDescription>
             Create a new appointment by selecting patient, service, therapist,
-            and available time slot.
+            and available time slot. Enable recurring appointments for regular
+            sessions.
           </DialogDescription>
         </DialogHeader>
 
@@ -423,7 +640,6 @@ export function ScheduleNewDialog({
         <div className="space-y-6">
           {/* Patient and Service Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Patient Selection */}
             <div className="space-y-2">
               <Label htmlFor="patientId" className="flex items-center gap-2">
                 <User className="h-4 w-4 text-indigo-600" />
@@ -450,7 +666,6 @@ export function ScheduleNewDialog({
               )}
             </div>
 
-            {/* Service Category Selection */}
             <div className="space-y-2">
               <Label
                 htmlFor="serviceCategory"
@@ -461,7 +676,7 @@ export function ScheduleNewDialog({
               </Label>
               <Select
                 onValueChange={(value) =>
-                  form.setValue("serviceCategory", value)
+                  form.setValue("serviceCategory", value as ServiceCategory)
                 }
               >
                 <SelectTrigger>
@@ -470,7 +685,7 @@ export function ScheduleNewDialog({
                 <SelectContent>
                   {serviceCategories.map((category) => (
                     <SelectItem key={category} value={category}>
-                      {category}
+                      {ServiceCategoryLabel[category]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -483,7 +698,7 @@ export function ScheduleNewDialog({
             </div>
           </div>
 
-          {/* Service Selection (appears after category is selected) */}
+          {/* Service Selection */}
           {watchedValues.serviceCategory && (
             <div className="space-y-2">
               <Label htmlFor="serviceId">Select Service</Label>
@@ -495,7 +710,7 @@ export function ScheduleNewDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {filteredServices.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
+                    <SelectItem key={service.id} value={service.id.toString()}>
                       <div className="flex justify-between items-center w-full">
                         <span>{service.name}</span>
                         <div className="flex gap-2 ml-4">
@@ -564,9 +779,12 @@ export function ScheduleNewDialog({
 
           {/* Date and Time Selection */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Date Selection */}
             <div className="space-y-2">
-              <Label htmlFor="appointmentDate">Appointment Date</Label>
+              <Label htmlFor="appointmentDate">
+                {watchedValues.isRecurring
+                  ? "First Appointment Date"
+                  : "Appointment Date"}
+              </Label>
               <Input
                 id="appointmentDate"
                 type="date"
@@ -580,7 +798,6 @@ export function ScheduleNewDialog({
               )}
             </div>
 
-            {/* Start Time Selection */}
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time</Label>
               <Input
@@ -600,7 +817,6 @@ export function ScheduleNewDialog({
               )}
             </div>
 
-            {/* End Time Selection */}
             <div className="space-y-2">
               <Label htmlFor="endTime">End Time</Label>
               <Input
@@ -618,6 +834,189 @@ export function ScheduleNewDialog({
             </div>
           </div>
 
+          {/* Recurring Appointment Option */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Repeat className="h-5 w-5 text-indigo-600" />
+                Recurring Appointment
+              </CardTitle>
+              <CardDescription>
+                Schedule multiple appointments at the same time and day of the
+                week
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isRecurring"
+                  checked={watchedValues.isRecurring}
+                  onCheckedChange={(checked) =>
+                    form.setValue("isRecurring", checked as boolean)
+                  }
+                />
+                <Label htmlFor="isRecurring" className="text-sm font-medium">
+                  Make this a recurring appointment
+                </Label>
+              </div>
+
+              {watchedValues.isRecurring && (
+                <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringType">Frequency</Label>
+                      <Select
+                        value={watchedValues.recurringType}
+                        onValueChange={(value) =>
+                          form.setValue("recurringType", value as RecurringType)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={RecurringType.WEEKLY}>
+                            Weekly
+                          </SelectItem>
+                          <SelectItem value={RecurringType.BIWEEKLY}>
+                            Bi-weekly (Every 2 weeks)
+                          </SelectItem>
+                          <SelectItem value={RecurringType.MONTHLY}>
+                            Monthly (Every 4 weeks)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringEndType">End Method</Label>
+                      <Select
+                        value={watchedValues.recurringEndType}
+                        onValueChange={(value) =>
+                          form.setValue(
+                            "recurringEndType",
+                            value as RecurringEndType
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select end method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={RecurringEndType.COUNT}>
+                            Number of appointments
+                          </SelectItem>
+                          <SelectItem value={RecurringEndType.DATE}>
+                            End date
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {watchedValues.recurringEndType ===
+                    RecurringEndType.COUNT && (
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringCount">
+                        Number of Appointments
+                      </Label>
+                      <Input
+                        id="recurringCount"
+                        type="number"
+                        min="1"
+                        max="52"
+                        value={watchedValues.recurringCount || ""}
+                        onChange={(e) =>
+                          form.setValue(
+                            "recurringCount",
+                            parseInt(e.target.value)
+                          )
+                        }
+                        placeholder="Enter number of appointments"
+                      />
+                    </div>
+                  )}
+
+                  {watchedValues.recurringEndType === RecurringEndType.DATE && (
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringEndDate">End Date</Label>
+                      <Input
+                        id="recurringEndDate"
+                        type="date"
+                        value={watchedValues.recurringEndDate || ""}
+                        onChange={(e) =>
+                          form.setValue("recurringEndDate", e.target.value)
+                        }
+                        min={watchedValues.appointmentDate}
+                      />
+                    </div>
+                  )}
+
+                  {/* Recurring Preview */}
+                  {recurringPreview.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4" />
+                        Appointment Preview ({recurringPreview.length}{" "}
+                        appointments)
+                      </Label>
+                      <div className="max-h-48 overflow-y-auto border rounded-lg p-3 bg-white">
+                        {isGeneratingPreview ? (
+                          <div className="flex items-center justify-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent" />
+                            <span className="ml-2 text-sm text-gray-600">
+                              Generating preview...
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {recurringPreview.map((appointment, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-2 bg-gray-50 rounded border"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                                    <span className="text-xs font-medium text-indigo-600">
+                                      {index + 1}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-sm">
+                                      {appointment.dayName},{" "}
+                                      {appointment.formattedDate}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {watchedValues.startTime &&
+                                      watchedValues.endTime
+                                        ? `${formatTime(
+                                            watchedValues.startTime
+                                          )} - ${formatTime(
+                                            watchedValues.endTime
+                                          )}`
+                                        : "Time not selected"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-xs">
+                                  {appointment.status === "available"
+                                    ? "Available"
+                                    : appointment.status === "conflict"
+                                    ? "Conflict"
+                                    : "Unknown"}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Appointment Duration Display */}
           {watchedValues.startTime && watchedValues.endTime && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -625,7 +1024,7 @@ export function ScheduleNewDialog({
                 <Clock className="h-4 w-4 text-green-600" />
                 <span className="font-medium text-green-800">
                   Appointment Time: {formatTime(watchedValues.startTime)} -{" "}
-                  {formatTime(watchedValues.endTime)}(
+                  {formatTime(watchedValues.endTime)} (
                   {calculateDuration(
                     watchedValues.startTime,
                     watchedValues.endTime
@@ -633,6 +1032,14 @@ export function ScheduleNewDialog({
                   minutes)
                 </span>
               </div>
+              {watchedValues.isRecurring && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm text-blue-800">
+                    This time will be used for all recurring appointments
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -716,7 +1123,7 @@ export function ScheduleNewDialog({
               Cancel
             </Button>
             <Button
-              onClick={form.handleSubmit(onSubmit)}
+              onClick={handleFormSubmit}
               disabled={
                 isLoading ||
                 !watchedValues.startTime ||
@@ -728,12 +1135,16 @@ export function ScheduleNewDialog({
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                  Scheduling...
+                  {watchedValues.isRecurring
+                    ? "Scheduling..."
+                    : "Scheduling..."}
                 </div>
               ) : (
                 <>
                   <Calendar className="h-4 w-4 mr-2" />
-                  Schedule Appointment
+                  {watchedValues.isRecurring
+                    ? `Schedule ${recurringPreview.length} Appointments`
+                    : "Schedule Appointment"}
                 </>
               )}
             </Button>

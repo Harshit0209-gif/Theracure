@@ -8,6 +8,9 @@ import {
   AppointmentStatus,
   ConsultationStatus,
   InvoiceStatus,
+  RecurringType,
+  RecurringEndType,
+  ServiceCategory,
 } from "@prisma/client";
 
 // Define enum groupings by model
@@ -18,6 +21,8 @@ const enumGroups = {
     Gender: Object.keys(Gender),
   },
   booking: {
+    RecurringType: Object.keys(RecurringType),
+    RecurringEndType: Object.keys(RecurringEndType),
     AssignmentStatus: Object.keys(AssignmentStatus),
     SessionStatus: Object.keys(SessionStatus),
     AppointmentStatus: Object.keys(AppointmentStatus),
@@ -25,6 +30,9 @@ const enumGroups = {
   },
   invoice: {
     InvoiceStatus: Object.keys(InvoiceStatus),
+  },
+  service: {
+    ServiceCategory: Object.keys(ServiceCategory),
   },
 };
 

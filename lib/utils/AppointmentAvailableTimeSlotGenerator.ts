@@ -27,6 +27,7 @@ export function generateAvailablePeriods(
 
   console.log("Therapist Schedule:", therapistSchedule);
   console.log("Existing Appointments:", existingAppointments);
+  console.log("Date:", date, "periods: ", periods);
 
   therapistSchedule.forEach((schedule) => {
     // Convert appointment times to time strings for comparison
@@ -117,7 +118,7 @@ export function generateStartTimes(
       }
     });
 
-  return [...new Set(startTimes)].sort(); // Remove duplicates and sort
+  return [...new Set(startTimes)].sort();
 }
 
 function calculateDuration(startTime: string, endTime: string): number {
