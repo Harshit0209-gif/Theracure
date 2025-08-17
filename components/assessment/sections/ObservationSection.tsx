@@ -46,13 +46,8 @@ const OBSERVATION_FIELDS: ObservationField[] = [
   {
     key: "gait",
     label: "Gait",
-    type: "select",
-    options: [
-      { value: "normal", label: "Normal" },
-      { value: "antalgic", label: "Antalgic" },
-      { value: "trendelenburg", label: "Trendelenburg" },
-      { value: "limping", label: "Limping" },
-    ],
+    type: "input",
+    placeholder: "e.g., Antalgic gait",
   },
   {
     key: "weightBearing",

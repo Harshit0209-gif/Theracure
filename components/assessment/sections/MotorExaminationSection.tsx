@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AssessmentFormData, MotorExaminationData } from "@/types/assessment";
+import { Input } from "@/components/ui/input";
 
 interface MotorExaminationSectionProps {
   formData: AssessmentFormData;
@@ -43,22 +44,17 @@ const MOTOR_FIELDS: MotorField[] = [
     label: "Passive ROM (PROM)",
     placeholder: "Passive movements...",
   },
-  {
-    key: "muscleStrength",
-    label: "Muscle Strength",
-    placeholder: "Manual muscle testing...",
-  },
 ];
 
 const MUSCLE_TONES = ["normal", "hypotonic", "hypertonic", "spastic"];
 
 const MMT_GRADES = [
-  { value: "0", label: "0 - No contraction" },
-  { value: "1", label: "1 - Trace" },
-  { value: "2", label: "2 - Poor" },
-  { value: "3", label: "3 - Fair" },
-  { value: "4", label: "4 - Good" },
-  { value: "5", label: "5 - Normal" },
+  { value: "0", label: "0 " },
+  { value: "1", label: "1 " },
+  { value: "2", label: "2 " },
+  { value: "3", label: "3 " },
+  { value: "4", label: "4 " },
+  { value: "5", label: "5 " },
 ];
 
 export const MotorExaminationSection: React.FC<
@@ -91,23 +87,15 @@ export const MotorExaminationSection: React.FC<
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label className="text-xs">Muscle Tone</Label>
-          <Select
+          <Input
+            type="text"
+            key={"tone"}
+            placeholder="Normal or something else..."
+            className={`h-8 ${disabled ? "bg-gray-100" : ""}`}
             value={formData.motorExamination.tone}
-            onValueChange={(value) => updateMotorExam("tone", value)}
+            onChange={(e) => updateMotorExam("tone", e.target.value)}
             disabled={disabled}
-          >
-            <SelectTrigger className={`h-8 ${disabled ? "bg-gray-100" : ""}`}>
-              {" "}
-              <SelectValue placeholder="Select tone" />
-            </SelectTrigger>
-            <SelectContent>
-              {MUSCLE_TONES.map((tone) => (
-                <SelectItem key={tone} value={tone}>
-                  {tone.charAt(0).toUpperCase() + tone.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
 
         <div>

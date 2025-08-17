@@ -80,6 +80,22 @@ enum ServiceCategory {
   COMBO_TREATMENT
 }
 
+enum DocumentType {
+  PRESCRIPTION
+  DIAGNOSTIC
+  NOTES
+  THERAPY_SUMMARY
+  LAB_REPORT
+  XRAY
+  MRI
+  CT_SCAN
+  ULTRASOUND
+  OTHER
+
+  @@map("document_type")
+}
+
+
 
 // Models
 model User {
@@ -98,6 +114,7 @@ model User {
   createdAppointments       Appointment[]         @relation("CreatedBy")
   therapistTimeSlots TherapistTimeSlot[] @relation("TherapistTimeSlots")
   therapist          Therapist?
+  uploadedMedicalRecords MedicalRecord[] @relation("MedicalRecordUploader")
  
 
   @@map("users")
@@ -125,6 +142,7 @@ model Patient {
   prescriptions   Prescription[] @relation("PatientPrescriptions")
   therapySessions TherapySession[] @relation("PatientTherapySessions")
   invoices          Invoice[]
+  medicalRecords    MedicalRecord[]
  
 
   @@map("patients")
@@ -332,4 +350,32 @@ model Consultation {
   @@index([consultationDate])
   @@index([status])
   @@map("consultations")
+}
+
+model MedicalRecord {
+  id               String   @id @default(uuid()) @db.Uuid
+  patientId        String   @map("patient_id") @db.Uuid
+  documentType     DocumentType @map("document_type")
+  fileName         String   @map("file_name")
+  originalFileName String   @map("original_file_name")
+  filePath         String   @map("file_path")
+  fileUrl          String?  @map("file_url")
+  fileSize         Int      @map("file_size")
+  uploadedBy       String   @map("uploaded_by") @db.Uuid
+  uploadDate       DateTime @default(now()) @map("upload_date")
+  tags             String[] @default([])
+  category         String?  
+  description      String?  
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  //relation
+  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  uploadedByUser   User     @relation("MedicalRecordUploader", fields: [uploadedBy], references: [id])
+
+  @@index([patientId])
+  @@index([documentType])
+  @@index([uploadDate])
+  @@index([uploadedBy])
+  @@map("medical_records")
 }

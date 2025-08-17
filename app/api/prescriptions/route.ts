@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
 
     // Query parameters for filtering and pagination
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const limit = parseInt(searchParams.get("limit") || "20");
     const search = searchParams.get("search");
     const patientId = searchParams.get("patientId");
     const therapistId = searchParams.get("therapistId");
@@ -84,6 +84,13 @@ export async function GET(request: NextRequest) {
                   email: true,
                 },
               },
+            },
+          },
+          session: {
+            select: {
+              id: true,
+              sessionDate: true,
+              completed: true,
             },
           },
         },

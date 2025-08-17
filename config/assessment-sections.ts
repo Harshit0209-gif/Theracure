@@ -30,19 +30,11 @@ export const SECTION_GROUPS = {
       toggle: false,
       defaultActive: true,
     },
+
     {
       id: "chiefComplaints",
-      name: "Present Illness History",
+      name: "Chief Complaints",
       icon: FileText,
-      required: true,
-      active: true,
-      toggle: false,
-      defaultActive: true,
-    },
-    {
-      id: "onObservation",
-      name: "On Observation",
-      icon: Eye,
       required: true,
       active: true,
       toggle: false,
@@ -51,6 +43,15 @@ export const SECTION_GROUPS = {
   ],
 
   history: [
+    {
+      id: "historyOfPresentIllness",
+      name: "History of Present Illness ",
+      icon: FileText,
+      required: true,
+      active: true,
+      toggle: false,
+      defaultActive: true,
+    },
     {
       id: "historyOfIllness",
       name: "Past History",
@@ -61,18 +62,18 @@ export const SECTION_GROUPS = {
       defaultActive: true,
     },
     {
-      id: "medicalHistory",
-      name: "Medical History",
-      icon: Heart,
+      id: "painHistory",
+      name: "Pain History",
+      icon: Zap,
       required: false,
       active: true,
       toggle: true,
       defaultActive: true,
     },
     {
-      id: "painHistory",
-      name: "Pain History",
-      icon: Zap,
+      id: "medicalHistory",
+      name: "Medical History",
+      icon: Heart,
       required: false,
       active: true,
       toggle: true,
@@ -109,6 +110,24 @@ export const SECTION_GROUPS = {
 
   examination: [
     {
+      id: "onObservation",
+      name: "On Observation",
+      icon: Eye,
+      required: true,
+      active: true,
+      toggle: false,
+      defaultActive: true,
+    },
+    {
+      id: "onPalpation",
+      name: "On Palpation",
+      icon: Hand,
+      required: false,
+      active: true,
+      toggle: true,
+      defaultActive: true,
+    },
+    {
       id: "motorExamination",
       name: "Motor Examination",
       icon: Move,
@@ -126,27 +145,7 @@ export const SECTION_GROUPS = {
       toggle: true,
       defaultActive: true,
     },
-    {
-      id: "onPalpation",
-      name: "On Palpation",
-      icon: Hand,
-      required: false,
-      active: true,
-      toggle: true,
-      defaultActive: true,
-    },
-    {
-      id: "specialTests",
-      name: "Special Tests",
-      icon: TestTube,
-      required: false,
-      active: true,
-      toggle: true,
-      defaultActive: true,
-    },
-  ],
 
-  assessment: [
     {
       id: "differentialDiagnosis",
       name: "Differential Diagnostics",
@@ -164,6 +163,15 @@ export const SECTION_GROUPS = {
       active: false,
       toggle: true,
       defaultActive: false,
+    },
+    {
+      id: "specialTests",
+      name: "Special Tests",
+      icon: TestTube,
+      required: false,
+      active: true,
+      toggle: true,
+      defaultActive: true,
     },
     {
       id: "provisionalDiagnosis",
@@ -190,7 +198,7 @@ export const SECTION_GROUPS = {
       id: "notes",
       name: "Additional Notes",
       icon: StickyNote,
-      required: true,
+      required: false,
       active: true,
       toggle: false,
       defaultActive: true,

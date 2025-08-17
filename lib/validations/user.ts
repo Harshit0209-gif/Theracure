@@ -2,9 +2,6 @@ import { TypeOf, z } from "zod";
 import { UserRoleSchema } from "@/lib/userRoles";
 import { UserStatus } from "@prisma/client";
 
-const phoneRegex =
-  /^\+?[1-9]\d{0,2}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/;
-
 // Schema for creating a new user
 export const createUserSchema = z.object({
   name: z
@@ -26,11 +23,7 @@ export const createUserSchema = z.object({
     ),
   phone: z
     .string()
-    .regex(
-      /^\d{10}$/,
-      "Phone number must be exactly 10 digits (e.g., 9876543210)"
-    )
-    .transform((val) => `+91${val}`)
+    .regex(/^\d{10}$/, "Must be exactly 10 digits")
     .optional(),
   role: UserRoleSchema,
 });
@@ -59,13 +52,7 @@ export const updateUserSchema = z.object({
     .optional(),
   phone: z
     .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .max(10, "Phone number must be less than 15 digits")
-    .regex(
-      phoneRegex,
-      "Please enter a valid phone number (e.g., +91 234-567-8909)"
-    )
-    .transform((val) => val.replace(/[-.\s]/g, ""))
+    .regex(/^\d{10}$/, "Must be exactly 10 digits")
     .optional()
     .or(z.literal("")),
 });

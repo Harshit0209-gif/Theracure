@@ -278,7 +278,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           <span class="pain-label">Location:</span>
           <span class="pain-value">${pain.location
             .replace("_", " ")
-            .replace(/\b\w/g, (l) => l.toUpperCase())}</span>
+            .replace(/\b\w/g, (l: any) => l.toUpperCase())}</span>
         </div>
       `;
     }
@@ -376,7 +376,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           <span class="obs-label">Gait:</span>
           <span class="obs-value">${obs.gait
             .replace("_", " ")
-            .replace(/\b\w/g, (l) => l.toUpperCase())}</span>
+            .replace(/\b\w/g, (l: any) => l.toUpperCase())}</span>
         </div>
       `;
     }
@@ -387,7 +387,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           <span class="obs-label">Weight Bearing:</span>
           <span class="obs-value">${obs.weightBearing
             .replace("_", " ")
-            .replace(/\b\w/g, (l) => l.toUpperCase())}</span>
+            .replace(/\b\w/g, (l: any) => l.toUpperCase())}</span>
         </div>
       `;
     }

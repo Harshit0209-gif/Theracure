@@ -301,25 +301,6 @@ export function AddAssessmentDialog({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-xs">Neurological Tone</Label>
-          <Select
-            value={formData.neurologicalExam.tone}
-            onValueChange={(value) => updateNeurologicalExam("tone", value)}
-            disabled={!isActive}
-          >
-            <SelectTrigger className={`h-8 ${!isActive ? "bg-gray-100" : ""}`}>
-              <SelectValue placeholder="Select tone" />
-            </SelectTrigger>
-            <SelectContent>
-              {NEUROLOGICAL_TONES.map((tone) => (
-                <SelectItem key={tone} value={tone}>
-                  {tone.charAt(0).toUpperCase() + tone.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
           <Label className="text-xs">Other Findings</Label>
           <Textarea
             placeholder="Other neurological findings..."
@@ -422,9 +403,6 @@ export function AddAssessmentDialog({
         <h3 className="text-lg font-semibold text-gray-800">
           {groupConfig.title}
         </h3>
-        <Badge className={`${groupConfig.badgeColor} text-xs`}>
-          {groupConfig.badge}
-        </Badge>
       </div>
 
       <div className={groupConfig.layout}>

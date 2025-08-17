@@ -329,23 +329,25 @@ export function EmployeeTable({
                               Reset Password
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className={
-                                user.status === UserStatus.ACTIVE
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleStatus(user);
-                              }}
-                              disabled={isLoading}
-                            >
-                              <Shield className="mr-2 h-4 w-4" />
-                              {user.status === UserStatus.ACTIVE
-                                ? "Deactivate"
-                                : "Activate"}
-                            </DropdownMenuItem>
+                            {user.status != UserStatus.SUSPENDED && (
+                              <DropdownMenuItem
+                                className={
+                                  user.status === UserStatus.ACTIVE
+                                    ? "text-red-600"
+                                    : "text-green-600"
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleStatus(user);
+                                }}
+                                disabled={isLoading}
+                              >
+                                <Shield className="mr-2 h-4 w-4" />
+                                {user.status === UserStatus.ACTIVE
+                                  ? "Deactivate"
+                                  : "Activate"}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

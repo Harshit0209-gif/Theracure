@@ -171,9 +171,9 @@ export interface AssessmentResponse {
 
 export interface GroupConfig {
   title: string;
-  badge: string;
+
   color: string;
-  badgeColor: string;
+
   layout: string;
   itemClass: string;
 }

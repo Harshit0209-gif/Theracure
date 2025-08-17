@@ -12,9 +12,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const therapistId = url.searchParams.get("therapistId");
     const search = url.searchParams.get("search") || "";
-    const page = parseInt(url.searchParams.get("page") || "1");
-    const limit = parseInt(url.searchParams.get("limit") || "10");
-    const skip = (page - 1) * limit;
+    const currentPage = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "20");
+    const skip = (currentPage - 1) * limit;
 
     // Build the where clause
     let where: any = {};
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
       }
     }
 
-    const [patients, total] = await Promise.all([
+    const [patients, totalCount] = await Promise.all([
       prisma.patient.findMany({
         where,
         skip,
@@ -72,15 +72,18 @@ export async function GET(req: Request) {
       }),
       prisma.patient.count({ where }),
     ]);
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
       patients,
       pagination: {
-        total,
-        pages: Math.ceil(total / limit),
-        page,
+        currentPage,
+        totalPages,
+        totalCount,
         limit,
+        hasNextPage: currentPage < totalPages,
+        hasPrevPage: currentPage > 1,
       },
     });
   } catch (error) {

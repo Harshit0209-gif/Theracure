@@ -197,16 +197,10 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+91 234-567-8902"
+                placeholder="123-456-7890"
                 className="col-span-3"
                 value={phoneValue}
                 onChange={handlePhoneChange}
-                onBlur={() => {
-                  if (phoneValue && !phoneValue.startsWith("+")) {
-                    setPhoneValue("+" + phoneValue);
-                    form.setValue("phone", "+" + phoneValue);
-                  }
-                }}
               />
               {form.formState.errors.phone && (
                 <p className="col-span-3 col-start-2 text-sm text-red-500">

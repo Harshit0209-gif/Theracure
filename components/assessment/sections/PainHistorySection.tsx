@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { AssessmentFormData, PainHistoryData } from "@/types/assessment";
+import { Input } from "@/components/ui/input";
 
 interface PainHistorySectionProps {
   formData: AssessmentFormData;
@@ -49,9 +50,9 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
     }));
   };
 
-  const handleVasChange = (value: number[]) => {
-    setVasScore(value);
-    updatePainHistory("vasScore", value[0]);
+  const handleVasChange = (value: number) => {
+    setVasScore([value]);
+    updatePainHistory("vasScore", value);
   };
 
   return (
@@ -84,6 +85,7 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
           <Select
             value={formData.painHistory.nature}
             onValueChange={(value) => updatePainHistory("nature", value)}
+            disabled={disabled}
           >
             <SelectTrigger className={`h-8 ${disabled ? "bg-gray-100" : ""}`}>
               <SelectValue placeholder="Select nature" />
@@ -102,21 +104,14 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
       <div>
         <Label className="text-xs">VAS Pain Score (0-10)</Label>
         <div className="flex items-center gap-4 mt-2">
-          <Slider
-            value={vasScore}
-            onValueChange={handleVasChange}
-            max={10}
-            step={1}
-            className="flex-1"
+          <Input
+            type="number"
+            placeholder="0-10"
+            className={`h-8 ${disabled ? "bg-gray-100" : ""}`}
+            value={vasScore[0]}
+            onChange={(e) => handleVasChange(Number(e.target.value))}
             disabled={disabled}
           />
-          <Badge variant="outline" className="min-w-[60px] justify-center">
-            {vasScore[0]}/10
-          </Badge>
-        </div>
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
-          <span>No Pain</span>
-          <span>Worst Pain</span>
         </div>
       </div>
 
