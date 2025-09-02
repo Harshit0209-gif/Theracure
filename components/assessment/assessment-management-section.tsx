@@ -29,7 +29,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { AddAssessmentDialog } from "@/components/assessment/add-assessment-form";
 import { UserRole } from "@/lib/generated/userRoles";
 import { PaginationDefaultValue, PaginationInfo } from "@/types";

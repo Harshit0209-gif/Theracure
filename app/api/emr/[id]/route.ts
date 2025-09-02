@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session-provider";
 import z from "zod";
+import { emrService } from "@/lib/services/emr-service";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession(req);
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -16,11 +18,13 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const validatedData = UpdateMedicalRecordSchema.parse(body);
+    const { id } = await params;
+
+    const validatedData = body;
 
     // Check if record exists and user has permission
-    const existingRecord = await prisma.MedicalRecord.findUnique({
-      where: { id: params.id },
+    const existingRecord = await prisma.medicalRecord.findUnique({
+      where: { id },
       include: {
         patient: true,
       },
@@ -36,10 +40,7 @@ export async function PUT(
     // Check permissions
     const canEdit =
       session.user.role === "ADMIN" ||
-      existingRecord.uploadedBy === session.user.id ||
-      (existingRecord.accessPermissions as any)?.canView?.includes(
-        session.user.id
-      );
+      existingRecord.uploadedBy === session.user.id;
 
     if (!canEdit) {
       return NextResponse.json(
@@ -50,7 +51,7 @@ export async function PUT(
 
     // Update the record
     const updatedRecord = await prisma.medicalRecord.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
       include: {
         patient: {
@@ -86,6 +87,42 @@ export async function PUT(
       );
     }
 
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession(req);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+
+    const canDelete =
+      session.user.role === "ADMIN" || session.user.role === "THERAPIST";
+    if (!canDelete) {
+      return NextResponse.json(
+        { success: false, error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
+    const res = await emrService.deleteFile(id);
+
+    return NextResponse.json(res);
+  } catch (error) {
+    console.error("EMR delete error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

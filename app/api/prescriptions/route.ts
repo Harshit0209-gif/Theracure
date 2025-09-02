@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     console.log("therapist found:  ", therapist);
     if (!therapist) {
       return NextResponse.json(
-        { success: false, error: "Therapist not found" },
+        { success: false, error: "Therapist Profile not found" },
         { status: 404 }
       );
     }

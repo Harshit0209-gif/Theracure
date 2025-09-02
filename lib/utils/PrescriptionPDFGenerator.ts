@@ -1029,248 +1029,215 @@ const generateAssessmentPDF = async (assessment: any) => {
     </style>
   </head>
   <body>
-    <div class="page">
-      <!-- Header -->
-      <div class="header">
-        <div class="clinic-info">
-          <div class="logo">
-            ${
-              logoBase64
-                ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo" />`
-                : `<div class="logo-fallback">TC</div>`
-            }
-          </div>
-          <div class="contact-info">
-            <p><strong>ADDRESS:</strong> 361/A, BASUDEVPUR ROAD, GROUND FLOOR - 'NILANJANA' APARTMENT</p>
-            <p>SHYAMNAGAR, NORTH 24 PARGANAS, PIN - 743127</p>
-            <p><strong>Tel:</strong> (033) 3564 7255 | <strong>Email:</strong> contacts@mstheracure.com</p>
-            <p><strong>Website:</strong> www.mstheracure.com</p>
-            <p style="margin-top: 5px; font-weight: bold;">Time: Monday to Saturday (9:00 AM to 7:00 PM)</p>
-            <p style="font-weight: bold; color: #e74c3c;">SUNDAY CLOSED</p>
-          </div>
+  <div class="page">
+    <!-- Header -->
+    <div class="header">
+      <div class="clinic-info">
+        <div class="logo">
+          ${
+            logoBase64
+              ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo" />`
+              : `<div class="logo-fallback">TC</div>`
+          }
         </div>
-        
-        <div class="doctor-info">
-          <div class="doctor-name">
-            ${
-              therapist?.user?.name ||
-              therapist?.name ||
-              "Dr. Diksha Palit (PT)"
-            }
-          </div>
-          <div class="doctor-qualifications">
-            ${
-              therapist?.qualification ||
-              "B.P.T [W.B.U.H.S], CDNT<br>Co-Founder & Consultant Physiotherapist"
-            }
-          </div>
-          <div class="doctor-details">
-            ${
-              therapist?.specialization ||
-              "Physiotherapy & Rehabilitation Specialist"
-            }
-          </div>
+        <div class="contact-info">
+          <p><strong>ADDRESS:</strong> 361/A, BASUDEVPUR ROAD, GROUND FLOOR - 'NILANJANA' APARTMENT</p>
+          <p>SHYAMNAGAR, NORTH 24 PARGANAS, PIN - 743127</p>
+          <p><strong>Tel:</strong> (033) 3564 7255 | <strong>Email:</strong> contacts@mstheracure.com</p>
+          <p><strong>Website:</strong> www.mstheracure.com</p>
+          <p style="margin-top: 5px; font-weight: bold;">Time: Monday to Saturday (9:00 AM to 7:00 PM)</p>
+          <p style="font-weight: bold; color: #e74c3c;">SUNDAY CLOSED</p>
         </div>
       </div>
       
-      <!-- Form Title -->
-      <div class="form-title">OPD ASSESSMENT SHEET</div>
-      
-      <!-- Patient Information -->
-      <div class="patient-info-container">
-        <div class="patient-info">
-          <div class="patient-info-title">Patient Information</div>
-          <div class="patient-grid">
-            <div class="patient-field">
-              <span class="patient-field-label">Name:</span>
-              <span class="patient-field-value">
-                ${
-                  patientInfo?.patientName ||
-                  patientInfo?.name ||
-                  assessmentData?.patientName ||
-                  "N/A"
-                }
-              </span>
-            </div>
-            <div class="patient-field">
-              <span class="patient-field-label">Age:</span>
-              <span class="patient-field-value">
-                ${patientInfo?.age || assessmentData?.age || "N/A"} years
-              </span>
-            </div>
-            <div class="patient-field">
-              <span class="patient-field-label">Gender:</span>
-              <span class="patient-field-value">
-                ${patientInfo?.gender || assessmentData?.gender || "N/A"}
-              </span>
-            </div>
-            <div class="patient-field">
-              <span class="patient-field-label">Patient ID:</span>
-              <span class="patient-field-value">
-                ${
-                  assessmentData?.patientId ||
-                  patientInfo?.id ||
-                  patientInfo?.patientId ||
-                  "N/A"
-                }
-              </span>
-            </div>
-            <div class="patient-field">
-              <span class="patient-field-label">Height:</span>
-              <span class="patient-field-value">
-                ${
-                  assessmentData?.vitals?.height || patientInfo?.height || "N/A"
-                } cms
-              </span>
-            </div>
-            <div class="patient-field">
-              <span class="patient-field-label">Weight:</span>
-              <span class="patient-field-value">
-                ${
-                  assessmentData?.vitals?.weight || patientInfo?.weight || "N/A"
-                } kgs
-              </span>
-            </div>
-            ${
-              assessmentData?.vitals?.bmi ||
-              (assessmentData?.vitals?.weight && assessmentData?.vitals?.height)
-                ? `
+      <div class="doctor-info">
+        <div class="doctor-name">
+          ${therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"}
+        </div>
+        <div class="doctor-qualifications">
+          ${
+            therapist?.qualification ||
+            "B.P.T [W.B.U.H.S], CDNT<br>Co-Founder & Consultant Physiotherapist"
+          }
+        </div>
+        <div class="doctor-details">
+          ${
+            therapist?.specialization ||
+            "Physiotherapy & Rehabilitation Specialist"
+          }
+        </div>
+      </div>
+    </div>
+    
+    <!-- Form Title -->
+    <div class="form-title">OPD ASSESSMENT SHEET</div>
+    
+    <!-- Patient Information -->
+    <div class="patient-info-container">
+      <div class="patient-info">
+        <div class="patient-info-title">Patient Information</div>
+        <div class="patient-grid">
+          ${[
+            {
+              label: "Name",
+              value:
+                patientInfo?.patientName ||
+                patientInfo?.name ||
+                assessmentData?.patientName,
+            },
+            { label: "Age", value: patientInfo?.age || assessmentData?.age },
+            {
+              label: "Gender",
+              value: patientInfo?.gender || assessmentData?.gender,
+            },
+            {
+              label: "Patient ID",
+              value:
+                assessmentData?.patientId ||
+                patientInfo?.id ||
+                patientInfo?.patientId,
+            },
+            {
+              label: "Height",
+              value: assessmentData?.vitals?.height || patientInfo?.height,
+            },
+            {
+              label: "Weight",
+              value: assessmentData?.vitals?.weight || patientInfo?.weight,
+            },
+            {
+              label: "Date",
+              value:
+                assessmentData?.assessmentDate ||
+                assessmentData?.createdAt ||
+                new Date(),
+            },
+          ]
+            .filter((field) => field.value != null && field.value !== "")
+            .map(
+              (field) => `
+              <div class="patient-field">
+                <span class="patient-field-label">${field.label}:</span>
+                <span class="patient-field-value">
+                  ${
+                    field.label === "Date"
+                      ? new Date(field.value).toLocaleDateString("en-IN")
+                      : field.value
+                  }
+                  ${field.label === "Height" ? " cms" : ""}
+                  ${field.label === "Weight" ? " kgs" : ""}
+                </span>
+              </div>
+            `
+            )
+            .join("")}
+          
+          ${
+            assessmentData?.vitals?.weight && assessmentData?.vitals?.height
+              ? `
             <div class="patient-field">
               <span class="patient-field-label">BMI:</span>
               <span class="patient-field-value">
                 ${(() => {
                   const bmiData = getBMIData(
-                    assessmentData?.vitals?.weight,
-                    assessmentData?.vitals?.height
+                    assessmentData.vitals.weight,
+                    assessmentData.vitals.height
                   );
-                  if (bmiData) {
-                    return `${bmiData.bmi} kg/cm² <span style="color: ${bmiData.color}; font-weight: bold; font-size: 10px;">(${bmiData.status})</span>`;
-                  }
-                  return assessmentData?.vitals?.bmi
-                    ? `${assessmentData.vitals.bmi} kg/cm²`
+                  return bmiData
+                    ? `${bmiData.bmi} kg/cm² <span style="color: ${bmiData.color}; font-weight: bold; font-size: 10px;">(${bmiData.status})</span>`
                     : "N/A";
                 })()}
               </span>
             </div>`
-                : ""
-            }
-            <div class="patient-field">
-              <span class="patient-field-label">Date:</span>
-              <span class="patient-field-value">
-                ${
-                  assessmentData?.assessmentDate || assessmentData?.createdAt
-                    ? new Date(
-                        assessmentData.assessmentDate ||
-                          assessmentData.createdAt
-                      ).toLocaleDateString("en-IN")
-                    : new Date().toLocaleDateString("en-IN")
-                }
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Assessment Content -->
-      <div class="content-container">
-        <!-- Left Column -->
-        <div class="left-column">
-          ${renderVitalsSection()}
-          ${renderSection("Chief Complaints", assessmentData?.chiefComplaints)}
-          ${renderSection(
-            "History of Present Illness",
-            assessmentData?.historyOfIllness
-          )}
-          ${renderSection(
-            "Past Medical History",
-            assessmentData?.medicalHistory
-          )}
-          ${renderPainHistory()}
-          ${renderObservation()}
-          ${renderSection("On Palpation", assessmentData?.onPalpation)}
-          ${renderSection("Special Tests", assessmentData?.specialTests)}
-          ${renderSection("Surgical History", assessmentData?.surgicalHistory)}
-          ${renderSection(
-            "Occupational History",
-            assessmentData?.occupationalHistory
-          )}
-          ${renderSection(
-            "Environmental History",
-            assessmentData?.environmentalHistory
-          )}
-        </div>
-
-        <!-- Middle Column -->
-        <div class="middle-column">
-          ${renderSection(
-            "Motor Examination - ROM",
-            assessmentData?.motorExamination?.rom
-          )}
-          ${renderSection(
-            "Motor Examination - AROM",
-            assessmentData?.motorExamination?.arom
-          )}
-          ${renderSection(
-            "Motor Examination - PROM",
-            assessmentData?.motorExamination?.prom
-          )}
-          ${renderSection(
-            "Muscle Strength",
-            assessmentData?.motorExamination?.muscleStrength
-          )}
-          ${renderSection(
-            "Muscle Tone",
-            assessmentData?.motorExamination?.tone
-          )}
-          ${renderSection("MMT Grade", assessmentData?.motorExamination?.grade)}
-          ${renderSection(
-            "Neurological - Sensory",
-            assessmentData?.neurologicalExam?.sensory
-          )}
-          ${renderSection(
-            "Neurological - Reflexes",
-            assessmentData?.neurologicalExam?.reflexes
-          )}
-          ${renderSection(
-            "Neurological - HMF",
-            assessmentData?.neurologicalExam?.hmf
-          )}
-          ${renderSection(
-            "Neurological - Cranial",
-            assessmentData?.neurologicalExam?.cranial
-          )}
-          ${renderSection(
-            "Differential Diagnosis",
-            assessmentData?.differentialDiagnosis
-          )}
-          ${renderSection("Investigations", assessmentData?.investigations)}
-          ${renderSection(
-            "Provisional Diagnosis",
-            assessmentData?.provisionalDiagnosis
-          )}
-          ${renderSection(
-            "Physiotherapy Management",
-            assessmentData?.physiotherapyMgmt
-          )}
-          ${renderSection("Additional Notes", assessmentData?.notes)}
-        </div>
-
-        <!-- Right Column - Only Body Diagram and BMI Chart -->
-        <div class="right-column">
-          <!-- Body Diagram at Top -->
-          <div class="body-diagram-section">
-            <div class="body-diagram-title">Body Diagram</div>
-            <div class="body-diagram"></div>
-          </div>
-          
-          <!-- BMI Reference Chart -->
-          ${renderBMIChart()}
+              : ""
+          }
         </div>
       </div>
     </div>
     
-   
-  </body>
+    <!-- Assessment Content -->
+    <div class="content-container">
+      <div class="left-column">
+        ${renderVitalsSection()}
+
+        ${[
+          { label: "Chief Complaints", value: assessmentData?.chiefComplaints },
+          {
+            label: "History of Present Illness",
+            value: assessmentData?.historyOfPresentIllness,
+          },
+          {
+            label: "Past Medical History",
+            value: assessmentData?.medicalHistory,
+          },
+          { label: "On Palpation", value: assessmentData?.onPalpation },
+          { label: "Special Tests", value: assessmentData?.specialTests },
+          { label: "Surgical History", value: assessmentData?.surgicalHistory },
+          {
+            label: "Occupational History",
+            value: assessmentData?.occupationalHistory,
+          },
+          {
+            label: "Environmental History",
+            value: assessmentData?.environmentalHistory,
+          },
+          { label: "Additional Notes", value: assessmentData?.notes },
+        ]
+          .filter((s) => s.value != null && s.value !== "")
+          .map((s) => renderSection(s.label, s.value))
+          .join("")}
+
+        ${renderPainHistory()}
+        ${renderObservation()}
+      </div>
+
+      <div class="middle-column">
+        ${Object.entries(assessmentData?.motorExamination || {})
+          .filter(([_, val]) => val != null && val !== "")
+          .map(([key, val]) =>
+            renderSection(`Motor Examination - ${key.toUpperCase()}`, val)
+          )
+          .join("")}
+
+        ${Object.entries(assessmentData?.neurologicalExam || {})
+          .filter(([_, val]) => val != null && val !== "")
+          .map(([key, val]) =>
+            renderSection(`Neurological - ${key.toUpperCase()}`, val)
+          )
+          .join("")}
+
+        ${[
+          {
+            label: "Differential Diagnosis",
+            value: assessmentData?.differentialDiagnosis,
+          },
+          { label: "Investigations", value: assessmentData?.investigations },
+          {
+            label: "Provisional Diagnosis",
+            value: assessmentData?.provisionalDiagnosis,
+          },
+          {
+            label: "Physiotherapy Management",
+            value: assessmentData?.physiotherapyMgmt,
+          },
+        ]
+          .filter((s) => s.value != null && s.value !== "")
+          .map((s) => renderSection(s.label, s.value))
+          .join("")}
+      </div>
+
+      <div class="right-column">
+        <div class="body-diagram-section">
+          <div class="body-diagram-title">Body Diagram</div>
+          <div class="body-diagram"></div>
+        </div>
+
+        ${renderBMIChart()}
+      </div>
+    </div>
+  </div>
+</body>
+
   </html>
 `;
 

@@ -18,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
   setUser: (user: LoginUser | null) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,7 +87,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
+
+    // Clear session cookie by setting it to expire
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
     router.push("/login");
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        if (data.success && data.user) {
+          const updatedUser: LoginUser = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            avatar: "/placeholder.svg?height=40&width=40",
+          };
+
+          setUser(updatedUser);
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh user:", error);
+      // Don't logout on refresh failure, just log the error
+    }
   };
 
   return (
@@ -97,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         setUser,
+        refreshUser,
       }}
     >
       {children}

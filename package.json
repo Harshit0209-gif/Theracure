@@ -16,6 +16,8 @@
     "seed": "ts-node --project tsconfig.seed.json -r tsconfig-paths/register prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.864.0",
+    "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.8.2",
     "@radix-ui/react-accordion": "1.2.2",
@@ -61,9 +63,11 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
+    "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
+    "next-auth": "^4.24.11",
     "next-themes": "^0.4.4",
     "pdfjs-dist": "^5.3.31",
     "prisma": "^6.8.2",
@@ -83,6 +87,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/lodash": "^4.17.20",
     "@types/node": "^22",
     "@types/react": "^19",

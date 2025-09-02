@@ -354,14 +354,14 @@ model Consultation {
 
 model MedicalRecord {
   id               String   @id @default(uuid()) @db.Uuid
-  patientId        String   @map("patient_id") @db.Uuid
+  patientId        String   @map("patient_id") 
   documentType     DocumentType @map("document_type")
   fileName         String   @map("file_name")
   originalFileName String   @map("original_file_name")
   filePath         String   @map("file_path")
   fileUrl          String?  @map("file_url")
   fileSize         Int      @map("file_size")
-  uploadedBy       String   @map("uploaded_by") @db.Uuid
+  uploadedBy       String   @map("uploaded_by") 
   uploadDate       DateTime @default(now()) @map("upload_date")
   tags             String[] @default([])
   category         String?  

@@ -24,6 +24,7 @@ import {
 import { Sidebar } from "@/components/sidebar";
 import { Footer } from "@/components/layout/footer";
 import { useAuth } from "@/contexts/auth-context";
+import { useSessionManager } from "@/hooks/use-session-manager";
 import { Toaster } from "@/components/ui/toaster";
 import { AllRoles } from "@/lib/userRoles";
 
@@ -40,6 +41,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, logout } = useAuth();
   const router = useRouter();
+
+  // Initialize session management
+  useSessionManager({
+    refreshThreshold: 10, // Refresh 10 minutes before expiry
+    inactivityTimeout: 10, // Logout after 1 minute of inactivity (for testing)
+    checkInterval: 1, // Check every minute
+  });
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);

@@ -45,7 +45,7 @@ import {
   User,
   Save,
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";

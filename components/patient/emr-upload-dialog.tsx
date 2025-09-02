@@ -34,7 +34,7 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
 interface EMRUploadDialogProps {
   patientId: string;
@@ -54,7 +54,6 @@ export function EMRUploadDialog({
     category: "",
     description: "",
     tags: "",
-    isPublicToPatient: false,
   });
 
   const documentTypes = [
@@ -71,7 +70,6 @@ export function EMRUploadDialog({
   ];
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    // Validate files
     const validFiles = acceptedFiles.filter((file) => {
       const supportedTypes = [
         "application/pdf",
@@ -110,7 +108,6 @@ export function EMRUploadDialog({
       return true;
     });
 
-    // Add valid files (max 10 total)
     setFiles((prev) => {
       const newFiles = [...prev, ...validFiles];
       if (newFiles.length > 10) {
@@ -198,12 +195,6 @@ export function EMRUploadDialog({
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean),
-        accessPermissions: {
-          canView: [],
-          canDownload: [],
-          isPublicToPatient: formData.isPublicToPatient,
-          restrictedAccess: false,
-        },
       };
 
       uploadFormData.append("data", JSON.stringify(uploadData));
@@ -264,7 +255,6 @@ export function EMRUploadDialog({
       category: "",
       description: "",
       tags: "",
-      isPublicToPatient: false,
     });
     setUploadProgress(0);
   };
@@ -355,22 +345,6 @@ export function EMRUploadDialog({
             <p className="text-xs text-gray-500">
               Separate multiple tags with commas
             </p>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isPublicToPatient"
-              checked={formData.isPublicToPatient}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  isPublicToPatient: !!checked,
-                }))
-              }
-            />
-            <Label htmlFor="isPublicToPatient" className="text-sm">
-              Allow patient to view and download this document
-            </Label>
           </div>
 
           {/* File Upload Area */}

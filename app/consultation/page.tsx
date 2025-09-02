@@ -48,32 +48,12 @@ import { useToast } from "@/hooks/use-toast";
 import { AddConsultationDialog } from "@/components/new-consultstation";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
-
-interface Consultation {
-  id: string;
-  name: string;
-  email?: string;
-  consultationWith: string;
-  consultationDate: string;
-  consultationTime: string;
-  status: "NOT_ASSIGN" | "ASSIGNED" | "COMPLETED" | "CANCELLED";
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const statusColor: Record<string, string> = {
-  NOT_ASSIGN: "bg-red-100 text-red-700 border-red-200",
-  ASSIGNED: "bg-green-100 text-green-700 border-green-200",
-  COMPLETED: "bg-indigo-100 text-indigo-700 border-indigo-200",
-  CANCELLED: "bg-gray-100 text-gray-700 border-gray-200",
-};
-
-const statusLabels: Record<string, string> = {
-  NOT_ASSIGN: "Not Assigned",
-  ASSIGNED: "Assigned",
-  COMPLETED: "Done",
-  CANCELLED: "Cancelled",
-};
+import {
+  Consultation,
+  ConsultationStatus,
+  statusColor,
+  statusLabels,
+} from "@/types/consultation";
 
 const availableDoctors = [
   { value: "Dr. Mainak Sur (PT)", label: "Dr. Mainak Sur (PT)" },
@@ -125,7 +105,7 @@ const fetchConsultations = async (filters = {}) => {
   }
 };
 
-export default function Consultation() {
+export default function ConsultationPage() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [consultations, setConsultations] = useState<Consultation[]>([]);
@@ -142,7 +122,6 @@ export default function Consultation() {
 
   const isTherapist = user?.role === UserRole.THERAPIST;
 
-  // Fetch consultations from API
   const loadConsultations = async () => {
     setLoading(true);
     try {
@@ -184,7 +163,6 @@ export default function Consultation() {
       try {
         await updateConsultation(editingConsultation.id, selectedDoctor);
 
-        // Update local state
         setConsultations((prev) =>
           prev.map((c) =>
             c.id === editingConsultation.id
@@ -237,26 +215,17 @@ export default function Consultation() {
     }
   };
 
-  const handleStatusUpdate = async (id: string, newStatus: string) => {
+  const handleStatusUpdate = async (
+    id: string,
+    newStatus: ConsultationStatus
+  ) => {
     try {
-      let apiCall;
-      switch (newStatus) {
-        case "ASSIGNED":
-          apiCall = updateConsultationStatus(id, "ASSIGNED");
-          break;
-        case "COMPLETED":
-          apiCall = updateConsultationStatus(id, "COMPLETED");
-          break;
-        case "CANCELLED":
-          apiCall = updateConsultationStatus(id, "CANCELLED");
-          break;
-        default:
-          throw new Error("Invalid status");
+      if (!Object.values(ConsultationStatus).includes(newStatus)) {
+        throw new Error("Invalid status");
       }
 
-      await apiCall;
+      await updateConsultationStatus(id, newStatus);
 
-      // Update local state
       setConsultations((prev) =>
         prev.map((apt) => (apt.id === id ? { ...apt, status: newStatus } : apt))
       );
@@ -266,9 +235,11 @@ export default function Consultation() {
         description: `Consultation status has been updated to ${statusLabels[newStatus]}`,
       });
     } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
-        description: "Failed to update status",
+        description:
+          error instanceof Error ? error.message : "Failed to update status",
         variant: "destructive",
       });
     }
@@ -280,7 +251,7 @@ export default function Consultation() {
     );
 
     if (confirmCancel) {
-      handleStatusUpdate(consultation.id, "CANCELLED");
+      handleStatusUpdate(consultation.id, ConsultationStatus.CANCELLED);
     }
   };
 
@@ -441,7 +412,7 @@ export default function Consultation() {
                                     onClick={() =>
                                       handleStatusUpdate(
                                         consultation.id,
-                                        "ASSIGNED"
+                                        ConsultationStatus.ASSIGNED
                                       )
                                     }
                                   >
@@ -455,7 +426,7 @@ export default function Consultation() {
                                     onClick={() =>
                                       handleStatusUpdate(
                                         consultation.id,
-                                        "COMPLETED"
+                                        ConsultationStatus.COMPLETED
                                       )
                                     }
                                   >

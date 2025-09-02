@@ -29,7 +29,7 @@ import {
   Save,
   Calendar,
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import PrintAssessment from "@/components/assessment/print-assessment";
 import { useAuth } from "@/contexts/auth-context";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
@@ -69,7 +69,6 @@ interface TemplateOption {
 export function AddAssessmentDialog({
   onAssessmentAdded,
 }: AddAssessmentDialogProps) {
-  // State management
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchingPatient, setSearchingPatient] = useState(false);
@@ -82,7 +81,6 @@ export function AddAssessmentDialog({
     defaultAssessmentFormData
   );
 
-  // Hooks
   const { user } = useAuth();
   const {
     sections,
@@ -124,8 +122,6 @@ export function AddAssessmentDialog({
       if (data.success) {
         const patient = data.patient as PatientInfo;
         setPatientInfo(patient);
-
-        // Pre-populate form data with patient information
         setFormData((prev) => ({
           ...prev,
           patientId: id,
@@ -223,31 +219,34 @@ export function AddAssessmentDialog({
         body: JSON.stringify(payloadData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create assessment");
-      }
-
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok) {
         toast({
-          title: "Success",
-          description: "Assessment created successfully",
+          title: data.success ? "Success" : "Notice",
+          description: data.message || "Assessment created successfully",
+          variant: data.success ? "default" : "destructive",
         });
-        resetForm();
-        setOpen(false);
-        onAssessmentAdded?.();
+
+        if (data.success) {
+          resetForm();
+          setOpen(false);
+          onAssessmentAdded?.();
+        }
       } else {
-        throw new Error(data.error || "Failed to create assessment");
+        toast({
+          title: "Error",
+          description:
+            data.error || data.message || "Failed to create assessment",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error creating assessment:", error);
       toast({
-        title: "Error",
+        title: "Network or Server Error",
         description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create assessment",
+          error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -523,6 +522,26 @@ export function AddAssessmentDialog({
     );
   };
 
+  function removeEmpty(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map(removeEmpty);
+    } else if (obj && typeof obj === "object") {
+      return Object.entries(obj).reduce((acc, [key, value]) => {
+        const cleaned = removeEmpty(value);
+        if (
+          cleaned !== null &&
+          cleaned !== undefined &&
+          cleaned !== "" &&
+          !(typeof cleaned === "number" && isNaN(cleaned))
+        ) {
+          acc[key] = cleaned;
+        }
+        return acc;
+      }, {} as any);
+    }
+    return obj;
+  }
+
   const activeSectionsCount = Object.values(sections).filter(
     (s) => s.active
   ).length;
@@ -642,7 +661,7 @@ export function AddAssessmentDialog({
             <div className="sticky bottom-0 bg-white border-t pt-4 flex justify-end gap-3">
               {patientInfo && (
                 <PrintAssessment
-                  assessmentData={formData}
+                  assessmentData={removeEmpty(formData)}
                   patientInfo={patientInfo}
                   therapistId={user?.id}
                 />

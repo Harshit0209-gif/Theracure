@@ -20,15 +20,6 @@ interface PainHistorySectionProps {
   ) => void;
   disabled?: boolean;
 }
-
-const PAIN_LOCATIONS = [
-  "lower_back",
-  "neck",
-  "shoulder",
-  "knee",
-  "hip",
-  "ankle",
-];
 const PAIN_NATURES = ["sharp", "dull", "burning", "throbbing", "shooting"];
 
 export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
@@ -50,9 +41,9 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
     }));
   };
 
-  const handleVasChange = (value: number) => {
-    setVasScore([value]);
-    updatePainHistory("vasScore", value);
+  const handleVasChange = (value: number[]) => {
+    setVasScore(value);
+    updatePainHistory("vasScore", value[0]);
   };
 
   return (
@@ -60,24 +51,14 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label className="text-xs">Pain Location</Label>
-          <Select
+          <Input
+            type="text"
             value={formData.painHistory.location}
-            onValueChange={(value) => updatePainHistory("location", value)}
+            onChange={(e) => updatePainHistory("location", e.target.value)}
+            placeholder="Enter Pain location"
+            className={`h-8 text-sm ${disabled ? "bg-gray-100" : ""}`}
             disabled={disabled}
-          >
-            <SelectTrigger className={`h-8 ${disabled ? "bg-gray-100" : ""}`}>
-              <SelectValue placeholder="Select location" />
-            </SelectTrigger>
-            <SelectContent>
-              {PAIN_LOCATIONS.map((location) => (
-                <SelectItem key={location} value={location}>
-                  {location
-                    .replace("_", " ")
-                    .replace(/\b\w/g, (l) => l.toUpperCase())}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
 
         <div>
@@ -104,14 +85,28 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
       <div>
         <Label className="text-xs">VAS Pain Score (0-10)</Label>
         <div className="flex items-center gap-4 mt-2">
-          <Input
-            type="number"
-            placeholder="0-10"
-            className={`h-8 ${disabled ? "bg-gray-100" : ""}`}
-            value={vasScore[0]}
-            onChange={(e) => handleVasChange(Number(e.target.value))}
+          <Slider
+            value={vasScore}
+            onValueChange={handleVasChange}
+            max={10}
+            step={0.1}
+            className={`flex-1 ${
+              disabled ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             disabled={disabled}
           />
+          <Badge
+            variant="outline"
+            className={`min-w-[60px] justify-center ${
+              disabled ? "bg-gray-100 text-gray-500 border-gray-300" : ""
+            }`}
+          >
+            {vasScore[0].toFixed(1)}/10
+          </Badge>
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>No Pain</span>
+          <span>Worst Pain</span>
         </div>
       </div>
 

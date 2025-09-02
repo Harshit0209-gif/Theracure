@@ -19,7 +19,7 @@ import {
   Clock,
   Hash,
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { PrescriptionData } from "@/types/prescription";
 import { AssessmentFormData } from "@/types/assessment";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";

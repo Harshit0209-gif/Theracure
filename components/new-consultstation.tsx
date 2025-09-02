@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -21,7 +20,7 @@ import {
 } from "@/lib/validations/consulation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import {
   Select,
   SelectContent,
@@ -29,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Consultation } from "@/lib/generated/userRoles";
+import { Consultation } from "@/types/consultation";
 
 type AddConsultationDialogProps = {
   onAdd: (consultation: Consultation) => void;

@@ -39,29 +39,10 @@ import {
   Loader2,
   Trash2,
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-
-interface MedicalRecord {
-  id: string;
-  documentType: string;
-  fileName: string;
-  originalFileName: string;
-  fileSize: number;
-  mimeType: string;
-  uploadDate: string;
-  category?: string;
-  description?: string;
-  tags: string[];
-  uploadedByUser: {
-    name: string;
-    role: string;
-  };
-}
-
-interface EMRTableViewProps {
-  patientId: string;
-  refreshTrigger?: number;
-}
+import { toast } from "@/components/ui/use-toast";
+import { useApiFetch } from "@/hooks/use-api-fetch";
+import { EMRTableViewProps, MedicalRecord } from "@/types/emr";
+import { inferMimeTypeFromName } from "@/lib/utils/mime";
 
 export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
@@ -72,6 +53,7 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 10;
+  const { apiFetch } = useApiFetch();
 
   const documentTypes = [
     { value: "ALL", label: "All Types" },
@@ -87,33 +69,29 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
     { value: "OTHER", label: "Other" },
   ];
 
-  // Fetch EMR records
+  // Fetch EMR records with enhanced error handling
   const fetchEMRRecords = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        patientId,
-        page: currentPage.toString(),
+        currentPage: currentPage.toString(),
         limit: pageSize.toString(),
         ...(searchQuery && { search: searchQuery }),
         ...(documentTypeFilter &&
           documentTypeFilter !== "ALL" && { documentType: documentTypeFilter }),
       });
 
-      const response = await fetch(`/api/patients/${patientId}/emr?${params}`);
+      const response = await apiFetch(
+        `/api/patients/${patientId}/emr?${params}`
+      );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch EMR records");
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setRecords(data.records);
-        setTotalPages(data.pagination.totalPages);
-        setTotalCount(data.pagination.totalCount);
+      if (response.success && response.data) {
+        setRecords(response.data.records);
+        setTotalPages(response.data.pagination.totalPages);
+        setTotalCount(response.data.pagination.totalCount);
       } else {
-        throw new Error(data.error || "Failed to fetch records");
+        // Error is already handled by apiFetch hook
+        console.error("Failed to fetch EMR records:", response.error);
       }
     } catch (error) {
       console.error("Error fetching EMR records:", error);
@@ -142,7 +120,8 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, documentTypeFilter]);
 
-  const getFileIcon = (mimeType: string) => {
+  const getFileIcon = (fileName?: string) => {
+    const mimeType = inferMimeTypeFromName(fileName) ?? "";
     if (mimeType === "application/pdf")
       return <FileText className="h-4 w-4 text-red-500" />;
     if (mimeType.startsWith("image/"))
@@ -208,10 +187,42 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
   };
 
   const handleView = async (recordId: string) => {
-    // For now, just download. In future, could implement viewer
-    const record = records.find((r) => r.id === recordId);
-    if (record) {
-      handleDownload(recordId, record.originalFileName);
+    try {
+      const response = await fetch(`/api/emr/${recordId}/view`);
+      if (!response.ok) throw new Error("Failed to fetch view URL");
+
+      const { url } = await response.json();
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error("View error:", error);
+      toast({
+        title: "Unable to view",
+        description: "Could not open the file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (recordId: string) => {
+    try {
+      const response = await apiFetch(`/api/emr/${recordId}`, {
+        method: "DELETE",
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Medical record deleted successfully",
+        });
+        fetchEMRRecords();
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete medical record",
+        variant: "destructive",
+      });
     }
   };
 
@@ -254,8 +265,6 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
             <TableRow className="bg-gray-50">
               <TableHead className="font-semibold">Document</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
-              <TableHead className="font-semibold">Size</TableHead>
-              <TableHead className="font-semibold">Uploaded By</TableHead>
               <TableHead className="font-semibold">Upload Date</TableHead>
               <TableHead className="font-semibold text-center">
                 Actions
@@ -282,7 +291,7 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
                     <p className="text-gray-500">
                       {searchQuery || documentTypeFilter
                         ? "No medical records found matching your criteria"
-                        : "No medical records uploaded yet"}
+                        : "No medical records Found"}
                     </p>
                   </div>
                 </TableCell>
@@ -292,16 +301,12 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
                 <TableRow key={record.id} className="hover:bg-gray-50">
                   <TableCell>
                     <div className="flex items-start gap-3">
-                      {getFileIcon(record.mimeType)}
+                      {getFileIcon(record.originalFileName)}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-gray-900 truncate">
                           {record.originalFileName}
                         </p>
-                        {record.description && (
-                          <p className="text-sm text-gray-600 truncate">
-                            {record.description}
-                          </p>
-                        )}
+
                         {record.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {record.tags.slice(0, 2).map((tag, idx) => (
@@ -330,19 +335,7 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
                       {record.documentType.replace("_", " ")}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600">
-                    {formatFileSize(record.fileSize)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <p className="font-medium text-gray-900">
-                        {record.uploadedByUser.name}
-                      </p>
-                      <p className="text-gray-600 capitalize">
-                        {record.uploadedByUser.role.toLowerCase()}
-                      </p>
-                    </div>
-                  </TableCell>
+
                   <TableCell className="text-sm text-gray-600">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -374,7 +367,7 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() =>
-                            handleDownload(record.id, record.originalFileName)
+                            handleDownload(record.id, record.fileName)
                           }
                           className="flex items-center gap-2"
                         >
@@ -382,7 +375,10 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
                           Download
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 flex items-center gap-2">
+                        <DropdownMenuItem
+                          className="text-red-600 flex items-center gap-2"
+                          onClick={() => handleDelete(record.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                           Delete
                         </DropdownMenuItem>

@@ -222,7 +222,7 @@ export default function AdminDashboard() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {getGreeting()}, {user?.name || "User"}!
+              {getGreeting()}, {user?.name.split(" ")[0] || "User"}!
             </h1>
             <p className="text-sm text-gray-600">
               Real-time clinic management overview

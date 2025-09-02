@@ -77,7 +77,7 @@ export const PatientDetailsCard = ({
   };
 
   return (
-    <Card className="w-full max-w-6xl mx-auto">
+    <Card className="w-full  mx-auto">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -277,7 +277,7 @@ export const PatientDetailsCard = ({
           </TabsContent>
 
           {/* EMR Tab */}
-          <TabsContent value="emr" className="mt-6">
+          <TabsContent value="emr" className="w-full ">
             <div className="space-y-6">
               {/* EMR Header with Upload Button */}
               <div className="flex items-center justify-between">
