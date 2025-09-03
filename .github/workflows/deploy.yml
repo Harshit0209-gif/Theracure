@@ -32,8 +32,18 @@ jobs:
             echo "📥 Pulling latest code from Git using GIT_SSH_COMMAND"
             GIT_SSH_COMMAND="ssh -i /root/.ssh/github_deploy_key -o StrictHostKeyChecking=no" git pull origin main
 
-            echo "🔐 Setting DATABASE_URL"
+            echo "🔐 Exporting all environment variables from GitHub Secrets"
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            export NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}"
+            export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export UTHO_ACCESS_KEY="${{ secrets.UTHO_ACCESS_KEY }}"
+            export UTHO_SECRET_KEY="${{ secrets.UTHO_SECRET_KEY }}"
+            export UTHO_REGION="${{ secrets.UTHO_REGION }}"
+            export UTHO_S3_BUCKET_NAME="${{ secrets.UTHO_S3_BUCKET_NAME }}"
+            export UTHO_ENDPOINT="${{ secrets.UTHO_ENDPOINT }}"
+            export UTHO_CDN="${{ secrets.UTHO_CDN }}"
+            export NODE_ENV="production"
 
             echo "📦 Installing dependencies"
             pnpm install
@@ -51,7 +61,7 @@ jobs:
             pnpm exec puppeteer browsers install chrome || { echo "❌ Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
 
             echo "🚀 Restarting application with PM2"
-            pm2 startOrRestart /var/www/html/ecosystem.config.js --only dashboard
+            pm2 startOrRestart /var/www/html/ecosystem.config.js --env production --only dashboard
 
             echo "✅ PM2 status check"
             pm2 status
