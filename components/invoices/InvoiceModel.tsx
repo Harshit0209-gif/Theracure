@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Activity,
   IndianRupee,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,9 +30,16 @@ import { Separator } from "@/components/ui/separator";
 import { isPrintable } from "@/lib/utils/invoiceUtils";
 
 import { toast } from "@/components/ui/use-toast";
+import {
+  InvoicePayload,
+  invoiceStatusLabelMap,
+  invoiceStatusStyles,
+  PaymentStatus,
+} from "@/types/invoice";
+import React from "react";
 
 interface InvoiceDetailsModalProps {
-  printPayload: any;
+  printPayload: InvoicePayload | null;
   isDetailsModalOpen: boolean;
   setIsDetailsModalOpen: (open: boolean) => void;
   handlePrintInvoice: () => void;
@@ -61,21 +69,23 @@ export const InvoiceDetailsModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-indigo-600" />
-            ID- {printPayload.invoiceDetails.invoiceId}
+            ID- {printPayload.invoiceDetails.id}
             <div className="text-right">
               <Badge
-                className={
-                  printPayload.paymentDetails.status === "PAID"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }
+                className={`${
+                  invoiceStatusStyles[printPayload.invoiceDetails.status]?.color
+                } `}
               >
-                {printPayload.paymentDetails.status === "PAID" ? (
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                ) : (
-                  <Clock className="h-3 w-3 mr-1" />
+                {React.createElement(
+                  invoiceStatusStyles[printPayload.invoiceDetails.status]?.icon,
+                  {
+                    className:
+                      invoiceStatusStyles[printPayload.invoiceDetails.status]
+                        ?.className,
+                  }
                 )}
-                {printPayload.paymentDetails.status}
+
+                {invoiceStatusLabelMap[printPayload.invoiceDetails.status]}
               </Badge>
             </div>
           </DialogTitle>
@@ -140,7 +150,7 @@ export const InvoiceDetailsModal = ({
                 <div>
                   <p className="text-sm text-gray-500">Payment Method</p>
                   <p className="font-semibold capitalize">
-                    {printPayload.paymentDetails.paymentMethod ||
+                    {printPayload.invoiceDetails.paymentMethod ||
                       "Not specified"}
                   </p>
                 </div>
@@ -167,18 +177,18 @@ export const InvoiceDetailsModal = ({
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead>Service/Item</TableHead>
-                    <TableHead className="text-center">Quantity</TableHead>
+                    <TableHead className="text-center">No.of Session</TableHead>
                     <TableHead className="text-right">Rate (₹)</TableHead>
                     <TableHead className="text-right">Amount (₹)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {printPayload.selectedServices?.map(
+                  {printPayload.invoiceDetails.invoiceItems?.map(
                     (item: any, index: number) => (
                       <TableRow key={index}>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{item.name}</p>
+                            <p className="font-medium">{item.serviceName}</p>
                             {item.description && (
                               <p className="text-sm text-gray-500">
                                 {item.description}
@@ -190,11 +200,10 @@ export const InvoiceDetailsModal = ({
                           {item.quantity}
                         </TableCell>
                         <TableCell className="text-right">
-                          ₹{item.price}
+                          ₹{item.priceAtPurchase.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
-                          ₹
-                          {(item.price * item.quantity).toLocaleString("en-IN")}
+                          ₹{(item.priceAtPurchase * item.quantity).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     )
@@ -213,6 +222,76 @@ export const InvoiceDetailsModal = ({
             </CardContent>
           </Card>
 
+          {/* Transaction Details */}
+          {printPayload.invoiceDetails.transactions &&
+            printPayload.invoiceDetails.transactions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-indigo-600" />
+                    Transaction Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead>Transaction ID</TableHead>
+                        <TableHead>Date Time</TableHead>
+                        <TableHead className="text-right">Amount (₹)</TableHead>
+                        <TableHead>Payment Mode</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {printPayload.invoiceDetails.transactions.map(
+                        (transaction: any) => (
+                          <TableRow key={transaction.id}>
+                            <TableCell className="font-mono text-sm">
+                              {transaction.id}
+                            </TableCell>
+                            <TableCell>
+                              {new Date(
+                                transaction.transactionDate
+                              ).toLocaleString("en-IN", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              ₹{transaction.amount.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {transaction.paymentMethod || "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  transaction.status === "SUCCESS"
+                                    ? "bg-green-100 text-green-700"
+                                    : transaction.status === "PENDING"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : transaction.status === "REFUNDED"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-red-100 text-red-700"
+                                }
+                              >
+                                {transaction.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
           {/* Payment Summary */}
           <Card>
             <CardHeader>
@@ -226,29 +305,18 @@ export const InvoiceDetailsModal = ({
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
                   <span>
-                    ₹
-                    {printPayload.paymentDetails.subTotal?.toLocaleString(
-                      "en-IN"
-                    ) || "0"}
+                    ₹{(printPayload.paymentDetails.subTotal || 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>offer:</span>
-                  <span>
-                    {printPayload.paymentDetails.offer?.toLocaleString(
-                      "en-IN"
-                    ) || "0"}
-                    %
-                  </span>
+                  <span>Offer:</span>
+                  <span>{printPayload.paymentDetails.offer || 0}%</span>
                 </div>
-                {printPayload.paymentDetails.subTotal > 0 && (
+                {printPayload.paymentDetails.discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount:</span>
                     <span>
-                      -₹
-                      {printPayload.paymentDetails.discount.toLocaleString(
-                        "en-IN"
-                      )}
+                      -₹{printPayload.paymentDetails.discount.toFixed(2)}
                     </span>
                   </div>
                 )}
@@ -256,28 +324,19 @@ export const InvoiceDetailsModal = ({
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total Amount:</span>
                   <span>
-                    ₹
-                    {printPayload.paymentDetails.totalAmount?.toLocaleString(
-                      "en-IN"
-                    )}
+                    ₹{(printPayload.paymentDetails.totalAmount || 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-green-600">
                   <span>Amount Paid:</span>
                   <span>
-                    ₹
-                    {printPayload.paymentDetails.amountPaid?.toLocaleString(
-                      "en-IN"
-                    ) || "0"}
+                    ₹{(printPayload.paymentDetails.amountPaid || 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-red-600 font-semibold">
                   <span>Balance Due:</span>
                   <span>
-                    ₹
-                    {printPayload.paymentDetails.balance.toLocaleString(
-                      "en-IN"
-                    )}
+                    ₹{(printPayload.paymentDetails.balance || 0).toFixed(2)}
                   </span>
                 </div>
               </div>

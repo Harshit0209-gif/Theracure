@@ -2,12 +2,17 @@ import puppeteer from "puppeteer";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import {
+  InvoiceItem,
+  InvoicePayload,
+  TransactionStatus,
+} from "@/types/invoice";
 
 // Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const generateInvoicePDF = async (invoiceData: any) => {
+export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
   let browser;
 
   try {
@@ -129,26 +134,109 @@ const getImageAsBase64 = async () => {
   }
 };
 
+// Helper function to calculate total paid from transactions with 2 decimal accuracy
+// Rounds each transaction amount before summing to prevent floating point drift
+const calculateTotalPaid = (transactions?: any[]) => {
+  if (!transactions || transactions.length === 0) return 0;
+  return parseFloat(
+    transactions
+      .filter((t) => t.status === TransactionStatus.SUCCESS)
+      .reduce((sum, t) => {
+        // Round each transaction amount before adding
+        const transactionAmount = parseFloat(t.amount.toFixed(2));
+        return sum + transactionAmount;
+      }, 0)
+      .toFixed(2)
+  );
+};
+
+// Helper function to get payment methods from transactions
+const getPaymentMethods = (transactions?: any[]) => {
+  if (!transactions || transactions.length === 0) return "N/A";
+  const methods = transactions
+    .filter((t) => t.status === TransactionStatus.SUCCESS && t.paymentMethod)
+    .map((t) => t.paymentMethod)
+    .filter((method, index, self) => self.indexOf(method) === index); // unique methods
+  return methods.length > 0 ? methods.join(", ") : "N/A";
+};
+
+// Helper function to format transaction date
+const getLatestTransactionDate = (transactions?: any[]) => {
+  if (!transactions || transactions.length === 0) return null;
+  const successfulTransactions = transactions.filter(
+    (t) => t.status === TransactionStatus.SUCCESS
+  );
+  if (successfulTransactions.length === 0) return null;
+  const latest = successfulTransactions.sort(
+    (a, b) =>
+      new Date(b.transactionDate).getTime() -
+      new Date(a.transactionDate).getTime()
+  )[0];
+  return latest.transactionDate;
+};
+
 // HTML Template Generator Function (now async)
-const generateInvoiceHTML = async (data: any) => {
-  const {
-    patientInfo,
-    invoiceDetails,
-    paymentDetails,
-    selectedServices,
-    notes,
-  } = data;
+const generateInvoiceHTML = async (data: InvoicePayload) => {
+  const { patientInfo, invoiceDetails, paymentDetails, selectedServices } =
+    data;
   console.log("Generating invoice HTML with data:", data);
+
+  // Calculate amount paid from transactions
+  const amountPaidFromTransactions = calculateTotalPaid(
+    invoiceDetails.transactions
+  );
+  const paymentMethods = getPaymentMethods(invoiceDetails.transactions);
+  const latestPaymentDate = getLatestTransactionDate(
+    invoiceDetails.transactions
+  );
 
   // Get the logo as base64
   const logoBase64 = await getImageAsBase64();
+
+  // Use invoiceItems if available (existing invoice), otherwise use selectedServices (new invoice)
+  const items =
+    invoiceDetails.invoiceItems && invoiceDetails.invoiceItems.length > 0
+      ? invoiceDetails.invoiceItems.map((item: any) => ({
+          name: item.serviceName,
+          description: item.description || "",
+          quantity: item.quantity,
+          price: item.priceAtPurchase,
+        }))
+      : selectedServices?.map((service: any) => ({
+          name: service.name,
+          description: service.description || "",
+          quantity: service.quantity,
+          price: service.price,
+        })) || [];
+
+  // For new invoices, use paymentDetails values; for existing invoices, use invoiceDetails
+  // Check if this is a new invoice by seeing if invoiceDetails has zero values
+  const isNewInvoice =
+    invoiceDetails.subTotal === 0 && invoiceDetails.totalAmount === 0;
+
+  const displaySubTotal = isNewInvoice
+    ? paymentDetails.subTotal
+    : invoiceDetails.subTotal;
+  const displayTotalAmount = isNewInvoice
+    ? paymentDetails.totalAmount
+    : invoiceDetails.totalAmount;
+  const displayOffer = isNewInvoice
+    ? paymentDetails.offer
+    : invoiceDetails.offer;
+  const displayDiscount = paymentDetails.discount || 0;
+  const displayAmountPaid = isNewInvoice
+    ? paymentDetails.amountPaid
+    : amountPaidFromTransactions || invoiceDetails.amountPaid;
+  const displayBalance = isNewInvoice
+    ? paymentDetails.balance
+    : displayTotalAmount - displayAmountPaid;
 
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Invoice - ${invoiceDetails.invoiceId}</title>
+      <title>Invoice - ${invoiceDetails.id}</title>
       <style>
         @page {
           size: A4;
@@ -321,9 +409,12 @@ const generateInvoiceHTML = async (data: any) => {
           text-align: left;
           border-bottom: 1px solid #d1d5db;
         }
-        
+
         .table-header th:nth-child(2),
-        .table-header th:nth-child(3),
+        .table-header th:nth-child(3) {
+          text-align: center;
+        }
+
         .table-header th:nth-child(4) {
           text-align: center;
         }
@@ -471,14 +562,13 @@ const generateInvoiceHTML = async (data: any) => {
         <!-- Invoice Info -->
         <div class="invoice-info">
           <div>
-            <div class="invoice-number">Invoice No: ${
-              invoiceDetails.invoiceId
-            }</div>
+            <div class="invoice-number">Invoice No: ${invoiceDetails.id}</div>
           </div>
           <div class="text-right">
             <div class="invoice-date">Date: ${new Date(
               invoiceDetails.date
             ).toLocaleDateString("en-IN")}</div>
+            <div class="invoice-date">Status: ${invoiceDetails.status}</div>
           </div>
         </div>
 
@@ -512,21 +602,38 @@ const generateInvoiceHTML = async (data: any) => {
           <!-- Payment Details -->
           <div class="detail-card">
             <div class="detail-title">PAYMENT DETAILS:</div>
-            <div class="detail-item">
-              <span class="detail-label">Payment Date:</span>
-              <span class="detail-value">${new Date(
-                paymentDetails.paymentDate
-              ).toLocaleDateString("en-IN")}</span>
-            </div>
+            ${
+              latestPaymentDate
+                ? `<div class="detail-item">
+                  <span class="detail-label">Last Payment Date:</span>
+                  <span class="detail-value">${new Date(
+                    latestPaymentDate
+                  ).toLocaleDateString("en-IN")}</span>
+                </div>`
+                : ""
+            }
             <div class="detail-item">
               <span class="detail-label">Payment Method:</span>
-              <span class="detail-value">${paymentDetails.paymentMethod.toUpperCase()}</span>
+              <span class="detail-value">${paymentMethods}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Payment Status:</span>
+              <span class="detail-value">${paymentDetails.status}</span>
             </div>
             ${
-              paymentDetails.offer > 0
+              displayOffer && displayOffer > 0
                 ? `<div class="detail-item">
                   <span class="detail-label">Offer Applied:</span>
-                  <span class="detail-value">${paymentDetails.offer}%</span>
+                  <span class="detail-value">${displayOffer}%</span>
+                </div>`
+                : ""
+            }
+            ${
+              invoiceDetails.transactions &&
+              invoiceDetails.transactions.length > 0
+                ? `<div class="detail-item">
+                  <span class="detail-label">Total Transactions:</span>
+                  <span class="detail-value">${invoiceDetails.transactions.length}</span>
                 </div>`
                 : ""
             }
@@ -539,29 +646,29 @@ const generateInvoiceHTML = async (data: any) => {
           <table class="services-table">
             <thead class="table-header">
               <tr>
-                <th style="width: 50%;">Service Description</th>
-                <th style="width: 12%;">Qty</th>
-                <th style="width: 19%;">Rate (₹)</th>
+                <th style="width: 48%;">Service Description</th>
+                <th style="width: 15%;">Qty</th>
+                <th style="width: 18%;">Rate (₹)</th>
                 <th style="width: 19%;">Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
-              ${selectedServices
+              ${items
                 .map(
-                  (service: any) => `
+                  (item: any) => `
                 <tr class="table-row">
                   <td>
-                    <div class="service-name">${service.name}</div>
+                    <div class="service-name">${item.name}</div>
                     <div class="service-description">${
-                      service.description
+                      item.description || ""
                     }</div>
                   </td>
-                  <td class="text-center">${service.quantity}</td>
-                  <td class="text-center">${service.price.toLocaleString(
+                  <td class="text-center">${item.quantity}</td>
+                  <td class="text-center">${item.price.toLocaleString(
                     "en-IN"
                   )}</td>
                   <td class="text-center">${(
-                    service.price * service.quantity
+                    item.price * item.quantity
                   ).toLocaleString("en-IN")}</td>
                 </tr>
               `
@@ -576,69 +683,50 @@ const generateInvoiceHTML = async (data: any) => {
           <table class="totals-table">
             <tr>
               <td class="totals-label">Subtotal:</td>
-              <td class="totals-value">₹${paymentDetails.subTotal.toLocaleString(
+              <td class="totals-value">₹${displaySubTotal.toLocaleString(
                 "en-IN"
               )}</td>
             </tr>
             ${
-              paymentDetails.offer > 0
+              displayOffer && displayOffer > 0
                 ? `
             <tr>
-              <td class="totals-label">Discount (${paymentDetails.offer}%):</td>
-              <td class="totals-value" style="color: #059669;">- ₹${(
-                (paymentDetails.subTotal * (paymentDetails?.offer ?? 0)) /
-                100
-              ).toLocaleString("en-IN")}</td>
+              <td class="totals-label">Discount (${displayOffer}%):</td>
+              <td class="totals-value" style="color: #059669;">- ₹${displayDiscount.toLocaleString(
+                "en-IN"
+              )}</td>
             </tr>
             `
                 : ""
             }
             <tr class="total-final">
               <td class="totals-label">Total Amount:</td>
-              <td class="totals-value">₹${paymentDetails.totalAmount.toLocaleString(
+              <td class="totals-value">₹${displayTotalAmount.toLocaleString(
                 "en-IN"
               )}</td>
             </tr>
             <tr>
               <td class="totals-label">Amount Paid:</td>
-              <td class="totals-value paid-amount">₹${paymentDetails.amountPaid.toLocaleString(
+              <td class="totals-value paid-amount">₹${displayAmountPaid.toLocaleString(
                 "en-IN"
               )}</td>
             </tr>
-            <td class="totals-label">
-              ${
-                paymentDetails.amountPaid >= paymentDetails.totalAmount
-                  ? "Paid"
-                  : "Due"
-              }:
-            </td>
-            <td
-              class="totals-value ${
-                paymentDetails.amountPaid >= paymentDetails.totalAmount
-                  ? "paid-amount"
-                  : "due-amount"
-              }"
-            >
-              ₹${Math.abs(
-                paymentDetails.totalAmount - paymentDetails.amountPaid
-              ).toLocaleString("en-IN")}
-            </td>
+            <tr>
+              <td class="totals-label">
+                ${displayBalance <= 0 ? "Paid (Change)" : "Balance Due"}:
+              </td>
+              <td
+                class="totals-value ${
+                  displayBalance <= 0 ? "paid-amount" : "due-amount"
+                }"
+              >
+                ₹${Math.abs(displayBalance).toLocaleString("en-IN")}
+              </td>
+            </tr>
           </table>
         </div>
 
-        ${
-          invoiceDetails.notes
-            ? `
-        <!-- Notes Section -->
-        <div class="notes-section">
-          <div class="section-title">NOTES:</div>
-          <div class="notes-content">
-            ${notes}
-          </div>
-        </div>
-        `
-            : ""
-        }
+        
 
         <!-- Footer -->
         <div class="footer">

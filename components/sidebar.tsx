@@ -51,12 +51,6 @@ export function Sidebar({
       roles: [UserRole.RECEPTIONIST, UserRole.ADMIN, UserRole.THERAPIST],
     },
     {
-      title: "Consultation",
-      icon: <Handshake className="h-6 w-6" />,
-      href: "/consultation",
-      roles: [UserRole.RECEPTIONIST, UserRole.ADMIN],
-    },
-    {
       title: "Invoices",
       icon: <FileText className="h-6 w-6" />,
       href: "/invoices",

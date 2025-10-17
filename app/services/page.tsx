@@ -64,7 +64,7 @@ const ServiceManagement = () => {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/services");
+      const response = await fetch("/api/services?includeInactive=true");
       if (!response.ok) throw new Error("Failed to fetch services");
       const data = await response.json();
       setServices(Array.isArray(data.data) ? data.data : []);

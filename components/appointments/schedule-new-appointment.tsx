@@ -57,6 +57,11 @@ import {
 import { RecurringEndType, RecurringType } from "@/lib/generated/bookingEnums";
 import { ServiceCategory } from "@/lib/generated/serviceEnums";
 import { ServiceCategoryLabel } from "@/lib/service";
+import { Patient } from "@/types/patient";
+import { debounce } from "lodash";
+import ReactSelect from "react-select";
+import { getServices } from "@/lib/api/services";
+import { getDayName } from "@/lib/utils/utils";
 
 interface ScheduleNewDialogProps {
   open: boolean;
@@ -70,7 +75,7 @@ export function ScheduleNewDialog({
   onAppointmentCreated,
 }: ScheduleNewDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [patients, setPatients] = useState([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [therapists, setTherapists] = useState([]);
   const [services, setServices] = useState<Service[]>([]);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
@@ -90,6 +95,10 @@ export function ScheduleNewDialog({
   const [recurringPreview, setRecurringPreview] = useState<RecurringPreview[]>(
     []
   );
+  const [patientOptions, setPatientOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const { user } = useAuth();
 
@@ -144,7 +153,7 @@ export function ScheduleNewDialog({
     if (open) {
       fetchPatients();
       fetchTherapists();
-      fetchServices();
+      fetchData();
     }
   }, [open]);
 
@@ -197,6 +206,32 @@ export function ScheduleNewDialog({
     }
   };
 
+  function debounceAsync<F extends (...args: any[]) => Promise<void>>(
+    fn: F,
+    wait: number
+  ) {
+    const debounced = debounce((...args: Parameters<F>) => {
+      fn(...args).catch(console.error);
+    }, wait);
+
+    return debounced;
+  }
+
+  const handlePatientSearch = debounceAsync(async (input: string) => {
+    const query = input ? `?search=${input}&limit=50` : "?limit=50";
+    const response = await fetch(`/api/patients${query}`);
+    const data = await response.json();
+
+    if (data.success) {
+      setPatientOptions(
+        data.patients.map((p: Patient) => ({
+          value: String(p.id),
+          label: `${p.patientName ?? ""} (${p.id})`,
+        }))
+      );
+    }
+  }, 300);
+
   const fetchTherapists = async () => {
     try {
       const response = await fetch("/api/users?role=therapist&limit=100");
@@ -209,30 +244,15 @@ export function ScheduleNewDialog({
     }
   };
 
-  const fetchServices = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch("/api/services");
-      const data = await response.json();
-      if (data.success) {
-        const fetchedServices: Service[] = (data.data || []).map(
-          (service: any) => ({
-            id: service.id,
-            name: service.name,
-            price: service.price,
-            category: service.category,
-            description: service.description,
-            isActive: service.isActive,
-          })
-        );
+      const fetchedServices = await getServices();
+      setServices(fetchedServices);
 
-        setServices(fetchedServices);
-        const categories: ServiceCategory[] = [
-          ...new Set(
-            fetchedServices.map((service: Service) => service.category)
-          ),
-        ];
-        setServiceCategories(categories);
-      }
+      const categories: ServiceCategory[] = [
+        ...new Set(fetchedServices.map((s) => s.category)),
+      ];
+      setServiceCategories(categories);
     } catch (error) {
       console.error("Error fetching services:", error);
       toast({
@@ -359,10 +379,6 @@ export function ScheduleNewDialog({
     const ampm = hour >= 12 ? "PM" : "AM";
     const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     return `${displayHour}:${minutes} ${ampm}`;
-  };
-
-  const getDayName = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", { weekday: "long" });
   };
 
   const calculateDuration = (startTime: string, endTime: string) => {
@@ -645,27 +661,22 @@ export function ScheduleNewDialog({
                 <User className="h-4 w-4 text-indigo-600" />
                 Patient
               </Label>
-              <Select
-                onValueChange={(value) => form.setValue("patientId", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select patient" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((patient: any) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.patientName} ({patient.id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ReactSelect
+                options={patientOptions}
+                onChange={(selectedOption) =>
+                  form.setValue("patientId", selectedOption?.value || "")
+                }
+                onInputChange={handlePatientSearch}
+                placeholder="Search and select patient"
+                isSearchable
+              />
               {form.formState.errors.patientId && (
                 <p className="text-sm text-red-500">
-                  {form.formState.errors.patientId.message}
+                  {" "}
+                  {form.formState.errors.patientId.message}{" "}
                 </p>
-              )}
-            </div>
-
+              )}{" "}
+            </div>{" "}
             <div className="space-y-2">
               <Label
                 htmlFor="serviceCategory"

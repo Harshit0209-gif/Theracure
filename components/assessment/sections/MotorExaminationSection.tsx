@@ -20,20 +20,12 @@ interface MotorExaminationSectionProps {
 }
 
 interface MotorField {
-  key: keyof Pick<
-    MotorExaminationData,
-    "rom" | "arom" | "prom" | "muscleStrength"
-  >;
+  key: keyof Pick<MotorExaminationData, "arom" | "prom" | "muscleStrength">;
   label: string;
   placeholder: string;
 }
 
 const MOTOR_FIELDS: MotorField[] = [
-  {
-    key: "rom",
-    label: "Range of Motion (ROM)",
-    placeholder: "Document ROM findings...",
-  },
   {
     key: "arom",
     label: "Active ROM (AROM)",

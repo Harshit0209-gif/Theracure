@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { InvoiceStatus, TransactionStatus } from "@prisma/client";
+import { PaymentStatus } from "@/types/invoice";
 
-// Validation schema for invoice updates
 const updateInvoiceSchema = z.object({
-  patientName: z.string().min(1).optional(),
-  date: z.string().datetime().optional(),
-  totalAmount: z.number().min(0).optional(),
-  amountPaid: z.number().min(0).optional(),
-  status: z.enum(["DUE", "PAID", "PARTIALLY_PAID", "CANCELLED"]).optional(),
+  date: z.string().datetime(),
+  totalAmount: z.number().min(0),
+  alreadyPaid: z.number().min(0),
+  due: z.number().min(0),
+  paymentAmount: z.number().min(0),
+  status: z
+    .enum([PaymentStatus.PAID, PaymentStatus.PENDING, PaymentStatus.FAILED])
+    .optional(),
   paymentMethod: z.string().optional(),
-  notes: z.string().optional(),
 });
 
-// GET /api/invoices/[id] - Get single invoice
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const invoice = await prisma.invoice.findUnique({
       where: { id },
@@ -33,6 +35,12 @@ export async function GET(
             address: true,
             age: true,
             gender: true,
+          },
+        },
+        invoiceItems: true,
+        transactions: {
+          orderBy: {
+            transactionDate: "desc",
           },
         },
       },
@@ -67,74 +75,61 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
-    // Validate request body
     const validatedData = updateInvoiceSchema.parse(body);
+    const { totalAmount, paymentAmount, alreadyPaid, date, paymentMethod } =
+      validatedData;
 
-    // Check if invoice exists
-    const existingInvoice = await prisma.invoice.findUnique({
-      where: { id },
-    });
-
+    const existingInvoice = await prisma.invoice.findUnique({ where: { id } });
     if (!existingInvoice) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invoice not found",
-        },
+        { success: false, error: "Invoice not found" },
         { status: 404 }
       );
     }
+    const newTotalAmount = totalAmount ?? existingInvoice.totalAmount;
+    const newAmountPaid =
+      (existingInvoice.amountPaid || 0) + (paymentAmount || 0);
 
-    // Prepare update data
-    const updateData: any = { ...validatedData };
+    const newStatus =
+      newAmountPaid >= newTotalAmount ? InvoiceStatus.PAID : InvoiceStatus.DUE;
 
-    // Convert date string to Date object if provided
-    if (validatedData.date) {
-      updateData.date = new Date(validatedData.date);
-    }
+    const updateData: any = {
+      totalAmount: newTotalAmount,
+      amountPaid: newAmountPaid,
+      status: newStatus,
+      date: date ? new Date(date) : existingInvoice.date,
+      paymentMethod: paymentMethod || existingInvoice.paymentMethod,
+    };
 
-    // Auto-update status based on payment if amounts are provided
-    if (
-      validatedData.totalAmount !== undefined ||
-      validatedData.amountPaid !== undefined
-    ) {
-      const totalAmount =
-        validatedData.totalAmount || existingInvoice.totalAmount;
-      const amountPaid =
-        validatedData.amountPaid !== undefined
-          ? validatedData.amountPaid
-          : existingInvoice.amountPaid;
+    console.log("Final update data:", updateData);
 
-      if (amountPaid === 0) {
-        updateData.status = "DUE";
-      } else if (amountPaid >= totalAmount) {
-        updateData.status = "PAID";
-      } else {
-        updateData.status = "PARTIALLY_PAID";
-      }
-    }
-
-    // Update invoice
     const updatedInvoice = await prisma.invoice.update({
       where: { id },
       data: updateData,
       include: {
         patient: {
-          select: {
-            id: true,
-            patientName: true,
-            email: true,
-            phone: true,
-          },
+          select: { id: true, patientName: true, email: true, phone: true },
         },
       },
     });
+
+    if (updateData.amountPaid > 0) {
+      await prisma.transaction.create({
+        data: {
+          invoiceId: id,
+          amount: paymentAmount,
+          paymentMethod: paymentMethod || "Cash",
+          transactionDate: new Date().toISOString(),
+          status: TransactionStatus.SUCCESS,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -146,11 +141,7 @@ export async function PATCH(
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Validation failed",
-          details: error.errors,
-        },
+        { success: false, error: "Validation failed", details: error.errors },
         { status: 400 }
       );
     }

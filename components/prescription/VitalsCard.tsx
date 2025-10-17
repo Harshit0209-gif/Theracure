@@ -24,8 +24,7 @@ export const VitalsCard: React.FC<VitalsCardProps> = ({ vitals }) => {
         vitals.height ||
         vitals.pulse ||
         vitals.bloodPressure?.systolic ||
-        vitals.temperature ||
-        vitals.sugar;
+        vitals.temperature;
 
   if (!hasVitals) {
     return (
@@ -127,18 +126,6 @@ export const VitalsCard: React.FC<VitalsCardProps> = ({ vitals }) => {
                 <p className="text-sm font-medium text-gray-600">Temperature</p>
                 <p className="font-semibold text-gray-900">
                   {vitals.temperature}°F
-                </p>
-              </div>
-            </div>
-          )}
-
-          {vitals.sugar && (
-            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
-              <Droplets className="h-5 w-5 text-purple-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Sugar Level</p>
-                <p className="font-semibold text-gray-900">
-                  {vitals.sugar} mg/dL
                 </p>
               </div>
             </div>

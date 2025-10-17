@@ -5,7 +5,15 @@ export interface VitalsData {
   height: number;
   bmi: number;
   temperature: string;
-  sugar: string;
+}
+
+export interface VasScoreEntry {
+  id: string;
+  location: string;
+  activity: string;
+  vasScore: number;
+  timeOfDay: string;
+  notes: string;
 }
 
 export interface PainHistoryData {
@@ -13,6 +21,7 @@ export interface PainHistoryData {
   nature: string;
   type: string;
   vasScore: number;
+  vasScores: VasScoreEntry[];
   aggravatingFactors: string;
   relievingFactors: string;
   duration: string;
@@ -29,7 +38,6 @@ export interface OnObservationData {
 }
 
 export interface MotorExaminationData {
-  rom: string;
   arom: string;
   prom: string;
   muscleStrength: string;
@@ -91,7 +99,6 @@ export type FormFieldPath =
   | `motorExamination.${keyof MotorExaminationData}`
   | `neurologicalExam.${keyof NeurologicalExamData}`;
 
-// Default form data
 export const defaultAssessmentFormData: AssessmentFormData = {
   patientId: "",
 
@@ -102,7 +109,6 @@ export const defaultAssessmentFormData: AssessmentFormData = {
     height: 0,
     bmi: 0,
     temperature: "",
-    sugar: "",
   },
   chiefComplaints: "",
   onObservation: {
@@ -122,6 +128,7 @@ export const defaultAssessmentFormData: AssessmentFormData = {
     nature: "",
     type: "",
     vasScore: 0,
+    vasScores: [],
     aggravatingFactors: "",
     relievingFactors: "",
     duration: "",
@@ -132,7 +139,6 @@ export const defaultAssessmentFormData: AssessmentFormData = {
   environmentalHistory: "",
 
   motorExamination: {
-    rom: "",
     arom: "",
     prom: "",
     muscleStrength: "",

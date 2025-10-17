@@ -6,20 +6,17 @@ import {
 } from "@/lib/validations/patient";
 import { generatePatientId } from "@/lib/utils/utils";
 
-// GET all patients
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const therapistId = url.searchParams.get("therapistId");
     const search = url.searchParams.get("search") || "";
-    const currentPage = parseInt(url.searchParams.get("page") || "1");
+    const currentPage = parseInt(url.searchParams.get("currentPage") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "20");
     const skip = (currentPage - 1) * limit;
 
-    // Build the where clause
     let where: any = {};
 
-    // If therapistId is provided, filter patients assigned to that therapist
     if (therapistId) {
       where.therapistAppointments = {
         some: {
@@ -28,7 +25,6 @@ export async function GET(req: Request) {
       };
     }
 
-    // Add search functionality
     if (search) {
       const searchConditions = {
         OR: [
@@ -39,7 +35,6 @@ export async function GET(req: Request) {
         ],
       };
 
-      // Combine therapist filter with search
       if (therapistId) {
         where.AND = [
           { therapistAppointments: { some: { therapistId: therapistId } } },

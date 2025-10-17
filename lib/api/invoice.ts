@@ -1,6 +1,7 @@
 import { InvoicePayload } from "@/types/invoice";
 
 export const saveInvoice = async (data: InvoicePayload) => {
+  console.log("Saving invoice with data:", data);
   const res = await fetch("/api/invoices", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

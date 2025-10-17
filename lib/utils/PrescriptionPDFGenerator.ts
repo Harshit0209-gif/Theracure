@@ -239,16 +239,6 @@ const generateAssessmentPDF = async (assessment: any) => {
       `;
     }
 
-    // Sugar Level
-    if (hasValue(vitals.sugar)) {
-      vitalsHTML += `
-        <div class="vital-item">
-          <span class="vital-label">Sugar Level:</span>
-          <span class="vital-value">${vitals.sugar} mg/dL</span>
-        </div>
-      `;
-    }
-
     vitalsHTML += `
         </div>
       </div>
@@ -294,7 +284,35 @@ const generateAssessmentPDF = async (assessment: any) => {
       `;
     }
 
-    if (hasValue(pain.vasScore)) {
+    // Display multiple VAS scores if available
+    if (hasValue(pain.vasScores) && Array.isArray(pain.vasScores) && pain.vasScores.length > 0) {
+      painHTML += `
+        <div class="pain-item full-width">
+          <span class="pain-label">VAS Scores:</span>
+          <div style="margin-top: 4px;">
+      `;
+
+      pain.vasScores.forEach((vasEntry: any, index: number) => {
+        painHTML += `
+          <div style="background: #fff; padding: 6px; margin-bottom: 4px; border-radius: 3px; border-left: 3px solid #3498db;">
+            <div style="font-weight: 600; font-size: 9px; color: #2c3e50; margin-bottom: 3px;">VAS Score #${index + 1}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 9px;">
+              ${vasEntry.location ? `<div><strong>Location:</strong> ${vasEntry.location}</div>` : ''}
+              ${vasEntry.activity ? `<div><strong>Activity:</strong> ${vasEntry.activity}</div>` : ''}
+              ${vasEntry.vasScore !== undefined ? `<div><strong>Score:</strong> ${vasEntry.vasScore}/10</div>` : ''}
+              ${vasEntry.timeOfDay ? `<div><strong>Time:</strong> ${vasEntry.timeOfDay}</div>` : ''}
+              ${vasEntry.notes ? `<div style="grid-column: 1 / -1;"><strong>Notes:</strong> ${vasEntry.notes}</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      painHTML += `
+          </div>
+        </div>
+      `;
+    } else if (hasValue(pain.vasScore)) {
+      // Fallback to old single VAS score for backward compatibility
       painHTML += `
         <div class="pain-item">
           <span class="pain-label">VAS Score:</span>

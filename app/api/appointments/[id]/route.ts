@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { AppointmentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -61,13 +62,14 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, therapyType, notes } = body;
+    console.log("PATCH body:", body);
+    const { status, serviceId, notes } = body;
 
     const appointment = await prisma.appointment.update({
       where: { id },
       data: {
         ...(status && { status }),
-        ...(therapyType && { therapyType }),
+        ...(serviceId && { serviceId }),
         ...(notes && { notes }),
       },
       include: {
@@ -110,7 +112,7 @@ export async function DELETE(
     const { id } = await params;
     await prisma.appointment.update({
       where: { id },
-      data: { status: "cancelled" },
+      data: { status: AppointmentStatus.CANCELLED },
     });
 
     return NextResponse.json({

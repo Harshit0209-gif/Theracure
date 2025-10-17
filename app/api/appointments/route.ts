@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         include: {
           patient: {
             select: {

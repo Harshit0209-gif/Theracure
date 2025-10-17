@@ -9,8 +9,13 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const patient = await prisma.patient.findUnique({
-      where: { id },
+    const patient = await prisma.patient.findFirst({
+      where: {
+        id: {
+          equals: id,
+          mode: "insensitive",
+        },
+      },
     });
 
     console.log("patient found in db", patient);

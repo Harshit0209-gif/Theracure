@@ -95,6 +95,12 @@ enum DocumentType {
   @@map("document_type")
 }
 
+enum TransactionStatus {
+  SUCCESS
+  FAILED
+  PENDING
+  REFUNDED
+}
 
 
 // Models
@@ -274,15 +280,13 @@ model Invoice {
   notes           String?
   offer           Float?
 
-  
-  // Metadata
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   createdBy       String   
 
-  // Relations
   patient         Patient  @relation(fields: [patientId], references: [id])
   invoiceItems     InvoiceItem[] @relation("InvoiceToItems")
+  transactions    Transaction[] @relation("InvoiceToTransactions")
 
 
   @@index([patientId])
@@ -292,13 +296,33 @@ model Invoice {
   @@map("invoices")
 }
 
+model Transaction {
+  id              String        @id @default(cuid()) @map("transaction_id")
+  invoiceId       String        @map("invoice_id")
+  amount          Float         @map("amount")
+  paymentMethod   String?       @map("payment_method")
+  transactionDate DateTime      @default(now()) @map("transaction_date")
+  status          TransactionStatus @default(SUCCESS)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  invoice         Invoice       @relation("InvoiceToTransactions", fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@index([transactionDate])
+  @@map("transactions")
+}
+
 model InvoiceItem {
   id String @id @default(uuid())
   invoiceId     String
-  serviceId     String  
-  serviceName   String   
-  priceAtPurchase Float  
+  serviceId     String
+  serviceName   String
+  priceAtPurchase Float
   quantity      Int
+  description   String?
+  category      String?
   createdAt     DateTime @default(now())
 
   invoice       Invoice  @relation("InvoiceToItems",fields: [invoiceId], references: [id])

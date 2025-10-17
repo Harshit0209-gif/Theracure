@@ -1,4 +1,5 @@
 import { AppointmentStatus } from "@/lib/generated/bookingEnums";
+import { ServiceCategory } from "@/lib/generated/serviceEnums";
 import { PaginationInfo } from "@/types/index";
 import { Service } from "@/types/service";
 
@@ -39,25 +40,37 @@ export interface Appointment {
 export interface AppointmentTableProps {
   appointments: Appointment[];
   loading: boolean;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
+  therapyTypeFilter: string;
+  setTherapyTypeFilter: (type: ServiceCategory) => void;
   pagination: PaginationInfo;
   onPageChange: (page: number) => void;
   onAppointmentUpdated: () => void;
 }
 
 export interface EditAppointmentData {
-  therapyType: string;
-  appointmentStartTime: string;
-  appointmentEndTime: string;
+  serviceCatagory: ServiceCategory;
+  serviceName: string;
   notes: string;
 }
 
-export interface RescheduleData {
+export const DefaultEditAppointmentData: EditAppointmentData = {
+  serviceCatagory: ServiceCategory.MANUAL_THERAPY,
+  serviceName: "",
+  notes: "",
+};
+
+export interface RescheduleAppointmentData {
+  date: string;
   appointmentStartTime: string;
   appointmentEndTime: string;
   reason: string;
 }
+export const DefaultRescheduleAppointmentData: RescheduleAppointmentData = {
+  date: "",
+  appointmentStartTime: "",
+  appointmentEndTime: "",
+  reason: "",
+};
 
 export interface CancelData {
   reason: string;

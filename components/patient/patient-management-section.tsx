@@ -133,8 +133,8 @@ export function PatientManagementSection() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // Handle currentPage change
   const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({ ...prev, currentPage: newPage }));
     fetchPatients(newPage, searchQuery);
   };
 

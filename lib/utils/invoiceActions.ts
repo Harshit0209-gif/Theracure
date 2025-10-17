@@ -1,5 +1,5 @@
-import { InvoicePayload, PrintPayload } from "@/types/invoice";
-import { saveInvoice, printInvoice } from "@/lib/utils/invoiceApi";
+import { InvoicePayload } from "@/types/invoice";
+import { saveInvoice, printInvoice } from "@/lib/api/invoice";
 
 export const handleSaveInvoice = async ({
   invoicePayload,
@@ -24,15 +24,15 @@ export const handleSaveInvoice = async ({
 };
 
 export const handlePrintInvoice = async ({
-  printPayload,
+  invoicePayload,
   toast,
 }: {
-  printPayload: PrintPayload;
+  invoicePayload: InvoicePayload;
   toast: (args: any) => void;
 }) => {
-  const { invoice, selectedServices } = printPayload;
+  const { invoiceDetails, patientInfo } = invoicePayload;
 
-  if (!invoice?.patient?.id || selectedServices.length === 0) {
+  if (!patientInfo?.id || !invoiceDetails?.invoiceItems || invoiceDetails.invoiceItems.length === 0) {
     toast({
       title: "Cannot Print",
       description:
@@ -43,7 +43,7 @@ export const handlePrintInvoice = async ({
   }
 
   try {
-    const blob = await printInvoice(printPayload);
+    const blob = await printInvoice(invoicePayload);
     const url = window.URL.createObjectURL(blob);
     window.open(url, "_blank");
     setTimeout(() => window.URL.revokeObjectURL(url), 2000);

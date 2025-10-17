@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { toast } from "@/components/ui/use-toast";
 
@@ -12,23 +12,24 @@ import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
 import { Appointment } from "@/types/appointments";
 import { PaginationDefaultValue, PaginationInfo } from "@/types/index";
+import { ServiceCategory } from "@/lib/generated/serviceEnums";
 
 const AppointmentPage = () => {
-  // State management
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [pagination, setPagination] = useState<PaginationInfo>(
     PaginationDefaultValue
   );
+  type TherapyTypeFilter = ServiceCategory | "all";
+  const [therapyTypeFilter, setTherapyTypeFilter] =
+    useState<TherapyTypeFilter>("all");
 
-  // Dialog states
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const { user } = useAuth();
 
-  // Fetch appointments from API
   const fetchAppointments = async (page: number = 1, search: string = "") => {
     try {
       setLoading(true);
@@ -95,15 +96,20 @@ const AppointmentPage = () => {
           onScheduleNew={() => setScheduleDialogOpen(true)}
           onManageAppointments={() => setManageDialogOpen(true)}
           onViewCalendar={() => setCalendarDialogOpen(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          appointments={appointments}
+          therapyTypeFilter={therapyTypeFilter}
+          setTherapyTypeFilter={setTherapyTypeFilter}
         />
 
         {/* Appointments Table */}
         <AppointmentTable
           appointments={appointments}
           loading={loading}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
           pagination={pagination}
+          therapyTypeFilter={therapyTypeFilter}
+          setTherapyTypeFilter={setTherapyTypeFilter}
           onPageChange={handlePageChange}
           onAppointmentUpdated={handleAppointmentUpdated}
         />

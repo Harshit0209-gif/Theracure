@@ -129,7 +129,7 @@ export const SECTION_GROUPS = {
     },
     {
       id: "motorExamination",
-      name: "Motor Examination",
+      name: "Motor Examination(ROM)",
       icon: Move,
       required: false,
       active: true,

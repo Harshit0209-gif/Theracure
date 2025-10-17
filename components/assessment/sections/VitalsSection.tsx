@@ -83,7 +83,6 @@ export const VitalsSection: React.FC<VitalsSectionProps> = ({
       unit: "°F",
       fromProfile: false,
     },
-    { key: "sugar", label: "Sugar Level", unit: "mg/dL", fromProfile: false },
   ];
 
   return (
