@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: data.name,
         email: data.email,
         role: data.role,
-        avatar: "/placeholder.svg?height=40&width=40",
+        avatar: data.avatar || undefined,
       };
 
       setUser(loginUser);
@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: data.user.name,
             email: data.user.email,
             role: data.user.role,
-            avatar: "/placeholder.svg?height=40&width=40",
+            avatar: data.user.avatar || undefined,
           };
 
           setUser(updatedUser);

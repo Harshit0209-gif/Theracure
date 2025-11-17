@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 import { getImagesAsBase64 } from "./imageUtils.node";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
 
-// Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -17,7 +16,6 @@ const generateAssessmentPDF = async (assessment: any) => {
   });
   const page = await browser.newPage();
 
-  // Get the logo as base64
   const images = await getImagesAsBase64([
     "apple-touch-icon.png",
     "humen-body.jpg",
@@ -120,7 +118,6 @@ const generateAssessmentPDF = async (assessment: any) => {
     `;
   };
 
-  // Helper function to render section conditionally with better formatting
   const renderSection = (
     label: string,
     value: any,
@@ -130,7 +127,6 @@ const generateAssessmentPDF = async (assessment: any) => {
 
     let displayValue = value;
     if (typeof value === "object" && !Array.isArray(value)) {
-      // Handle object values by showing non-empty fields
       const objFields = Object.entries(value)
         .filter(([k, v]) => hasValue(v))
         .map(([k, v]) => `${k}: ${v}`)
@@ -285,7 +281,11 @@ const generateAssessmentPDF = async (assessment: any) => {
     }
 
     // Display multiple VAS scores if available
-    if (hasValue(pain.vasScores) && Array.isArray(pain.vasScores) && pain.vasScores.length > 0) {
+    if (
+      hasValue(pain.vasScores) &&
+      Array.isArray(pain.vasScores) &&
+      pain.vasScores.length > 0
+    ) {
       painHTML += `
         <div class="pain-item full-width">
           <span class="pain-label">VAS Scores:</span>
@@ -295,13 +295,35 @@ const generateAssessmentPDF = async (assessment: any) => {
       pain.vasScores.forEach((vasEntry: any, index: number) => {
         painHTML += `
           <div style="background: #fff; padding: 6px; margin-bottom: 4px; border-radius: 3px; border-left: 3px solid #3498db;">
-            <div style="font-weight: 600; font-size: 9px; color: #2c3e50; margin-bottom: 3px;">VAS Score #${index + 1}</div>
+            <div style="font-weight: 600; font-size: 9px; color: #2c3e50; margin-bottom: 3px;">VAS Score #${
+              index + 1
+            }</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 9px;">
-              ${vasEntry.location ? `<div><strong>Location:</strong> ${vasEntry.location}</div>` : ''}
-              ${vasEntry.activity ? `<div><strong>Activity:</strong> ${vasEntry.activity}</div>` : ''}
-              ${vasEntry.vasScore !== undefined ? `<div><strong>Score:</strong> ${vasEntry.vasScore}/10</div>` : ''}
-              ${vasEntry.timeOfDay ? `<div><strong>Time:</strong> ${vasEntry.timeOfDay}</div>` : ''}
-              ${vasEntry.notes ? `<div style="grid-column: 1 / -1;"><strong>Notes:</strong> ${vasEntry.notes}</div>` : ''}
+              ${
+                vasEntry.location
+                  ? `<div><strong>Location:</strong> ${vasEntry.location}</div>`
+                  : ""
+              }
+              ${
+                vasEntry.activity
+                  ? `<div><strong>Activity:</strong> ${vasEntry.activity}</div>`
+                  : ""
+              }
+              ${
+                vasEntry.vasScore !== undefined
+                  ? `<div><strong>Score:</strong> ${vasEntry.vasScore}/10</div>`
+                  : ""
+              }
+              ${
+                vasEntry.timeOfDay
+                  ? `<div><strong>Time:</strong> ${vasEntry.timeOfDay}</div>`
+                  : ""
+              }
+              ${
+                vasEntry.notes
+                  ? `<div style="grid-column: 1 / -1;"><strong>Notes:</strong> ${vasEntry.notes}</div>`
+                  : ""
+              }
             </div>
           </div>
         `;
@@ -449,221 +471,215 @@ const generateAssessmentPDF = async (assessment: any) => {
     <style>
       @page {
         size: A4;
-        margin: 10mm 10mm 30mm 10mm; /* Bottom margin for signature and footer */
+        margin: 8mm 8mm 25mm 8mm; /* Reduced margins for more space */
       }
-      
+
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
-      
+
       body {
         font-family: 'Arial', sans-serif;
-        font-size: 12px;
-        line-height: 1.4;
+        font-size: 10px;
+        line-height: 1.3;
         color: #2c3e50;
         background: white;
         margin: 0;
         padding: 0;
       }
-      
+
       .page {
         width: 100%;
         min-height: 100vh;
         padding: 0;
         position: relative;
-        padding-bottom: 20px; /* Reduced padding for signature space */
+        padding-bottom: 15px;
       }
       
       /* Header Section */
       .header {
         display: flex;
         align-items: flex-start;
-        margin-bottom: 15px;
-        border-bottom: 3px solid #3498db;
-        padding-bottom: 10px;
+        margin-bottom: 8px;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 6px;
       }
-      
+
       .clinic-info {
         flex: 1;
       }
-      
+
       .logo-image {
-        width: 120px;
+        width: 90px;
         height: auto;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
       }
-      
+
       .logo-fallback {
-        width: 120px;
-        height: 50px;
+        width: 90px;
+        height: 40px;
         background: linear-gradient(135deg, #3498db, #2980b9);
-        border-radius: 8px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
-        font-size: 20px;
-        letter-spacing: 2px;
-        margin-bottom: 8px;
+        font-size: 16px;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
       }
-      
+
       .contact-info {
-        font-size: 10px;
-        line-height: 1.3;
+        font-size: 8px;
+        line-height: 1.2;
         color: #495057;
       }
-      
+
       .contact-info p {
-        margin-bottom: 2px;
+        margin-bottom: 1px;
       }
-      
+
       .doctor-info {
-        width: 280px;
+        width: 260px;
         text-align: right;
-        font-size: 10px;
+        font-size: 9px;
       }
-      
+
       .doctor-name {
-        font-size: 14px;
+        font-size: 12px;
         font-weight: bold;
         color: #e74c3c;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
-      
+
       .doctor-qualifications {
-        font-size: 9px;
-        line-height: 1.2;
+        font-size: 8px;
+        line-height: 1.1;
         color: #6c757d;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
-      
+
       .doctor-details {
-        font-size: 9px;
-        line-height: 1.2;
+        font-size: 8px;
+        line-height: 1.1;
         color: #868e96;
       }
-      
+
       /* Form Title */
       .form-title {
         background: linear-gradient(135deg, #3498db, #2980b9);
         color: white;
         text-align: center;
-        padding: 10px;
-        font-size: 16px;
+        padding: 6px;
+        font-size: 13px;
         font-weight: bold;
-        margin: 10px 0;
-        border-radius: 5px;
-        letter-spacing: 1px;
+        margin: 6px 0;
+        border-radius: 4px;
+        letter-spacing: 0.8px;
       }
       
       /* Patient Info Section */
       .patient-info-container {
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         page-break-inside: avoid;
         page-break-after: avoid;
       }
-      
+
       .patient-info {
         background: #f8f9fa;
-        padding: 12px;
-        border-radius: 8px;
-        border-left: 5px solid #3498db;
-        margin-bottom: 15px;
+        padding: 8px;
+        border-radius: 5px;
+        border-left: 3px solid #3498db;
+        margin-bottom: 8px;
         page-break-inside: avoid;
       }
-      
+
       .patient-info-title {
-        font-size: 14px;
+        font-size: 11px;
         font-weight: bold;
         color: #2c3e50;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
       }
-      
+
       .patient-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 8px 15px;
-        font-size: 11px;
+        gap: 5px 10px;
+        font-size: 9px;
       }
-      
+
       .patient-field {
         display: flex;
         flex-direction: column;
       }
-      
+
       .patient-field-label {
         font-weight: 600;
         color: #495057;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
       }
-      
+
       .patient-field-value {
         color: #2c3e50;
         font-weight: 500;
         background: white;
-        padding: 4px 6px;
-        border-radius: 3px;
+        padding: 3px 5px;
+        border-radius: 2px;
         border: 1px solid #dee2e6;
       }
       
       /* Assessment Sections */
       .content-container {
         display: grid;
-        grid-template-columns: 1fr 1fr 200px;
-        gap: 12px;
-        margin-bottom: 20px; /* Reduced margin */
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 10px;
         min-height: auto;
       }
-      
+
       .left-column {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 6px;
       }
-      
+
       .middle-column {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 6px;
       }
-      
-      .right-column {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      
+
       .assessment-section {
-        margin-bottom: 8px;
+        margin-bottom: 5px;
         page-break-inside: avoid;
       }
-      
+
       .section-label {
         font-weight: bold;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         color: #2c3e50;
-        font-size: 11px;
-        padding: 3px 6px;
+        font-size: 9px;
+        padding: 2px 5px;
         background: #e8f4f8;
-        border-left: 4px solid #3498db;
-        border-radius: 3px;
+        border-left: 3px solid #3498db;
+        border-radius: 2px;
       }
-      
+
       .section-content {
-        margin-top: 4px;
-        padding: 6px;
-        font-size: 10px;
-        line-height: 1.4;
+        margin-top: 2px;
+        padding: 4px;
+        font-size: 9px;
+        line-height: 1.3;
         color: #2c3e50;
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 4px;
-        min-height: 30px;
+        border-radius: 3px;
+        min-height: 20px;
         white-space: pre-wrap;
         word-wrap: break-word;
       }
@@ -672,107 +688,107 @@ const generateAssessmentPDF = async (assessment: any) => {
       .vitals-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        padding: 8px;
+        gap: 4px;
+        padding: 5px;
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 4px;
+        border-radius: 3px;
       }
-      
+
       .vital-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 6px;
+        padding: 3px 4px;
         background: #f8f9fa;
-        border-radius: 3px;
-        font-size: 10px;
+        border-radius: 2px;
+        font-size: 8px;
       }
-      
+
       .vital-label {
         font-weight: 600;
         color: #495057;
       }
-      
+
       .vital-value {
         color: #2c3e50;
         font-weight: 500;
       }
-      
+
       .bmi-status {
         font-weight: bold;
-        font-size: 9px;
+        font-size: 7px;
       }
-      
+
       /* Pain Grid */
       .pain-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        padding: 8px;
+        gap: 4px;
+        padding: 5px;
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 4px;
+        border-radius: 3px;
       }
-      
+
       .pain-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 6px;
+        padding: 3px 4px;
         background: #fff5f5;
-        border-radius: 3px;
-        font-size: 10px;
+        border-radius: 2px;
+        font-size: 8px;
       }
-      
+
       .pain-item.full-width {
         grid-column: 1 / -1;
         flex-direction: column;
         align-items: flex-start;
       }
-      
+
       .pain-label {
         font-weight: 600;
         color: #495057;
       }
-      
+
       .pain-value {
         color: #2c3e50;
         font-weight: 500;
       }
-      
+
       /* Observation Grid */
       .obs-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        padding: 8px;
+        gap: 4px;
+        padding: 5px;
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 4px;
+        border-radius: 3px;
       }
-      
+
       .obs-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 6px;
+        padding: 3px 4px;
         background: #f0f8f0;
-        border-radius: 3px;
-        font-size: 10px;
+        border-radius: 2px;
+        font-size: 8px;
       }
-      
+
       .obs-item.full-width {
         grid-column: 1 / -1;
         flex-direction: column;
         align-items: flex-start;
       }
-      
+
       .obs-label {
         font-weight: 600;
         color: #495057;
       }
-      
+
       .obs-value {
         color: #2c3e50;
         font-weight: 500;
@@ -780,174 +796,175 @@ const generateAssessmentPDF = async (assessment: any) => {
       
       /* BMI Chart Styles */
       .bmi-chart-section {
-        margin: 15px 0;
+        margin: 5px 0;
         page-break-inside: avoid;
       }
-      
+
       .bmi-chart {
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 12px;
+        border-radius: 5px;
+        padding: 6px;
       }
-      
+
       .bmi-ranges {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 15px;
+        gap: 4px;
+        margin-bottom: 6px;
       }
-      
+
       .bmi-range {
         display: flex;
         align-items: center;
-        padding: 6px;
+        padding: 3px;
         background: #f8f9fa;
-        border-radius: 4px;
-      }
-      
-      .bmi-color-bar {
-        width: 15px;
-        height: 15px;
         border-radius: 3px;
-        margin-right: 8px;
       }
-      
+
+      .bmi-color-bar {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        margin-right: 4px;
+      }
+
       .bmi-range-info {
         display: flex;
         flex-direction: column;
       }
-      
+
       .bmi-range-label {
         font-weight: 600;
-        font-size: 10px;
+        font-size: 7px;
         color: #2c3e50;
       }
-      
+
       .bmi-range-value {
-        font-size: 9px;
+        font-size: 7px;
         color: #6c757d;
         font-weight: 500;
       }
-      
+
       .patient-bmi-indicator {
-        margin-top: 12px;
+        margin-top: 6px;
       }
-      
+
       .bmi-scale {
         position: relative;
       }
-      
+
       .bmi-scale-bar {
-        height: 20px;
+        height: 15px;
         background: #f8f9fa;
-        border-radius: 10px;
+        border-radius: 8px;
         overflow: hidden;
         position: relative;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
       }
-      
+
       .bmi-sections {
         display: flex;
         height: 100%;
       }
-      
+
       .bmi-section {
         height: 100%;
       }
-      
+
       .bmi-pointer {
         position: absolute;
-        top: -25px;
+        top: -20px;
         transform: translateX(-50%);
         z-index: 10;
       }
-      
+
       .bmi-pointer-arrow {
         color: #2c3e50;
-        font-size: 14px;
+        font-size: 12px;
         text-align: center;
         font-weight: bold;
       }
-      
+
       .bmi-pointer-value {
         background: #2c3e50;
         color: white;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 9px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-size: 7px;
         font-weight: bold;
         text-align: center;
-        margin-top: 2px;
-        min-width: 30px;
+        margin-top: 1px;
+        min-width: 25px;
       }
-      
+
       /* Body Diagram */
       .body-diagram-section {
-        margin-bottom: 15px;
+        margin-bottom: 6px;
         text-align: center;
       }
-      
+
       .body-diagram-title {
         font-weight: bold;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         color: #2c3e50;
-        font-size: 11px;
-        padding: 3px 6px;
+        font-size: 9px;
+        padding: 2px 5px;
         background: #e8f4f8;
-        border-left: 4px solid #3498db;
-        border-radius: 3px;
+        border-left: 3px solid #3498db;
+        border-radius: 2px;
         text-align: left;
       }
-      
+
       .body-diagram {
         background-image: url('${bodyBase64}');
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
-        width: 180px;
-        height: 220px;
+        width: 100%;
+        max-width: 160px;
+        height: 190px;
         margin: 0 auto;
-        border: 2px solid #dee2e6;
-        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
         background-color: #f8f9fa;
       }
       
       /* Page Signature Section - Fixed positioning for every page */
       .page-signature {
         position: fixed;
-        bottom: 25px; /* Positioned above footer */
-        right: 15px;
+        bottom: 20px;
+        right: 10px;
         background: white;
-        padding: 4px 8px;
-        border-radius: 3px;
+        padding: 3px 6px;
+        border-radius: 2px;
         border: 1px solid #dee2e6;
-        font-size: 9px;
+        font-size: 7px;
         text-align: center;
-        width: 120px;
+        width: 100px;
         z-index: 1000;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
       }
-      
+
       .signature-text {
         font-style: italic;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
         color: #6c757d;
-        font-size: 8px;
+        font-size: 7px;
       }
-      
+
       .signature-line {
         border-bottom: 1px solid #495057;
-        width: 100px;
-        margin: 4px auto 2px;
+        width: 80px;
+        margin: 2px auto 1px;
       }
-      
+
       .signature-name {
-        font-size: 8px;
+        font-size: 7px;
         color: #495057;
         font-weight: 600;
       }
-      
+
       /* Footer */
       .footer {
         position: fixed;
@@ -958,9 +975,9 @@ const generateAssessmentPDF = async (assessment: any) => {
         color: white;
         text-align: center;
         padding: 2px;
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 600;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
         z-index: 1000;
         margin: 0;
       }
@@ -974,7 +991,7 @@ const generateAssessmentPDF = async (assessment: any) => {
         .page {
           page-break-after: auto;
           margin-bottom: 0;
-          padding-bottom: 20px;
+          padding-bottom: 15px;
         }
         
         .assessment-section {
@@ -985,19 +1002,15 @@ const generateAssessmentPDF = async (assessment: any) => {
         .content-container {
           page-break-inside: auto;
         }
-        
+
         .left-column, .middle-column {
           page-break-inside: auto;
         }
-        
-        .right-column {
-          page-break-inside: avoid;
-        }
-        
+
         .body-diagram-section {
           page-break-inside: avoid;
         }
-        
+
         .bmi-chart-section {
           page-break-inside: avoid;
         }
@@ -1026,11 +1039,11 @@ const generateAssessmentPDF = async (assessment: any) => {
         /* Ensure signature and footer appear on every page */
         .page-signature {
           position: fixed;
-          bottom: 25px;
-          right: 15px;
+          bottom: 20px;
+          right: 10px;
           z-index: 1000;
         }
-        
+
         .footer {
           position: fixed;
           bottom: 0;
@@ -1185,11 +1198,13 @@ const generateAssessmentPDF = async (assessment: any) => {
             value: assessmentData?.historyOfPresentIllness,
           },
           {
-            label: "Past Medical History",
+            label: "Past History",
+            value: assessmentData?.historyOfIllness,
+          },
+          {
+            label: "Medical History",
             value: assessmentData?.medicalHistory,
           },
-          { label: "On Palpation", value: assessmentData?.onPalpation },
-          { label: "Special Tests", value: assessmentData?.specialTests },
           { label: "Surgical History", value: assessmentData?.surgicalHistory },
           {
             label: "Occupational History",
@@ -1199,7 +1214,6 @@ const generateAssessmentPDF = async (assessment: any) => {
             label: "Environmental History",
             value: assessmentData?.environmentalHistory,
           },
-          { label: "Additional Notes", value: assessmentData?.notes },
         ]
           .filter((s) => s.value != null && s.value !== "")
           .map((s) => renderSection(s.label, s.value))
@@ -1207,9 +1221,25 @@ const generateAssessmentPDF = async (assessment: any) => {
 
         ${renderPainHistory()}
         ${renderObservation()}
+
+        ${[
+          { label: "On Palpation", value: assessmentData?.onPalpation },
+          { label: "Special Tests", value: assessmentData?.specialTests },
+          { label: "Additional Notes", value: assessmentData?.notes },
+        ]
+          .filter((s) => s.value != null && s.value !== "")
+          .map((s) => renderSection(s.label, s.value))
+          .join("")}
       </div>
 
       <div class="middle-column">
+        <div class="body-diagram-section">
+          <div class="body-diagram-title">Body Diagram</div>
+          <div class="body-diagram"></div>
+        </div>
+
+        ${renderBMIChart()}
+
         ${Object.entries(assessmentData?.motorExamination || {})
           .filter(([_, val]) => val != null && val !== "")
           .map(([key, val]) =>
@@ -1243,15 +1273,6 @@ const generateAssessmentPDF = async (assessment: any) => {
           .map((s) => renderSection(s.label, s.value))
           .join("")}
       </div>
-
-      <div class="right-column">
-        <div class="body-diagram-section">
-          <div class="body-diagram-title">Body Diagram</div>
-          <div class="body-diagram"></div>
-        </div>
-
-        ${renderBMIChart()}
-      </div>
     </div>
   </div>
 </body>
@@ -1264,26 +1285,26 @@ const generateAssessmentPDF = async (assessment: any) => {
     format: "A4",
     printBackground: true,
     margin: {
-      top: "10mm",
-      right: "10mm",
-      bottom: "30mm",
-      left: "10mm",
+      top: "8mm",
+      right: "8mm",
+      bottom: "25mm",
+      left: "8mm",
     },
     preferCSSPageSize: false,
     displayHeaderFooter: true,
     headerTemplate: "<div></div>",
     footerTemplate: `
-      <div style="position: relative; width: 100%; font-size: 9px;">
+      <div style="position: relative; width: 100%; font-size: 8px;">
         <!-- Signature Section -->
-        <div style="position: absolute; bottom: 20px; right: 15px; background: white; padding: 4px 8px; border: 1px solid #dee2e6; border-radius: 3px; font-size: 8px; text-align: center; width: 120px;">
-          <div style="font-style: italic; margin-bottom: 2px; color: #6c757d;">Doctor's Signature</div>
-          <div style="border-bottom: 1px solid #495057; width: 100px; margin: 4px auto 2px;"></div>
+        <div style="position: absolute; bottom: 18px; right: 10px; background: white; padding: 3px 6px; border: 1px solid #dee2e6; border-radius: 2px; font-size: 7px; text-align: center; width: 100px;">
+          <div style="font-style: italic; margin-bottom: 1px; color: #6c757d;">Doctor's Signature</div>
+          <div style="border-bottom: 1px solid #495057; width: 80px; margin: 2px auto 1px;"></div>
           <div style="font-weight: 600; color: #495057;">${
             therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"
           }</div>
         </div>
         <!-- Footer Section -->
-        <div style="position: absolute; bottom: 0; left: 0; right: 0; background:rgb(222, 23, 23); color: white; text-align: center; padding: 2px; font-size: 9px; font-weight: 600;">
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; background:rgb(222, 23, 23); color: white; text-align: center; padding: 2px; font-size: 8px; font-weight: 600;">
           IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
         </div>
       </div>

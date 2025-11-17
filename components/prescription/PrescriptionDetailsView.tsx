@@ -218,10 +218,23 @@ export const PrescriptionDetailsView: React.FC<
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
+          {assessmentData && prescription.patient && (
+            <PrintAssessment
+              assessmentData={assessmentData}
+              patientInfo={{
+                id: prescription.patient.id,
+                patientName: prescription.patient.patientName,
+                age: prescription.patient.age,
+                gender: prescription.patient.gender,
+                phone: prescription.patient.phone || "",
+                email: prescription.patient.email || "",
+                createdBy: prescription.therapistId,
+                createdAt: prescription.createdAt,
+                updatedAt: prescription.updatedAt,
+              }}
+              therapistId={prescription.therapistId}
+            />
+          )}
         </div>
       </div>
 

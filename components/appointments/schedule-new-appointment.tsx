@@ -801,6 +801,7 @@ export function ScheduleNewDialog({
                 type="date"
                 {...form.register("appointmentDate")}
                 min={new Date().toISOString().split("T")[0]}
+                className="w-full"
               />
               {form.formState.errors.appointmentDate && (
                 <p className="text-sm text-red-500">

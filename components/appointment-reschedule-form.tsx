@@ -65,6 +65,7 @@ export function AppointmentRescheduleForm({ appointment, onSubmit, onCancel, isL
           {...form.register("appointmentDate")}
           onChange={handleDateChange}
           min={new Date().toISOString().split('T')[0]}
+          className="w-full"
         />
         {form.formState.errors.appointmentDate && (
           <p className="text-sm text-red-500">{form.formState.errors.appointmentDate.message}</p>
@@ -78,6 +79,7 @@ export function AppointmentRescheduleForm({ appointment, onSubmit, onCancel, isL
             id="startTime"
             type="time"
             {...form.register("startTime")}
+            className="w-full"
           />
           {form.formState.errors.startTime && (
             <p className="text-sm text-red-500">{form.formState.errors.startTime.message}</p>
@@ -90,6 +92,7 @@ export function AppointmentRescheduleForm({ appointment, onSubmit, onCancel, isL
             id="endTime"
             type="time"
             {...form.register("endTime")}
+            className="w-full"
           />
           {form.formState.errors.endTime && (
             <p className="text-sm text-red-500">{form.formState.errors.endTime.message}</p>

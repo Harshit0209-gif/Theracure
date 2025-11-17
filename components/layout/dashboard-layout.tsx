@@ -79,19 +79,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
 
               <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors relative"
-                  >
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-medium">
-                      3
-                    </span>
-                  </Button>
-                </div>
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
