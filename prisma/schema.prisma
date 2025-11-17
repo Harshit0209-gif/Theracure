@@ -134,7 +134,7 @@ model User {
 }
 
 model Patient {
-  id              String   @id @default(dbgenerated("auto_generate_patient_id()")) @db.VarChar(20) @map("patient_id")
+  id              String   @id @default(dbgenerated("generate_patient_id()")) @db.VarChar(20) @map("patient_id")
   patientName     String    @map("patient_name")
   age             Int
   height          Float?    
