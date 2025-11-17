@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppointmentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { sendSMSNotification } from "@/config/smsConfig";
 
 export async function PATCH(
   req: NextRequest,
@@ -18,7 +19,34 @@ export async function PATCH(
         notes: reason,
         status: AppointmentStatus.CANCELLED,
       },
+      include: {
+        patient: {
+          select: {
+            patientName: true,
+            phone: true,
+          },
+        },
+        therapist: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
+
+    // Send SMS notification
+    if (appointment.patient?.phone) {
+      try {
+        await sendSMSNotification("APPOINTMENT_CANCELLED", {
+          phone: appointment.patient.phone,
+          patientName: appointment.patient.patientName,
+          therapistName: appointment.therapist.name,
+          date: appointment.assignedDate,
+        });
+      } catch (smsError) {
+        console.error("Failed to queue SMS:", smsError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

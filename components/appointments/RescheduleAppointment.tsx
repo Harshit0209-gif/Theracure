@@ -24,9 +24,13 @@ import {
   AvailablePeriod,
   DefaultRescheduleAppointmentData,
   RescheduleAppointmentData,
-  TherapistAvailability,
 } from "@/types/appointments";
-import { formatDate, formatTime, getDayName } from "@/lib/utils/utils";
+import {
+  formatDate,
+  formatTime,
+  formatTimeString,
+  getDayName,
+} from "@/lib/utils/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 interface RescheduleAppointmentDialogProps {
@@ -46,28 +50,22 @@ export function RescheduleAppointmentDialog({
     useState<RescheduleAppointmentData>(DefaultRescheduleAppointmentData);
   const [actionLoading, setActionLoading] = useState(false);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-  const [therapistSchedule, setTherapistSchedule] = useState<
-    TherapistAvailability[]
-  >([]);
   const [availablePeriods, setAvailablePeriods] = useState<AvailablePeriod[]>(
     []
   );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  const formatDateTimeForInput = (dateString: string) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
   const validateTimeRange = (startTime: string, endTime: string) => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    return start < end;
+    if (!startTime || !endTime) return false;
+
+    // Compare time strings directly (HH:MM format)
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const [endHour, endMin] = endTime.split(":").map(Number);
+
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    return endMinutes > startMinutes;
   };
 
   // Initialize form data when dialog opens
@@ -83,6 +81,14 @@ export function RescheduleAppointmentDialog({
     try {
       setActionLoading(true);
 
+      // Combine date and time to create full datetime
+      const startDateTime = new Date(
+        `${rescheduleData.date}T${rescheduleData.appointmentStartTime}:00`
+      );
+      const endDateTime = new Date(
+        `${rescheduleData.date}T${rescheduleData.appointmentEndTime}:00`
+      );
+
       const response = await fetch(
         `/api/appointments/${appointment.id}/reschedule`,
         {
@@ -91,12 +97,8 @@ export function RescheduleAppointmentDialog({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            appointmentStartTime: new Date(
-              rescheduleData.appointmentStartTime
-            ).toISOString(),
-            appointmentEndTime: new Date(
-              rescheduleData.appointmentEndTime
-            ).toISOString(),
+            appointmentStartTime: startDateTime.toISOString(),
+            appointmentEndTime: endDateTime.toISOString(),
             reason: rescheduleData.reason,
           }),
         }
@@ -131,11 +133,11 @@ export function RescheduleAppointmentDialog({
   };
 
   useEffect(() => {
-    const checkTherapistAvailability = async (
-      therapistId: string,
-      date: string
-    ) => {
+    const checkTherapistAvailability = async (therapistId: string) => {
       setIsCheckingAvailability(true);
+      // Ensure date picker is closed when checking availability
+      setIsDatePickerOpen(false);
+
       try {
         const appointmentDate = rescheduleData.date;
         const therapistResponse = await fetch(
@@ -149,14 +151,6 @@ export function RescheduleAppointmentDialog({
               "Failed to fetch therapist schedule and availability"
           );
         }
-
-        const schedule: TherapistAvailability[] =
-          therapistData.therapistSchedule?.map((slot: any) => ({
-            dayOfWeek: slot.weekDay,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-          }));
-        setTherapistSchedule(schedule);
 
         const availablePeriods: AvailablePeriod[] =
           therapistData.availablePeriods.map((period: any) => ({
@@ -173,21 +167,21 @@ export function RescheduleAppointmentDialog({
       }
     };
     if (appointment?.therapist?.id && rescheduleData.date) {
-      checkTherapistAvailability(appointment.therapist.id, rescheduleData.date);
+      checkTherapistAvailability(appointment.therapist.id);
     } else {
-      setTherapistSchedule([]);
       setAvailablePeriods([]);
     }
   }, [appointment?.therapist?.id, rescheduleData.date]);
 
   const resetAndClose = () => {
     setRescheduleData(DefaultRescheduleAppointmentData);
+    setIsDatePickerOpen(false);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={resetAndClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 text-blue-600" />
@@ -218,9 +212,9 @@ export function RescheduleAppointmentDialog({
         )}
 
         {/* Date + time pickers */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-4">
           {/* Date picker */}
-          <div className="col-span-1">
+          <div>
             <Label>New Date</Label>
             <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
               <PopoverTrigger asChild>
@@ -230,10 +224,10 @@ export function RescheduleAppointmentDialog({
                     !rescheduleData.date ? "text-muted-foreground" : ""
                   }`}
                 >
+                  <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                   {rescheduleData.date
                     ? formatDate(new Date(rescheduleData.date).toDateString())
                     : "Pick a date"}
-                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -250,47 +244,53 @@ export function RescheduleAppointmentDialog({
                         ...rescheduleData,
                         date: date.toISOString().split("T")[0],
                       });
-                      setIsDatePickerOpen(false); // ✅ close popover after selecting
+                      setIsDatePickerOpen(false);
                     }
                   }}
+                  disabled={(date) =>
+                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                  }
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
           </div>
 
-          {/* Start time */}
-          <div>
-            <Label htmlFor="rescheduleStartTime">Start</Label>
-            <Input
-              id="rescheduleStartTime"
-              type="time"
-              value={rescheduleData.appointmentStartTime}
-              onChange={(e) =>
-                setRescheduleData({
-                  ...rescheduleData,
-                  appointmentStartTime: e.target.value,
-                })
-              }
-              disabled={!rescheduleData.date}
-            />
-          </div>
+          {/* Time pickers */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Start time */}
+            <div>
+              <Label htmlFor="rescheduleStartTime">Start Time</Label>
+              <Input
+                id="rescheduleStartTime"
+                type="time"
+                value={rescheduleData.appointmentStartTime}
+                onChange={(e) =>
+                  setRescheduleData({
+                    ...rescheduleData,
+                    appointmentStartTime: e.target.value,
+                  })
+                }
+                disabled={!rescheduleData.date}
+              />
+            </div>
 
-          {/* End time */}
-          <div>
-            <Label htmlFor="rescheduleEndTime">End</Label>
-            <Input
-              id="rescheduleEndTime"
-              type="time"
-              value={rescheduleData.appointmentEndTime}
-              onChange={(e) =>
-                setRescheduleData({
-                  ...rescheduleData,
-                  appointmentEndTime: e.target.value,
-                })
-              }
-              disabled={!rescheduleData.date}
-            />
+            {/* End time */}
+            <div>
+              <Label htmlFor="rescheduleEndTime">End Time</Label>
+              <Input
+                id="rescheduleEndTime"
+                type="time"
+                value={rescheduleData.appointmentEndTime}
+                onChange={(e) =>
+                  setRescheduleData({
+                    ...rescheduleData,
+                    appointmentEndTime: e.target.value,
+                  })
+                }
+                disabled={!rescheduleData.date}
+              />
+            </div>
           </div>
         </div>
 
@@ -307,7 +307,6 @@ export function RescheduleAppointmentDialog({
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-indigo-600" />
                     <span className="font-medium">
                       {getDayName(rescheduleData.date)} –{" "}
                       {new Date(rescheduleData.date).toLocaleDateString(
@@ -336,8 +335,8 @@ export function RescheduleAppointmentDialog({
                               <XCircle className="h-4 w-4" />
                             )}
                             <span className="font-medium">
-                              {formatTime(period.startTime)} –{" "}
-                              {formatTime(period.endTime)}
+                              {formatTimeString(period.startTime)} –{" "}
+                              {formatTimeString(period.endTime)}
                             </span>
                           </div>
                         </div>
@@ -393,6 +392,9 @@ export function RescheduleAppointmentDialog({
             onClick={handleRescheduleAppointment}
             disabled={
               actionLoading ||
+              !rescheduleData.date ||
+              !rescheduleData.appointmentStartTime ||
+              !rescheduleData.appointmentEndTime ||
               !rescheduleData.reason.trim() ||
               !validateTimeRange(
                 rescheduleData.appointmentStartTime,

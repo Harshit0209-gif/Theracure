@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { InvoiceStatus, TransactionStatus } from "@prisma/client";
+import { s3Service } from "@/lib/services/s3-service";
+import generateInvoicePDF from "@/lib/utils/InvoicePDFGenerator";
+import { sendSMSNotification } from "@/config/smsConfig";
 
 const createInvoiceSchema = z.object({
   id: z.string().optional(),
@@ -206,10 +209,57 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Generate PDF and upload to S3
+    let pdfPath = null;
+    try {
+      const pdfBuffer = await generateInvoicePDF(body);
+      const fileName = `invoices/${invoiceDetails.id}.pdf`;
+
+      const bufferData = Buffer.isBuffer(pdfBuffer)
+        ? pdfBuffer
+        : Buffer.from(pdfBuffer);
+
+      const uploadResult = await s3Service.uploadFile(
+        fileName,
+        bufferData,
+        "application/pdf"
+      );
+
+      if (uploadResult.success) {
+        pdfPath = fileName;
+
+        await prisma.invoice.update({
+          where: { id: invoiceDetails.id },
+          data: { pdfUrl: pdfPath },
+        });
+      }
+    } catch (pdfError) {
+      console.error("Failed to generate/upload PDF:", pdfError);
+    }
+
+    if (invoice.patient?.phone && pdfPath) {
+      try {
+        const presignedUrl = await s3Service.generatePresignedUrl(
+          pdfPath,
+          parseInt(process.env.URL_EXPIRY_SECONDS || "604800", 10)
+        );
+
+        await sendSMSNotification("INVOICE_NOTIFICATION", {
+          phone: invoice.patient.phone,
+          patientName: invoice.patient.patientName,
+          therapistName: "",
+          amount: totalAmount,
+          link: presignedUrl,
+        });
+      } catch (smsError) {
+        console.error("Failed to queue SMS:", smsError);
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
-        data: { invoice, selectedServices },
+        data: { invoice, selectedServices, pdfPath },
         message: "Invoice created successfully",
       },
       { status: 201 }

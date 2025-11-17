@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AppointmentStatus, Prisma } from "@prisma/client";
 import { getDay } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
+import { sendSMSNotification } from "@/config/smsConfig";
 
 export async function PATCH(
   req: NextRequest,
@@ -128,6 +129,7 @@ export async function PATCH(
           select: {
             id: true,
             patientName: true,
+            phone: true,
           },
         },
         therapist: {
@@ -140,6 +142,21 @@ export async function PATCH(
         },
       },
     });
+
+    // Send SMS notification
+    if (appointment.patient?.phone) {
+      try {
+        await sendSMSNotification("APPOINTMENT_RESCHEDULED", {
+          phone: appointment.patient.phone,
+          patientName: appointment.patient.patientName,
+          therapistName: appointment.therapist.name,
+          date: appointment.assignedDate,
+          startTime: appointment.appointmentStartTime,
+        });
+      } catch (smsError) {
+        console.error("Failed to queue SMS:", smsError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

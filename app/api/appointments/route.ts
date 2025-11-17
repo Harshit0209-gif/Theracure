@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getDay } from "date-fns";
 import { AppointmentStatus } from "@prisma/client";
+import { sendSMSNotification } from "@/config/smsConfig";
 
 export async function GET(req: NextRequest) {
   try {
@@ -283,6 +284,37 @@ export async function POST(req: NextRequest) {
     });
 
     console.log("Appointment created successfully:", appointment);
+
+    // 5. Send SMS Notification to Patient
+    const [patient, therapistUser, service] = await Promise.all([
+      prisma.patient.findUnique({
+        where: { id: patientId },
+      }),
+      prisma.user.findUnique({
+        where: { id: therapistId },
+      }),
+      serviceId
+        ? prisma.service.findUnique({
+            where: { id: serviceId },
+          })
+        : null,
+    ]);
+
+    if (patient?.phone) {
+      try {
+        await sendSMSNotification("APPOINTMENT_CONFIRMATION", {
+          phone: patient.phone,
+          patientName: patient.patientName,
+          therapistName: therapistUser?.name || "Doctor",
+          serviceName: service?.name || "Therapy",
+          date: appointment.assignedDate,
+          startTime: appointment.appointmentStartTime,
+          endTime: appointment.appointmentEndTime,
+        });
+      } catch (smsError) {
+        console.error("Failed to queue SMS:", smsError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

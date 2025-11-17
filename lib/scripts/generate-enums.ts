@@ -11,6 +11,7 @@ import {
   RecurringType,
   RecurringEndType,
   ServiceCategory,
+  SmsStatus,
 } from "@prisma/client";
 
 // Define enum groupings by model
@@ -33,6 +34,9 @@ const enumGroups = {
   },
   service: {
     ServiceCategory: Object.keys(ServiceCategory),
+  },
+  sms: {
+    SmsStatus: Object.keys(SmsStatus),
   },
 };
 

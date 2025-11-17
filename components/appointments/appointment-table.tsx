@@ -25,6 +25,7 @@ import {
   X,
   Clock,
   Eye,
+  Mail,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useState, useCallback, useMemo } from "react";
@@ -126,6 +127,41 @@ export function AppointmentTable({
       toast({
         title: "Error",
         description: "Failed to update appointment status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle Send Reminder SMS
+  const handleSendReminder = async (appointmentId: string) => {
+    try {
+      const response = await fetch(
+        `/api/appointments/${appointmentId}/send-reminder`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send reminder");
+      }
+
+      toast({
+        title: "Success",
+        description: data.message || "Reminder SMS sent successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to send reminder SMS",
         variant: "destructive",
       });
     }
@@ -268,6 +304,27 @@ export function AppointmentTable({
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
+
+                          {(appointment.status ===
+                            AppointmentStatus.CONFIRMED ||
+                            appointment.status ===
+                              AppointmentStatus.CANCELLED ||
+                            appointment.status ===
+                              AppointmentStatus.RESCHEDULED) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendReminder(appointment.id);
+                                }}
+                                className="text-blue-600"
+                              >
+                                <Mail className="mr-2 h-4 w-4" />
+                                Send Reminder SMS
+                              </DropdownMenuItem>
+                            </>
+                          )}
 
                           {appointment.status !==
                             AppointmentStatus.CANCELLED && (

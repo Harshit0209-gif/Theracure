@@ -29,6 +29,7 @@ import { EditAppointmentDialog } from "@/components/appointments/EditAppointment
 import { RescheduleAppointmentDialog } from "@/components/appointments/RescheduleAppointment";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
+import { AppointmentStatus } from "@/lib/generated/bookingEnums";
 
 interface AppointmentDetailsDialogProps {
   isOpen: boolean;
@@ -158,7 +159,7 @@ export function AppointmentDetailsDialog({
               Appointment Details
             </DialogTitle>
 
-            {hasFullControl && (
+            {hasFullControl && appointment.status !== AppointmentStatus.CANCELLED && (
               <div className="flex gap-2">
                 <Button
                   size="sm"

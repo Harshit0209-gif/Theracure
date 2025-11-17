@@ -43,6 +43,7 @@ jobs:
             export UTHO_S3_BUCKET_NAME="${{ secrets.UTHO_S3_BUCKET_NAME }}"
             export UTHO_ENDPOINT="${{ secrets.UTHO_ENDPOINT }}"
             export UTHO_CDN="${{ secrets.UTHO_CDN }}"
+            export MSG91_AUTH_KEY="${{ secrets.MSG91_AUTH_KEY }}"
             export NODE_ENV="production"
 
             echo "📦 Installing dependencies"
@@ -50,6 +51,9 @@ jobs:
 
             echo "⚙️ Generating Prisma client"
             pnpm prisma generate
+
+            echo "🔧 Generating TypeScript enums"
+            pnpm run generate:enums
 
             echo "⚙️ Building the application"
             pnpm build

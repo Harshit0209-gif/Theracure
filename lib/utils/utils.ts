@@ -49,6 +49,14 @@ export const formatTime = (dateString: string) => {
   });
 };
 
+export const formatTimeString = (timeString: string) => {
+  const [hours, minutes] = timeString.split(":");
+  const hour = parseInt(hours, 10);
+  const isPM = hour >= 12;
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${displayHour}:${minutes} ${isPM ? "PM" : "AM"}`;
+};
+
 export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",

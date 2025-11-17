@@ -102,6 +102,13 @@ enum TransactionStatus {
   REFUNDED
 }
 
+enum SmsStatus{
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
 
 // Models
 model User {
@@ -272,17 +279,18 @@ model Invoice {
   id              String    @id @map("invoice_id")
   patientId       String    @map("patient_id")
   date            DateTime  @default(now())
-  subTotal        Float     @map("sub_total")  
+  subTotal        Float     @map("sub_total")
   totalAmount     Float     @map("total_amount")
   amountPaid      Float    @default(0) @map("amount_paid")
-  status          InvoiceStatus @default(DUE) 
+  status          InvoiceStatus @default(DUE)
   paymentMethod   String?   @map("payment_method")
   notes           String?
   offer           Float?
+  pdfUrl          String?   @map("pdf_url")
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  createdBy       String   
+  createdBy       String
 
   patient         Patient  @relation(fields: [patientId], references: [id])
   invoiceItems     InvoiceItem[] @relation("InvoiceToItems")
@@ -402,4 +410,20 @@ model MedicalRecord {
   @@index([uploadDate])
   @@index([uploadedBy])
   @@map("medical_records")
+}
+
+model SmsQueue {
+  id        String   @id @default(cuid())
+  type      String
+  phone     String
+  variables Json?
+  status    SmsStatus   @default(PENDING) 
+  attempts  Int      @default(0)
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([id])
+  @@index([phone])
+  @@map("sms_queue")
 }
