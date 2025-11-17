@@ -4,7 +4,6 @@ import {
   createPatientSchema,
   patientUpdateSchema,
 } from "@/lib/validations/patient";
-import { generatePatientId } from "@/lib/utils/utils";
 
 export async function GET(req: Request) {
   try {
@@ -96,10 +95,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("create patient body:", body);
 
-    const patientId = generatePatientId();
-    body.id = patientId;
-    console.log("Generated id..", patientId);
-
     const result = createPatientSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -125,7 +120,6 @@ export async function POST(req: Request) {
     // Create patient
     const patient = await prisma.patient.create({
       data: {
-        id: patientId,
         patientName: data.patientName,
         email: data.email,
         phone: data.phone,
