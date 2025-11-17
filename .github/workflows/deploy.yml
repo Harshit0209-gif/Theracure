@@ -44,6 +44,7 @@ jobs:
             export UTHO_ENDPOINT="${{ secrets.UTHO_ENDPOINT }}"
             export UTHO_CDN="${{ secrets.UTHO_CDN }}"
             export MSG91_AUTH_KEY="${{ secrets.MSG91_AUTH_KEY }}"
+            export URL_EXPIRY_SECONDS="${{ secrets.URL_EXPIRY_SECONDS }}"
             export NODE_ENV="production"
 
             echo "📦 Installing dependencies"
@@ -64,10 +65,19 @@ jobs:
             echo "🧑‍💻 Installing Puppeteer Chrome"
             pnpm exec puppeteer browsers install chrome || { echo "❌ Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
 
-            echo "🚀 Restarting application with PM2"
+            echo "📋 Copying ecosystem config to deployment directory"
+            cp ecosystem.config.js /var/www/html/ecosystem.config.js
+
+            echo "🚀 Restarting Dashboard with PM2"
             pm2 startOrRestart /var/www/html/ecosystem.config.js --env production --only dashboard
+
+            echo "📨 Restarting SMS Worker with PM2"
+            pm2 startOrRestart /var/www/html/ecosystem.config.js --env production --only sms-worker
 
             echo "✅ PM2 status check"
             pm2 status
+
+            echo "💾 Saving PM2 process list"
+            pm2 save
 
             echo "🎉 Deployment complete!"
