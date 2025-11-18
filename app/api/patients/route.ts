@@ -49,7 +49,7 @@ export async function GET(req: Request) {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
+        orderBy: { id: "desc" },
         include: {
           therapistAppointments: {
             include: {

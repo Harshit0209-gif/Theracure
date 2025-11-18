@@ -14,6 +14,15 @@ interface SMSData {
   link?: string;
 }
 
+// Helper function to convert UTC date to local timezone string
+const formatLocalTime = (date: Date, formatStr: string): string => {
+  // Create a date string using toLocaleString with IST timezone
+  const localDate = new Date(
+    date.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+  return format(localDate, formatStr);
+};
+
 export const SMS_CONFIG = {
   APPOINTMENT_CONFIRMATION: (data: SMSData) => ({
     type: "APPOINTMENT_CONFIRMATION" as TemplateKey,
@@ -22,10 +31,10 @@ export const SMS_CONFIG = {
       var1: data.patientName,
       var2: data.therapistName,
       var3: data.serviceName || "Therapy",
-      var4: `${format(data.date!, "do MMM yyyy")} at ${format(
+      var4: `${formatLocalTime(data.date!, "do MMM yyyy")} at ${formatLocalTime(
         data.startTime!,
         "hh:mm a"
-      )} to ${format(data.endTime!, "hh:mm a")}`,
+      )} to ${formatLocalTime(data.endTime!, "hh:mm a")}`,
     },
   }),
 
@@ -35,7 +44,7 @@ export const SMS_CONFIG = {
     variables: {
       var1: data.patientName,
       var2: data.therapistName,
-      var3: format(data.date!, "do MMM yyyy"),
+      var3: formatLocalTime(data.date!, "do MMM yyyy"),
     },
   }),
 
@@ -45,8 +54,8 @@ export const SMS_CONFIG = {
     variables: {
       var1: data.patientName,
       var2: data.therapistName,
-      var3: format(data.date!, "do MMM yyyy"),
-      var4: format(data.startTime!, "hh:mm a"),
+      var3: formatLocalTime(data.date!, "do MMM yyyy"),
+      var4: formatLocalTime(data.startTime!, "hh:mm a"),
     },
   }),
 
