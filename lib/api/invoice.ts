@@ -14,12 +14,15 @@ export const printInvoice = async (payload: InvoicePayload) => {
   const response = await fetch("/api/generate-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      type: "invoice",
+    }),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to generate PDF");
+    throw new Error(errorData.error || errorData.message || "Failed to generate PDF");
   }
 
   return await response.blob();

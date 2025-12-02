@@ -159,27 +159,29 @@ export function AppointmentDetailsDialog({
               Appointment Details
             </DialogTitle>
 
-            {hasFullControl && appointment.status !== AppointmentStatus.CANCELLED && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditDialogOpen(true)}
-                  className="flex items-center gap-1"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1"
-                  onClick={() => setRescheduleDialogOpen(true)}
-                >
-                  <Calendar className="h-4 w-4" />
-                  Reschedule
-                </Button>
-              </div>
-            )}
+            {hasFullControl &&
+              appointment.status !== AppointmentStatus.CANCELLED &&
+              appointment.status !== AppointmentStatus.COMPLETED && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1"
+                    onClick={() => setRescheduleDialogOpen(true)}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Reschedule
+                  </Button>
+                </div>
+              )}
           </DialogHeader>
 
           <div className="space-y-6 mt-4">

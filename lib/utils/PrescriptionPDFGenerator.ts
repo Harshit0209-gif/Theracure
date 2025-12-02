@@ -10,11 +10,24 @@ const __dirname = path.dirname(__filename);
 const generateAssessmentPDF = async (assessment: any) => {
   const { patientInfo, therapist, assessmentData } = assessment;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-  const page = await browser.newPage();
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+      ],
+      timeout: 30000,
+    });
+
+    const page = await browser.newPage();
+    page.setDefaultTimeout(30000);
 
   const images = await getImagesAsBase64([
     "apple-touch-icon.png",
@@ -1280,39 +1293,51 @@ const generateAssessmentPDF = async (assessment: any) => {
   </html>
 `;
 
-  await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: {
-      top: "8mm",
-      right: "8mm",
-      bottom: "25mm",
-      left: "8mm",
-    },
-    preferCSSPageSize: false,
-    displayHeaderFooter: true,
-    headerTemplate: "<div></div>",
-    footerTemplate: `
-      <div style="position: relative; width: 100%; font-size: 8px;">
-        <!-- Signature Section -->
-        <div style="position: absolute; bottom: 18px; right: 10px; background: white; padding: 3px 6px; border: 1px solid #dee2e6; border-radius: 2px; font-size: 7px; text-align: center; width: 100px;">
-          <div style="font-style: italic; margin-bottom: 1px; color: #6c757d;">Doctor's Signature</div>
-          <div style="border-bottom: 1px solid #495057; width: 80px; margin: 2px auto 1px;"></div>
-          <div style="font-weight: 600; color: #495057;">${
-            therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"
-          }</div>
-        </div>
-        <!-- Footer Section -->
-        <div style="position: absolute; bottom: 0; left: 0; right: 0; background:rgb(222, 23, 23); color: white; text-align: center; padding: 2px; font-size: 8px; font-weight: 600;">
-          IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
-        </div>
-      </div>
-    `,
-  });
+    await page.setContent(htmlTemplate, {
+      waitUntil: "networkidle0",
+      timeout: 30000
+    });
 
-  await browser.close();
-  return pdfBuffer;
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "8mm",
+        right: "8mm",
+        bottom: "25mm",
+        left: "8mm",
+      },
+      preferCSSPageSize: false,
+      displayHeaderFooter: true,
+      headerTemplate: "<div></div>",
+      footerTemplate: `
+        <div style="position: relative; width: 100%; font-size: 8px;">
+          <!-- Signature Section -->
+          <div style="position: absolute; bottom: 18px; right: 10px; background: white; padding: 3px 6px; border: 1px solid #dee2e6; border-radius: 2px; font-size: 7px; text-align: center; width: 100px;">
+            <div style="font-style: italic; margin-bottom: 1px; color: #6c757d;">Doctor's Signature</div>
+            <div style="border-bottom: 1px solid #495057; width: 80px; margin: 2px auto 1px;"></div>
+            <div style="font-weight: 600; color: #495057;">${
+              therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"
+            }</div>
+          </div>
+          <!-- Footer Section -->
+          <div style="position: absolute; bottom: 0; left: 0; right: 0; background:rgb(222, 23, 23); color: white; text-align: center; padding: 2px; font-size: 8px; font-weight: 600;">
+            IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
+          </div>
+        </div>
+      `,
+      timeout: 30000,
+    });
+
+    return pdfBuffer;
+  } catch (error) {
+    console.error("Assessment PDF generation error:", error);
+    throw new Error(`Failed to generate assessment PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 };
 
 export default generateAssessmentPDF;

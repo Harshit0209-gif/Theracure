@@ -26,6 +26,7 @@ import {
   Clock,
   Eye,
   Mail,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useState, useCallback, useMemo } from "react";
@@ -162,6 +163,41 @@ export function AppointmentTable({
           error instanceof Error
             ? error.message
             : "Failed to send reminder SMS",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle Send Feedback SMS
+  const handleSendFeedback = async (appointmentId: string) => {
+    try {
+      const response = await fetch(
+        `/api/appointments/${appointmentId}/send-feedback`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send feedback SMS");
+      }
+
+      toast({
+        title: "Success",
+        description: data.message || "Feedback SMS sent successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to send feedback SMS",
         variant: "destructive",
       });
     }
@@ -304,6 +340,22 @@ export function AppointmentTable({
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
+
+                          {appointment.status === AppointmentStatus.COMPLETED && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendFeedback(appointment.id);
+                                }}
+                                className="text-green-600"
+                              >
+                                <MessageCircle className="mr-2 h-4 w-4" />
+                                Send Feedback SMS
+                              </DropdownMenuItem>
+                            </>
+                          )}
 
                           {(appointment.status ===
                             AppointmentStatus.CONFIRMED ||

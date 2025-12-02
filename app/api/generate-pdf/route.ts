@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-    const therapist = supportedTypes[1].includes(type)
+    const therapist = type === "assessment"
       ? await prisma.therapist.findUnique({
           where: { id: therapistId },
           select: {

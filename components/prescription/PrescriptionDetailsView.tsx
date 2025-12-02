@@ -18,6 +18,7 @@ import {
   CheckCircle,
   Clock,
   Hash,
+  Loader2,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { PrescriptionData } from "@/types/prescription";
@@ -78,24 +79,42 @@ export const PrescriptionDetailsView: React.FC<
     }
   };
 
+  const [downloading, setDownloading] = useState(false);
+
   const handleDownloadPDF = async () => {
     try {
+      setDownloading(true);
+
       const response = await fetch(`/api/prescriptions/${prescriptionId}/pdf`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `assessment-${prescriptionId}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to download PDF");
       }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `assessment-${prescription?.patient?.patientName || prescriptionId}-${new Date().toLocaleDateString()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "PDF downloaded successfully",
+      });
     } catch (error) {
+      console.error("Download error:", error);
       toast({
         title: "Error",
-        description: "Failed to download PDF",
+        description: error instanceof Error ? error.message : "Failed to download PDF",
         variant: "destructive",
       });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -218,6 +237,19 @@ export const PrescriptionDetailsView: React.FC<
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={handleDownloadPDF}
+            disabled={downloading || loading}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {downloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {downloading ? "Downloading..." : "Download PDF"}
+          </Button>
           {assessmentData && prescription.patient && (
             <PrintAssessment
               assessmentData={assessmentData}

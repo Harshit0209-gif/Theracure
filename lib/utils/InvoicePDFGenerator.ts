@@ -27,14 +27,21 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
         "--no-zygote",
         "--disable-gpu",
       ],
+      timeout: 30000, // 30 second timeout
     });
 
     const page = await browser.newPage();
 
+    // Set timeout for page operations
+    page.setDefaultTimeout(30000);
+
     // Generate HTML template with data
     const htmlTemplate = await generateInvoiceHTML(invoiceData);
 
-    await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
+    await page.setContent(htmlTemplate, {
+      waitUntil: "networkidle0",
+      timeout: 30000
+    });
 
     const pdfBuffer = await page.pdf({
       format: "A4",
@@ -46,12 +53,13 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
         left: "0.2in",
       },
       preferCSSPageSize: true,
+      timeout: 30000,
     });
 
     return pdfBuffer;
   } catch (error) {
-    console.error("PDF generation error:", error);
-    throw error;
+    console.error("Invoice PDF generation error:", error);
+    throw new Error(`Failed to generate invoice PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   } finally {
     if (browser) {
       await browser.close();
@@ -62,43 +70,29 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
 // Function to convert image to base64
 const getImageAsBase64 = async () => {
   try {
-    // Construct the path to the image
-    // Assuming this file is in /lib/ and image is in app/lib/utils/
-    const imagePath = path.resolve(__dirname, "./public/apple-touch-icon.png");
-
-    // Alternative paths to try if the above doesn't work
+    // Alternative paths to try
     const alternativePaths = [
-      path.resolve(__dirname, "./public/apple-touch-icon.png"),
-      path.resolve(__dirname, "./public/apple-touch-icon.png"),
-      path.resolve(process.cwd(), "./public/apple-touch-icon.png"),
-      path.resolve(process.cwd(), "./public/apple-touch-icon.png"),
+      path.resolve(process.cwd(), "public/apple-touch-icon.png"),
+      path.resolve(process.cwd(), "public", "apple-touch-icon.png"),
+      path.resolve(__dirname, "../../public/apple-touch-icon.png"),
     ];
 
     let imageBuffer;
     let foundPath = null;
 
-    // Try the main path first
-    try {
-      imageBuffer = await fs.readFile(imagePath);
-      foundPath = imagePath;
-    } catch (error) {
-      // Try alternative paths
-      for (const altPath of alternativePaths) {
-        try {
-          imageBuffer = await fs.readFile(altPath);
-          foundPath = altPath;
-          break;
-        } catch (altError) {
-          continue;
-        }
+    // Try all alternative paths
+    for (const altPath of alternativePaths) {
+      try {
+        imageBuffer = await fs.readFile(altPath);
+        foundPath = altPath;
+        break;
+      } catch (altError) {
+        continue;
       }
     }
 
     if (!imageBuffer) {
-      console.warn("Logo image not found at any of the expected paths:", [
-        imagePath,
-        ...alternativePaths,
-      ]);
+      console.warn("Logo image not found at any of the expected paths:", alternativePaths);
       return null;
     }
 
@@ -242,20 +236,22 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           size: A4;
           margin: 0.2in;
         }
-        
+
         * {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
         }
-        
+
         body {
-          font-family: 'Arial', sans-serif;
+          font-family: 'Arial', 'Helvetica', sans-serif;
           font-size: 12px;
           line-height: 1.4;
           color: #333;
           background: white;
           width: 100%;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         
         .container {
