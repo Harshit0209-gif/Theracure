@@ -17,25 +17,25 @@ import {
   Target,
   TestTube,
   Zap,
-} from "lucide-react";
+} from 'lucide-react';
 
 export const SECTION_GROUPS = {
   essential: [
     {
-      id: "vitals",
-      name: "On Examination (Vitals)",
+      id: 'vitals',
+      name: 'On Examination (Vitals)',
       icon: Stethoscope,
-      required: true,
+      required: false,
       active: true,
       toggle: false,
       defaultActive: true,
     },
 
     {
-      id: "chiefComplaints",
-      name: "Chief Complaints",
+      id: 'chiefComplaints',
+      name: 'Chief Complaints',
       icon: FileText,
-      required: true,
+      required: false,
       active: true,
       toggle: false,
       defaultActive: true,
@@ -44,17 +44,17 @@ export const SECTION_GROUPS = {
 
   history: [
     {
-      id: "historyOfPresentIllness",
-      name: "History of Present Illness ",
+      id: 'historyOfPresentIllness',
+      name: 'History of Present Illness ',
       icon: FileText,
-      required: true,
+      required: false,
       active: true,
       toggle: false,
       defaultActive: true,
     },
     {
-      id: "historyOfIllness",
-      name: "Past History",
+      id: 'historyOfIllness',
+      name: 'Past History',
       icon: History,
       required: false,
       active: true,
@@ -62,8 +62,8 @@ export const SECTION_GROUPS = {
       defaultActive: true,
     },
     {
-      id: "painHistory",
-      name: "Pain History",
+      id: 'painHistory',
+      name: 'Pain History',
       icon: Zap,
       required: false,
       active: true,
@@ -71,8 +71,8 @@ export const SECTION_GROUPS = {
       defaultActive: true,
     },
     {
-      id: "medicalHistory",
-      name: "Medical History",
+      id: 'medicalHistory',
+      name: 'Medical History',
       icon: Heart,
       required: false,
       active: true,
@@ -80,8 +80,8 @@ export const SECTION_GROUPS = {
       defaultActive: true,
     },
     {
-      id: "surgicalHistory",
-      name: "Surgical History",
+      id: 'surgicalHistory',
+      name: 'Surgical History',
       icon: Scissors,
       required: false,
       active: false,
@@ -89,8 +89,8 @@ export const SECTION_GROUPS = {
       defaultActive: false,
     },
     {
-      id: "occupationalHistory",
-      name: "Occupational History",
+      id: 'occupationalHistory',
+      name: 'Occupational History',
       icon: Briefcase,
       required: false,
       active: false,
@@ -98,8 +98,8 @@ export const SECTION_GROUPS = {
       defaultActive: false,
     },
     {
-      id: "environmentalHistory",
-      name: "Environmental History",
+      id: 'environmentalHistory',
+      name: 'Environmental History',
       icon: Home,
       required: false,
       active: false,
@@ -110,17 +110,17 @@ export const SECTION_GROUPS = {
 
   examination: [
     {
-      id: "onObservation",
-      name: "On Observation",
+      id: 'onObservation',
+      name: 'On Observation',
       icon: Eye,
-      required: true,
+      required: false,
       active: true,
       toggle: false,
       defaultActive: true,
     },
     {
-      id: "onPalpation",
-      name: "On Palpation",
+      id: 'onPalpation',
+      name: 'On Palpation',
       icon: Hand,
       required: false,
       active: true,
@@ -128,8 +128,8 @@ export const SECTION_GROUPS = {
       defaultActive: true,
     },
     {
-      id: "motorExamination",
-      name: "Motor Examination(ROM)",
+      id: 'motorExamination',
+      name: 'Motor Examination(ROM)',
       icon: Move,
       required: false,
       active: true,
@@ -137,8 +137,8 @@ export const SECTION_GROUPS = {
       defaultActive: true,
     },
     {
-      id: "neurologicalExam",
-      name: "Neurological Examination",
+      id: 'neurologicalExam',
+      name: 'Neurological Examination',
       icon: Brain,
       required: false,
       active: true,
@@ -147,8 +147,8 @@ export const SECTION_GROUPS = {
     },
 
     {
-      id: "differentialDiagnosis",
-      name: "Differential Diagnostics",
+      id: 'differentialDiagnosis',
+      name: 'Differential Diagnostics',
       icon: List,
       required: false,
       active: false,
@@ -156,8 +156,8 @@ export const SECTION_GROUPS = {
       defaultActive: false,
     },
     {
-      id: "investigations",
-      name: "Investigations",
+      id: 'investigations',
+      name: 'Investigations',
       icon: FileTextIcon,
       required: false,
       active: false,
@@ -165,8 +165,8 @@ export const SECTION_GROUPS = {
       defaultActive: false,
     },
     {
-      id: "specialTests",
-      name: "Special Tests",
+      id: 'specialTests',
+      name: 'Special Tests',
       icon: TestTube,
       required: false,
       active: true,
@@ -174,8 +174,8 @@ export const SECTION_GROUPS = {
       defaultActive: true,
     },
     {
-      id: "provisionalDiagnosis",
-      name: "Provisional Diagnosis",
+      id: 'provisionalDiagnosis',
+      name: 'Provisional Diagnosis',
       icon: CheckCircle,
       required: false,
       active: false,
@@ -183,8 +183,8 @@ export const SECTION_GROUPS = {
       defaultActive: false,
     },
     {
-      id: "physiotherapyMgmt",
-      name: "Physiotherapy Management Plan",
+      id: 'physiotherapyMgmt',
+      name: 'Physiotherapy Management Plan',
       icon: Target,
       required: false,
       active: false,
@@ -195,8 +195,8 @@ export const SECTION_GROUPS = {
 
   documentation: [
     {
-      id: "notes",
-      name: "Additional Notes",
+      id: 'notes',
+      name: 'Additional Notes',
       icon: StickyNote,
       required: false,
       active: true,

@@ -1,12 +1,12 @@
-import type React from "react";
-import "@/app/globals.css";
-import { Inter } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/contexts/auth-context";
-import { ProtectedRoute } from "@/components/protected-route";
-import type { Metadata } from "next";
+import type React from 'react';
+import '@/app/globals.css';
+import { Inter } from 'next/font/google';
+import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/contexts/auth-context';
+import { ProtectedRoute } from '@/components/protected-route';
+import type { Metadata } from 'next';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({
   children,
@@ -14,14 +14,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang='en' suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
+          attribute='class'
+          defaultTheme='system'
           enableSystem
           disableTransitionOnChange
-          storageKey="physio-theme"
+          storageKey='physio-theme'
         >
           <AuthProvider>
             <ProtectedRoute>{children}</ProtectedRoute>
@@ -33,9 +33,9 @@ export default function RootLayout({
 }
 
 export const metadata: Metadata = {
-  generator: "golicit.in",
-  title: "Ms Thera-Cure",
+  generator: 'golicit.in',
+  title: 'Ms Thera-Cure',
   icons: {
-    icon: "/favicon.png",
+    icon: '/favicon.png',
   },
 };

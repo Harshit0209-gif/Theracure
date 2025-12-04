@@ -1,8 +1,8 @@
-import puppeteer from "puppeteer";
-import path from "path";
-import { fileURLToPath } from "url";
-import { getImagesAsBase64 } from "./imageUtils.node";
-import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
+import puppeteer from 'puppeteer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getImagesAsBase64 } from './imageUtils.node';
+import { calculateSimpleBMI } from '@/lib/utils/bmi-claculator';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,13 +15,13 @@ const generateAssessmentPDF = async (assessment: any) => {
     browser = await puppeteer.launch({
       headless: true,
       args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-gpu",
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
       ],
       timeout: 30000,
     });
@@ -29,39 +29,39 @@ const generateAssessmentPDF = async (assessment: any) => {
     const page = await browser.newPage();
     page.setDefaultTimeout(30000);
 
-  const images = await getImagesAsBase64([
-    "apple-touch-icon.png",
-    "humen-body.jpg",
-  ]);
+    const images = await getImagesAsBase64([
+      'apple-touch-icon.png',
+      'humen-body.jpg',
+    ]);
 
-  const logoBase64 = images["apple-touch-icon.png"];
-  const bodyBase64 = images["humen-body.jpg"];
+    const logoBase64 = images['apple-touch-icon.png'];
+    const bodyBase64 = images['humen-body.jpg'];
 
-  const hasValue = (value: any): boolean => {
-    if (value === null || value === undefined) return false;
-    if (typeof value === "string") return value.trim() !== "";
-    if (typeof value === "number") return value !== 0;
-    if (typeof value === "object") {
-      if (Array.isArray(value)) return value.length > 0;
-      return Object.values(value).some((v) => hasValue(v));
-    }
-    return Boolean(value);
-  };
+    const hasValue = (value: any): boolean => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === 'string') return value.trim() !== '';
+      if (typeof value === 'number') return value !== 0;
+      if (typeof value === 'object') {
+        if (Array.isArray(value)) return value.length > 0;
+        return Object.values(value).some((v) => hasValue(v));
+      }
+      return Boolean(value);
+    };
 
-  const getBMIData = (weight: number, height: number) => {
-    if (!weight || !height) return null;
-    return calculateSimpleBMI(weight, height);
-  };
+    const getBMIData = (weight: number, height: number) => {
+      if (!weight || !height) return null;
+      return calculateSimpleBMI(weight, height);
+    };
 
-  const renderBMIChart = () => {
-    const vitals = assessmentData?.vitals;
-    const patientBMI =
-      vitals?.bmi ||
-      (vitals?.weight && vitals?.height
-        ? calculateSimpleBMI(vitals.weight, vitals.height)?.bmi
-        : null);
+    const renderBMIChart = () => {
+      const vitals = assessmentData?.vitals;
+      const patientBMI =
+        vitals?.bmi ||
+        (vitals?.weight && vitals?.height
+          ? calculateSimpleBMI(vitals.weight, vitals.height)?.bmi
+          : null);
 
-    return `
+      return `
       <div class="bmi-chart-section">
         <div class="section-label">BMI Reference Chart</div>
         <div class="bmi-chart">
@@ -124,166 +124,166 @@ const generateAssessmentPDF = async (assessment: any) => {
               </div>
             </div>
           </div>`
-              : ""
+              : ''
           }
         </div>
       </div>
     `;
-  };
+    };
 
-  const renderSection = (
-    label: string,
-    value: any,
-    className: string = "assessment-section"
-  ) => {
-    if (!hasValue(value)) return "";
+    const renderSection = (
+      label: string,
+      value: any,
+      className: string = 'assessment-section'
+    ) => {
+      if (!hasValue(value)) return '';
 
-    let displayValue = value;
-    if (typeof value === "object" && !Array.isArray(value)) {
-      const objFields = Object.entries(value)
-        .filter(([k, v]) => hasValue(v))
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(", ");
-      displayValue = objFields || "";
-    }
+      let displayValue = value;
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        const objFields = Object.entries(value)
+          .filter(([k, v]) => hasValue(v))
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ');
+        displayValue = objFields || '';
+      }
 
-    if (!displayValue || displayValue.toString().trim() === "") return "";
+      if (!displayValue || displayValue.toString().trim() === '') return '';
 
-    return `
+      return `
       <div class="${className}">
         <div class="section-label">${label}</div>
         <div class="section-content">${displayValue}</div>
       </div>
     `;
-  };
+    };
 
-  const renderVitalsSection = () => {
-    const vitals = assessmentData?.vitals;
-    if (!vitals) return "";
+    const renderVitalsSection = () => {
+      const vitals = assessmentData?.vitals;
+      if (!vitals) return '';
 
-    let vitalsHTML = `
+      let vitalsHTML = `
       <div class="assessment-section">
         <div class="section-label">On Examination (Vitals)</div>
         <div class="vitals-grid">
     `;
 
-    // Blood pressure
-    if (
-      hasValue(vitals.bloodPressure?.systolic) ||
-      hasValue(vitals.bloodPressure?.diastolic)
-    ) {
-      const systolic = vitals.bloodPressure?.systolic || "0";
-      const diastolic = vitals.bloodPressure?.diastolic || "0";
-      vitalsHTML += `
+      // Blood pressure
+      if (
+        hasValue(vitals.bloodPressure?.systolic) ||
+        hasValue(vitals.bloodPressure?.diastolic)
+      ) {
+        const systolic = vitals.bloodPressure?.systolic || '0';
+        const diastolic = vitals.bloodPressure?.diastolic || '0';
+        vitalsHTML += `
         <div class="vital-item">
           <span class="vital-label">Blood Pressure:</span>
           <span class="vital-value">${systolic}/${diastolic} mmHg</span>
         </div>
       `;
-    }
+      }
 
-    // Pulse
-    if (hasValue(vitals.pulse)) {
-      vitalsHTML += `
+      // Pulse
+      if (hasValue(vitals.pulse)) {
+        vitalsHTML += `
         <div class="vital-item">
           <span class="vital-label">Pulse Rate:</span>
           <span class="vital-value">${vitals.pulse} beats/min</span>
         </div>
       `;
-    }
+      }
 
-    // Weight
-    if (hasValue(vitals.weight)) {
-      vitalsHTML += `
+      // Weight
+      if (hasValue(vitals.weight)) {
+        vitalsHTML += `
         <div class="vital-item">
           <span class="vital-label">Weight:</span>
           <span class="vital-value">${vitals.weight} kg</span>
         </div>
       `;
-    }
+      }
 
-    // Height
-    if (hasValue(vitals.height)) {
-      vitalsHTML += `
+      // Height
+      if (hasValue(vitals.height)) {
+        vitalsHTML += `
         <div class="vital-item">
           <span class="vital-label">Height:</span>
           <span class="vital-value">${vitals.height} cm</span>
         </div>
       `;
-    }
+      }
 
-    // BMI with status and color coding
-    if (hasValue(vitals.bmi)) {
-      const bmiData = getBMIData(vitals.weight, vitals.height) || {
-        bmi: vitals.bmi,
-        status: "Unknown",
-        color: "#666",
-      };
-      vitalsHTML += `
+      // BMI with status and color coding
+      if (hasValue(vitals.bmi)) {
+        const bmiData = getBMIData(vitals.weight, vitals.height) || {
+          bmi: vitals.bmi,
+          status: 'Unknown',
+          color: '#666',
+        };
+        vitalsHTML += `
         <div class="vital-item">
           <span class="vital-label">BMI:</span>
           <span class="vital-value">${bmiData.bmi} kg/cm²
         </div>
       `;
-    } else if (hasValue(vitals.weight) && hasValue(vitals.height)) {
-      // Calculate BMI if not provided
-      const bmiData = getBMIData(vitals.weight, vitals.height);
-      if (bmiData) {
-        vitalsHTML += `
+      } else if (hasValue(vitals.weight) && hasValue(vitals.height)) {
+        // Calculate BMI if not provided
+        const bmiData = getBMIData(vitals.weight, vitals.height);
+        if (bmiData) {
+          vitalsHTML += `
           <div class="vital-item">
             <span class="vital-label">BMI:</span>
             <span class="vital-value">${bmiData.bmi} kg/cm² <span class="bmi-status" style="color: ${bmiData.color};">(${bmiData.status})</span></span>
           </div>
         `;
+        }
       }
-    }
 
-    // Temperature
-    if (hasValue(vitals.temperature)) {
-      vitalsHTML += `
+      // Temperature
+      if (hasValue(vitals.temperature)) {
+        vitalsHTML += `
         <div class="vital-item">
           <span class="vital-label">Temperature:</span>
           <span class="vital-value">${vitals.temperature} °F</span>
         </div>
       `;
-    }
+      }
 
-    vitalsHTML += `
+      vitalsHTML += `
         </div>
       </div>
     `;
 
-    // Only return if we have actual vital signs data
-    if (vitalsHTML.includes("vital-item")) {
-      return vitalsHTML;
-    }
-    return "";
-  };
+      // Only return if we have actual vital signs data
+      if (vitalsHTML.includes('vital-item')) {
+        return vitalsHTML;
+      }
+      return '';
+    };
 
-  // Helper function to render pain history with structured layout
-  const renderPainHistory = () => {
-    const pain = assessmentData?.painHistory;
-    if (!pain) return "";
+    // Helper function to render pain history with structured layout
+    const renderPainHistory = () => {
+      const pain = assessmentData?.painHistory;
+      if (!pain) return '';
 
-    let painHTML = `
+      let painHTML = `
       <div class="assessment-section">
         <div class="section-label">Pain History</div>
         <div class="pain-grid">
     `;
 
-    if (hasValue(pain.location)) {
-      painHTML += `
+      if (hasValue(pain.location)) {
+        painHTML += `
         <div class="pain-item">
           <span class="pain-label">Location:</span>
           <span class="pain-value">${pain.location
-            .replace("_", " ")
+            .replace('_', ' ')
             .replace(/\b\w/g, (l: any) => l.toUpperCase())}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(pain.nature)) {
-      painHTML += `
+      if (hasValue(pain.nature)) {
+        painHTML += `
         <div class="pain-item">
           <span class="pain-label">Nature:</span>
           <span class="pain-value">${
@@ -291,22 +291,22 @@ const generateAssessmentPDF = async (assessment: any) => {
           }</span>
         </div>
       `;
-    }
+      }
 
-    // Display multiple VAS scores if available
-    if (
-      hasValue(pain.vasScores) &&
-      Array.isArray(pain.vasScores) &&
-      pain.vasScores.length > 0
-    ) {
-      painHTML += `
+      // Display multiple VAS scores if available
+      if (
+        hasValue(pain.vasScores) &&
+        Array.isArray(pain.vasScores) &&
+        pain.vasScores.length > 0
+      ) {
+        painHTML += `
         <div class="pain-item full-width">
           <span class="pain-label">VAS Scores:</span>
           <div style="margin-top: 4px;">
       `;
 
-      pain.vasScores.forEach((vasEntry: any, index: number) => {
-        painHTML += `
+        pain.vasScores.forEach((vasEntry: any, index: number) => {
+          painHTML += `
           <div style="background: #fff; padding: 6px; margin-bottom: 4px; border-radius: 3px; border-left: 3px solid #3498db;">
             <div style="font-weight: 600; font-size: 9px; color: #2c3e50; margin-bottom: 3px;">VAS Score #${
               index + 1
@@ -315,167 +315,167 @@ const generateAssessmentPDF = async (assessment: any) => {
               ${
                 vasEntry.location
                   ? `<div><strong>Location:</strong> ${vasEntry.location}</div>`
-                  : ""
+                  : ''
               }
               ${
                 vasEntry.activity
                   ? `<div><strong>Activity:</strong> ${vasEntry.activity}</div>`
-                  : ""
+                  : ''
               }
               ${
                 vasEntry.vasScore !== undefined
                   ? `<div><strong>Score:</strong> ${vasEntry.vasScore}/10</div>`
-                  : ""
+                  : ''
               }
               ${
                 vasEntry.timeOfDay
                   ? `<div><strong>Time:</strong> ${vasEntry.timeOfDay}</div>`
-                  : ""
+                  : ''
               }
               ${
                 vasEntry.notes
                   ? `<div style="grid-column: 1 / -1;"><strong>Notes:</strong> ${vasEntry.notes}</div>`
-                  : ""
+                  : ''
               }
             </div>
           </div>
         `;
-      });
+        });
 
-      painHTML += `
+        painHTML += `
           </div>
         </div>
       `;
-    } else if (hasValue(pain.vasScore)) {
-      // Fallback to old single VAS score for backward compatibility
-      painHTML += `
+      } else if (hasValue(pain.vasScore)) {
+        // Fallback to old single VAS score for backward compatibility
+        painHTML += `
         <div class="pain-item">
           <span class="pain-label">VAS Score:</span>
           <span class="pain-value">${pain.vasScore}/10</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(pain.duration)) {
-      painHTML += `
+      if (hasValue(pain.duration)) {
+        painHTML += `
         <div class="pain-item">
           <span class="pain-label">Duration:</span>
           <span class="pain-value">${pain.duration}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(pain.aggravatingFactors)) {
-      painHTML += `
+      if (hasValue(pain.aggravatingFactors)) {
+        painHTML += `
         <div class="pain-item full-width">
           <span class="pain-label">Aggravating Factors:</span>
           <span class="pain-value">${pain.aggravatingFactors}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(pain.relievingFactors)) {
-      painHTML += `
+      if (hasValue(pain.relievingFactors)) {
+        painHTML += `
         <div class="pain-item full-width">
           <span class="pain-label">Relieving Factors:</span>
           <span class="pain-value">${pain.relievingFactors}</span>
         </div>
       `;
-    }
+      }
 
-    painHTML += `
+      painHTML += `
         </div>
       </div>
     `;
 
-    if (painHTML.includes("pain-item")) {
-      return painHTML;
-    }
-    return "";
-  };
+      if (painHTML.includes('pain-item')) {
+        return painHTML;
+      }
+      return '';
+    };
 
-  // Helper function to render observation data with grid layout
-  const renderObservation = () => {
-    const obs = assessmentData?.onObservation;
-    if (!obs) return "";
+    // Helper function to render observation data with grid layout
+    const renderObservation = () => {
+      const obs = assessmentData?.onObservation;
+      if (!obs) return '';
 
-    let obsHTML = `
+      let obsHTML = `
       <div class="assessment-section">
         <div class="section-label">On Observation</div>
         <div class="obs-grid">
     `;
 
-    if (hasValue(obs.bodyBuild)) {
-      obsHTML += `
+      if (hasValue(obs.bodyBuild)) {
+        obsHTML += `
         <div class="obs-item">
           <span class="obs-label">Body Build:</span>
           <span class="obs-value">${obs.bodyBuild}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(obs.posture)) {
-      obsHTML += `
+      if (hasValue(obs.posture)) {
+        obsHTML += `
         <div class="obs-item">
           <span class="obs-label">Posture:</span>
           <span class="obs-value">${obs.posture}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(obs.gait)) {
-      obsHTML += `
+      if (hasValue(obs.gait)) {
+        obsHTML += `
         <div class="obs-item">
           <span class="obs-label">Gait:</span>
           <span class="obs-value">${obs.gait
-            .replace("_", " ")
+            .replace('_', ' ')
             .replace(/\b\w/g, (l: any) => l.toUpperCase())}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(obs.weightBearing)) {
-      obsHTML += `
+      if (hasValue(obs.weightBearing)) {
+        obsHTML += `
         <div class="obs-item">
           <span class="obs-label">Weight Bearing:</span>
           <span class="obs-value">${obs.weightBearing
-            .replace("_", " ")
+            .replace('_', ' ')
             .replace(/\b\w/g, (l: any) => l.toUpperCase())}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(obs.peripheralPulses)) {
-      obsHTML += `
+      if (hasValue(obs.peripheralPulses)) {
+        obsHTML += `
         <div class="obs-item">
           <span class="obs-label">Peripheral Pulses:</span>
           <span class="obs-value">${obs.peripheralPulses}</span>
         </div>
       `;
-    }
+      }
 
-    if (hasValue(obs.localExam)) {
-      obsHTML += `
+      if (hasValue(obs.localExam)) {
+        obsHTML += `
         <div class="obs-item full-width">
           <span class="obs-label">Local Examination:</span>
           <span class="obs-value">${obs.localExam}</span>
         </div>
       `;
-    }
+      }
 
-    obsHTML += `
+      obsHTML += `
         </div>
       </div>
     `;
 
-    if (obsHTML.includes("obs-item")) {
-      return obsHTML;
-    }
-    return "";
-  };
+      if (obsHTML.includes('obs-item')) {
+        return obsHTML;
+      }
+      return '';
+    };
 
-  // HTML Template with improved styling and page signature
-  const htmlTemplate = `
+    // HTML Template with improved styling and page signature
+    const htmlTemplate = `
   <!DOCTYPE html>
   <html>
   <head>
@@ -484,7 +484,7 @@ const generateAssessmentPDF = async (assessment: any) => {
     <style>
       @page {
         size: A4;
-        margin: 8mm 8mm 25mm 8mm; /* Reduced margins for more space */
+        margin: 10mm 8mm 20mm 8mm;/* Reduced margins for more space */
       }
 
       * {
@@ -522,7 +522,8 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       .clinic-info {
         flex: 1;
-      }
+        margin-top: 0 !important;
+      } 
 
       .logo-image {
         width: 90px;
@@ -556,9 +557,13 @@ const generateAssessmentPDF = async (assessment: any) => {
       }
 
       .doctor-info {
-        width: 260px;
-        text-align: right;
-        font-size: 9px;
+margin-top: 30px !important;   
+margin-right: 10px; 
+  padding-top: 4px;             
+  max-width: 260px;
+  text-align: justify !important;  
+  text-align-last: right;  
+  line-height: 1.3;
       }
 
       .doctor-name {
@@ -566,6 +571,8 @@ const generateAssessmentPDF = async (assessment: any) => {
         font-weight: bold;
         color: #e74c3c;
         margin-bottom: 3px;
+        text-align: centre !important;  
+
       }
 
       .doctor-qualifications {
@@ -573,6 +580,7 @@ const generateAssessmentPDF = async (assessment: any) => {
         line-height: 1.1;
         color: #6c757d;
         margin-bottom: 3px;
+        white-space: normal !important;
       }
 
       .doctor-details {
@@ -593,6 +601,7 @@ const generateAssessmentPDF = async (assessment: any) => {
         border-radius: 4px;
         letter-spacing: 0.8px;
       }
+
       
       /* Patient Info Section */
       .patient-info-container {
@@ -648,20 +657,25 @@ const generateAssessmentPDF = async (assessment: any) => {
       
       /* Assessment Sections */
       .content-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+display: block !important;
         gap: 8px;
         margin-bottom: 10px;
         min-height: auto;
       }
-
-      .left-column {
+.,
+. {
+  width: 100% !important;
+  margin: 0;
+  padding: 0;
+   page-break-inside: avoid;
+}
+      . {
         display: flex;
         flex-direction: column;
         gap: 6px;
       }
 
-      .middle-column {
+      . {
         display: flex;
         flex-direction: column;
         gap: 6px;
@@ -929,25 +943,26 @@ const generateAssessmentPDF = async (assessment: any) => {
         text-align: left;
       }
 
-      .body-diagram {
-        background-image: url('${bodyBase64}');
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        width: 100%;
-        max-width: 160px;
-        height: 190px;
-        margin: 0 auto;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
-        background-color: #f8f9fa;
-      }
+.body-diagram {
+  background-image: url('${bodyBase64}');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 100%;
+  max-width: 120px;
+  height: 140px;
+  margin: 0 auto;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+}
+
       
       /* Page Signature Section - Fixed positioning for every page */
       .page-signature {
-        position: fixed;
-        bottom: 20px;
-        right: 10px;
+  position: absolute;
+  bottom: 20px;
+  right: 10px;
         background: white;
         padding: 3px 6px;
         border-radius: 2px;
@@ -980,10 +995,10 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       /* Footer */
       .footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
         background: linear-gradient(135deg, #e74c3c, #c0392b);
         color: white;
         text-align: center;
@@ -1012,13 +1027,20 @@ const generateAssessmentPDF = async (assessment: any) => {
           break-inside: avoid;
         }
         
-        .content-container {
-          page-break-inside: auto;
-        }
+/* Single-column layout to remove huge blank space */
+.content-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-        .left-column, .middle-column {
-          page-break-inside: auto;
-        }
+.,
+. {
+  width: 100%;
+  page-break-inside: avoid;
+}
+
 
         .body-diagram-section {
           page-break-inside: avoid;
@@ -1030,8 +1052,14 @@ const generateAssessmentPDF = async (assessment: any) => {
         
         /* Ensure header and patient info stay together */
         .header {
-          page-break-after: avoid;
-          page-break-inside: avoid;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;   
+  width: 100%;
+  max-width: 760px;            
+  margin: 0 auto;
+  padding: 6px 0;              
+  border-bottom: 2px solid #3498db;
         }
         
         .form-title {
@@ -1049,21 +1077,6 @@ const generateAssessmentPDF = async (assessment: any) => {
           page-break-inside: avoid;
         }
         
-        /* Ensure signature and footer appear on every page */
-        .page-signature {
-          position: fixed;
-          bottom: 20px;
-          right: 10px;
-          z-index: 1000;
-        }
-
-        .footer {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          z-index: 1000;
-        }
         
         /* Prevent unnecessary page breaks */
         h1, h2, h3, h4, h5, h6 {
@@ -1075,39 +1088,34 @@ const generateAssessmentPDF = async (assessment: any) => {
   <body>
   <div class="page">
     <!-- Header -->
-    <div class="header">
-      <div class="clinic-info">
-        <div class="logo">
-          ${
-            logoBase64
-              ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo" />`
-              : `<div class="logo-fallback">TC</div>`
-          }
-        </div>
-        <div class="contact-info">
-          <p><strong>ADDRESS:</strong> 361/A, BASUDEVPUR ROAD, GROUND FLOOR - 'NILANJANA' APARTMENT</p>
-          <p>SHYAMNAGAR, NORTH 24 PARGANAS, PIN - 743127</p>
-          <p><strong>Tel:</strong> (033) 3564 7255 | <strong>Email:</strong> contacts@mstheracure.com</p>
-          <p><strong>Website:</strong> www.mstheracure.com</p>
-          <p style="margin-top: 5px; font-weight: bold;">Time: Monday to Saturday (9:00 AM to 7:00 PM)</p>
-          <p style="font-weight: bold; color: #e74c3c;">SUNDAY CLOSED</p>
-        </div>
-      </div>
+<div class="header">
+  <div class="clinic-info">
+    <img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo" />
+    
+    <div class="contact-info">
+      <p><strong>ADDRESS:</strong> 361/A, BASUDEVPUR ROAD, GROUND FLOOR - 'NILANJANA' APARTMENT</p>
+      <p>SHYAMNAGAR, NORTH 24 PARGANAS, PIN - 743127</p>
+      <p><strong>Tel:</strong> (033) 3564 7255 | <strong>Email:</strong> contacts@mstheracure.com</p>
+      <p><strong>Website:</strong> www.mstheracure.com</p>
+      <p style="margin-top: 4px; font-weight: bold;">Time: Monday to Saturday (9:00 AM to 7:00 PM)</p>
+      <p style="font-weight: bold; color: #e74c3c;">SUNDAY CLOSED</p>
+    </div>
+  </div>
       
       <div class="doctor-info">
         <div class="doctor-name">
-          ${therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"}
+          ${therapist?.user?.name || therapist?.name || 'Dr. Diksha Palit (PT)'}
         </div>
         <div class="doctor-qualifications">
           ${
             therapist?.qualification ||
-            "B.P.T [W.B.U.H.S], CDNT<br>Co-Founder & Consultant Physiotherapist"
+            'B.P.T [W.B.U.H.S], CDNT<br>Co-Founder & Consultant Physiotherapist'
           }
         </div>
         <div class="doctor-details">
           ${
             therapist?.specialization ||
-            "Physiotherapy & Rehabilitation Specialist"
+            'Physiotherapy & Rehabilitation Specialist'
           }
         </div>
       </div>
@@ -1123,58 +1131,58 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div class="patient-grid">
           ${[
             {
-              label: "Name",
+              label: 'Name',
               value:
                 patientInfo?.patientName ||
                 patientInfo?.name ||
                 assessmentData?.patientName,
             },
-            { label: "Age", value: patientInfo?.age || assessmentData?.age },
+            { label: 'Age', value: patientInfo?.age || assessmentData?.age },
             {
-              label: "Gender",
+              label: 'Gender',
               value: patientInfo?.gender || assessmentData?.gender,
             },
             {
-              label: "Patient ID",
+              label: 'Patient ID',
               value:
                 assessmentData?.patientId ||
                 patientInfo?.id ||
                 patientInfo?.patientId,
             },
             {
-              label: "Height",
+              label: 'Height',
               value: assessmentData?.vitals?.height || patientInfo?.height,
             },
             {
-              label: "Weight",
+              label: 'Weight',
               value: assessmentData?.vitals?.weight || patientInfo?.weight,
             },
             {
-              label: "Date",
+              label: 'Date',
               value:
                 assessmentData?.assessmentDate ||
                 assessmentData?.createdAt ||
                 new Date(),
             },
           ]
-            .filter((field) => field.value != null && field.value !== "")
+            .filter((field) => field.value != null && field.value !== '')
             .map(
               (field) => `
               <div class="patient-field">
                 <span class="patient-field-label">${field.label}:</span>
                 <span class="patient-field-value">
                   ${
-                    field.label === "Date"
-                      ? new Date(field.value).toLocaleDateString("en-IN")
+                    field.label === 'Date'
+                      ? new Date(field.value).toLocaleDateString('en-IN')
                       : field.value
                   }
-                  ${field.label === "Height" ? " cms" : ""}
-                  ${field.label === "Weight" ? " kgs" : ""}
+                  ${field.label === 'Height' ? ' cms' : ''}
+                  ${field.label === 'Weight' ? ' kgs' : ''}
                 </span>
               </div>
             `
             )
-            .join("")}
+            .join('')}
           
           ${
             assessmentData?.vitals?.weight && assessmentData?.vitals?.height
@@ -1189,11 +1197,11 @@ const generateAssessmentPDF = async (assessment: any) => {
                   );
                   return bmiData
                     ? `${bmiData.bmi} kg/cm² <span style="color: ${bmiData.color}; font-weight: bold; font-size: 10px;">(${bmiData.status})</span>`
-                    : "N/A";
+                    : 'N/A';
                 })()}
               </span>
             </div>`
-              : ""
+              : ''
           }
         </div>
       </div>
@@ -1201,51 +1209,51 @@ const generateAssessmentPDF = async (assessment: any) => {
     
     <!-- Assessment Content -->
     <div class="content-container">
-      <div class="left-column">
+      <div class="">
         ${renderVitalsSection()}
 
         ${[
-          { label: "Chief Complaints", value: assessmentData?.chiefComplaints },
+          { label: 'Chief Complaints', value: assessmentData?.chiefComplaints },
           {
-            label: "History of Present Illness",
+            label: 'History of Present Illness',
             value: assessmentData?.historyOfPresentIllness,
           },
           {
-            label: "Past History",
+            label: 'Past History',
             value: assessmentData?.historyOfIllness,
           },
           {
-            label: "Medical History",
+            label: 'Medical History',
             value: assessmentData?.medicalHistory,
           },
-          { label: "Surgical History", value: assessmentData?.surgicalHistory },
+          { label: 'Surgical History', value: assessmentData?.surgicalHistory },
           {
-            label: "Occupational History",
+            label: 'Occupational History',
             value: assessmentData?.occupationalHistory,
           },
           {
-            label: "Environmental History",
+            label: 'Environmental History',
             value: assessmentData?.environmentalHistory,
           },
         ]
-          .filter((s) => s.value != null && s.value !== "")
+          .filter((s) => s.value != null && s.value !== '')
           .map((s) => renderSection(s.label, s.value))
-          .join("")}
+          .join('')}
 
         ${renderPainHistory()}
         ${renderObservation()}
 
         ${[
-          { label: "On Palpation", value: assessmentData?.onPalpation },
-          { label: "Special Tests", value: assessmentData?.specialTests },
-          { label: "Additional Notes", value: assessmentData?.notes },
+          { label: 'On Palpation', value: assessmentData?.onPalpation },
+          { label: 'Special Tests', value: assessmentData?.specialTests },
+          { label: 'Additional Notes', value: assessmentData?.notes },
         ]
-          .filter((s) => s.value != null && s.value !== "")
+          .filter((s) => s.value != null && s.value !== '')
           .map((s) => renderSection(s.label, s.value))
-          .join("")}
+          .join('')}
       </div>
 
-      <div class="middle-column">
+      <div class="">
         <div class="body-diagram-section">
           <div class="body-diagram-title">Body Diagram</div>
           <div class="body-diagram"></div>
@@ -1254,37 +1262,37 @@ const generateAssessmentPDF = async (assessment: any) => {
         ${renderBMIChart()}
 
         ${Object.entries(assessmentData?.motorExamination || {})
-          .filter(([_, val]) => val != null && val !== "")
+          .filter(([_, val]) => val != null && val !== '')
           .map(([key, val]) =>
             renderSection(`Motor Examination - ${key.toUpperCase()}`, val)
           )
-          .join("")}
+          .join('')}
 
         ${Object.entries(assessmentData?.neurologicalExam || {})
-          .filter(([_, val]) => val != null && val !== "")
+          .filter(([_, val]) => val != null && val !== '')
           .map(([key, val]) =>
             renderSection(`Neurological - ${key.toUpperCase()}`, val)
           )
-          .join("")}
+          .join('')}
 
         ${[
           {
-            label: "Differential Diagnosis",
+            label: 'Differential Diagnosis',
             value: assessmentData?.differentialDiagnosis,
           },
-          { label: "Investigations", value: assessmentData?.investigations },
+          { label: 'Investigations', value: assessmentData?.investigations },
           {
-            label: "Provisional Diagnosis",
+            label: 'Provisional Diagnosis',
             value: assessmentData?.provisionalDiagnosis,
           },
           {
-            label: "Physiotherapy Management",
+            label: 'Physiotherapy Management',
             value: assessmentData?.physiotherapyMgmt,
           },
         ]
-          .filter((s) => s.value != null && s.value !== "")
+          .filter((s) => s.value != null && s.value !== '')
           .map((s) => renderSection(s.label, s.value))
-          .join("")}
+          .join('')}
       </div>
     </div>
   </div>
@@ -1294,22 +1302,22 @@ const generateAssessmentPDF = async (assessment: any) => {
 `;
 
     await page.setContent(htmlTemplate, {
-      waitUntil: "networkidle0",
-      timeout: 30000
+      waitUntil: 'networkidle0',
+      timeout: 30000,
     });
 
     const pdfBuffer = await page.pdf({
-      format: "A4",
+      format: 'A4',
       printBackground: true,
       margin: {
-        top: "8mm",
-        right: "8mm",
-        bottom: "25mm",
-        left: "8mm",
+        top: '8mm',
+        right: '8mm',
+        bottom: '25mm',
+        left: '8mm',
       },
       preferCSSPageSize: false,
       displayHeaderFooter: true,
-      headerTemplate: "<div></div>",
+      headerTemplate: '<div></div>',
       footerTemplate: `
         <div style="position: relative; width: 100%; font-size: 8px;">
           <!-- Signature Section -->
@@ -1317,7 +1325,9 @@ const generateAssessmentPDF = async (assessment: any) => {
             <div style="font-style: italic; margin-bottom: 1px; color: #6c757d;">Doctor's Signature</div>
             <div style="border-bottom: 1px solid #495057; width: 80px; margin: 2px auto 1px;"></div>
             <div style="font-weight: 600; color: #495057;">${
-              therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"
+              therapist?.user?.name ||
+              therapist?.name ||
+              'Dr. Diksha Palit (PT)'
             }</div>
           </div>
           <!-- Footer Section -->
@@ -1331,8 +1341,12 @@ const generateAssessmentPDF = async (assessment: any) => {
 
     return pdfBuffer;
   } catch (error) {
-    console.error("Assessment PDF generation error:", error);
-    throw new Error(`Failed to generate assessment PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Assessment PDF generation error:', error);
+    throw new Error(
+      `Failed to generate assessment PDF: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+    );
   } finally {
     if (browser) {
       await browser.close();
