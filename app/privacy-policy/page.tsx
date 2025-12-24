@@ -9,9 +9,6 @@ export default function PrivacyPolicyPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return;
-
     async function loadPdf() {
       try {
         setIsLoading(true);

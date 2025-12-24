@@ -5,10 +5,6 @@ const nextConfig = {
     cpus: 1,
   },
 
-  devIndicators: {
-    buildActivity: false,
-  },
-
   eslint: {
     ignoreDuringBuilds: true,
   },
