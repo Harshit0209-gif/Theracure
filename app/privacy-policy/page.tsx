@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 
 export default function PrivacyPolicyPage() {
@@ -10,14 +9,18 @@ export default function PrivacyPolicyPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    GlobalWorkerOptions.workerSrc = new URL(
-      "pdfjs-dist/build/pdf.worker.mjs",
-      import.meta.url
-    ).toString();
-
     async function loadPdf() {
       try {
         setIsLoading(true);
+
+        // Dynamically import pdfjs-dist only on client-side
+        const pdfjs = await import("pdfjs-dist");
+
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+          "pdfjs-dist/build/pdf.worker.mjs",
+          import.meta.url
+        ).toString();
+
         const url = "/privacy-policy.pdf";
         const response = await fetch(url);
 
@@ -26,7 +29,7 @@ export default function PrivacyPolicyPage() {
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        const pdf = await getDocument({ data: arrayBuffer }).promise;
+        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
         let fullText = "";
         for (let i = 1; i <= pdf.numPages; i++) {
