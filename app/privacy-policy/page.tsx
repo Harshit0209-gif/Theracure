@@ -9,30 +9,40 @@ export default function PrivacyPolicyPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     async function loadPdf() {
       try {
         setIsLoading(true);
+        console.log("Starting PDF load process...");
 
         // Dynamically import pdfjs-dist only on client-side
         const pdfjs = await import("pdfjs-dist");
+        console.log("pdfjs-dist loaded, version:", pdfjs.version);
 
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.mjs",
-          import.meta.url
-        ).toString();
+        // Set worker path using CDN for better compatibility
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+        console.log("Worker source set to:", pdfjs.GlobalWorkerOptions.workerSrc);
 
         const url = "/privacy-policy.pdf";
+        console.log("Fetching PDF from:", url);
         const response = await fetch(url);
 
         if (!response.ok) {
-          throw new Error(`Failed to load PDF: ${response.statusText}`);
+          console.error("PDF fetch failed:", response.status, response.statusText);
+          throw new Error(`Failed to load PDF (${response.status}): ${response.statusText}`);
         }
 
+        console.log("PDF fetched successfully, size:", response.headers.get('content-length'), "bytes");
         const arrayBuffer = await response.arrayBuffer();
+        console.log("ArrayBuffer created, parsing PDF...");
         const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        console.log("PDF loaded, number of pages:", pdf.numPages);
 
         let fullText = "";
         for (let i = 1; i <= pdf.numPages; i++) {
+          console.log(`Processing page ${i} of ${pdf.numPages}`);
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
 
@@ -67,8 +77,10 @@ export default function PrivacyPolicyPage() {
 
           fullText += pageText + "\n\n";
         }
+        console.log("PDF parsed successfully");
         setText(fullText);
       } catch (err) {
+        console.error("Error loading PDF:", err);
         setError(err instanceof Error ? err.message : "Failed to load PDF");
       } finally {
         setIsLoading(false);

@@ -4,7 +4,7 @@ module.exports = {
       name: "dashboard",
       script: "pnpm",
       args: "start",
-      cwd: "/var/www/html/Theracure-Dashboard",
+      cwd: "/var/www/theracure/Theracure-Dashboard",
       env: {
         NODE_ENV: "production",
       },
@@ -21,7 +21,7 @@ module.exports = {
       name: "sms-worker",
       script: "pnpm",
       args: "worker:sms",
-      cwd: "/var/www/html/Theracure-Dashboard",
+      cwd: "/var/www/theracure/Theracure-Dashboard",
       env: {
         NODE_ENV: "production",
       },
