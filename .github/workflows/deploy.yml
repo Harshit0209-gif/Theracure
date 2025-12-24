@@ -1,4 +1,4 @@
-name: Deploy Theracure
+name: Deploy Theracure Dashboard
 
 on:
   push:
@@ -6,14 +6,14 @@ on:
       - main
 
 jobs:
-  deploy-frontend:
-    name: Deploy Frontend
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Deploy Frontend via SSH
+      - name: Deploy to Utho Cloud via SSH
         uses: appleboy/ssh-action@master
         with:
           host: 157.20.214.173
@@ -22,46 +22,20 @@ jobs:
           script: |
             set -e
 
-            cd /var/www/theracure/Theracure-Frontend
-            git pull origin main
-            npm install
-            npm run build
-
-            cd /var/www/theracure
-            pm2 reload mstheracure-frontend
-
-            pm2 save
-            pm2 status
-
-  deploy-dashboard:
-    name: Deploy Dashboard
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Deploy Dashboard via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: 157.20.214.173
-          username: root
-          key: ${{ secrets.UTHO_INSTANCE_PRIVAT_KEY }}
-          script: |
-            set -e
-
+            echo "💾 Saving deploy private key for Git pull"
             echo "${{ secrets.DEPLOY_KEY }}" > /root/.ssh/github_deploy_key
             chmod 600 /root/.ssh/github_deploy_key
 
             cd /var/www/theracure/Theracure-Dashboard
 
             GIT_SSH_COMMAND="ssh -i /root/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-              git pull origin main
+            git pull origin main
 
+            echo "🔐 Exporting all environment variables from GitHub Secrets"
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}"
             export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            export NODE_ENV=production
             export UTHO_ACCESS_KEY="${{ secrets.UTHO_ACCESS_KEY }}"
             export UTHO_SECRET_KEY="${{ secrets.UTHO_SECRET_KEY }}"
             export UTHO_REGION="${{ secrets.UTHO_REGION }}"
@@ -70,16 +44,39 @@ jobs:
             export UTHO_CDN="${{ secrets.UTHO_CDN }}"
             export MSG91_AUTH_KEY="${{ secrets.MSG91_AUTH_KEY }}"
             export URL_EXPIRY_SECONDS="${{ secrets.URL_EXPIRY_SECONDS }}"
+            export NODE_ENV="production"
 
+            echo "📦 Installing dependencies"
             pnpm install
+
+            echo "⚙️ Generating Prisma client"
             pnpm prisma generate
+
+            echo "🔧 Generating TypeScript enums"
             pnpm run generate:enums
+
+            echo "⚙️ Building the application"
             pnpm build
-            pnpm prisma migrate deploy
-            pnpm exec puppeteer browsers install chrome
 
-            cd /var/www/theracure
-            pm2 reload mstheracure-dashboard --env production
+            echo "🗄️ Running Prisma migrations"
+            pnpm prisma migrate deploy || { echo "❌ Error: Failed to deploy Prisma migrations. Exiting."; exit 1; }
 
-            pm2 save
+            echo "🧑‍💻 Installing Puppeteer Chrome"
+            pnpm exec puppeteer browsers install chrome || { echo "❌ Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
+
+            echo "📋 Copying ecosystem config to deployment directory"
+            cp ecosystem.config.js /var/www/html/ecosystem.config.js
+
+            echo "🚀 Restarting Dashboard with PM2"
+            pm2 startOrRestart /var/www/html/ecosystem.config.js --env production --only dashboard
+
+            echo "📨 Restarting SMS Worker with PM2"
+            pm2 startOrRestart /var/www/html/ecosystem.config.js --env production --only sms-worker
+
+            echo "✅ PM2 status check"
             pm2 status
+
+            echo "💾 Saving PM2 process list"
+            pm2 save
+
+            echo "🎉 Deployment complete!"
