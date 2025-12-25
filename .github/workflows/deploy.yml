@@ -65,13 +65,13 @@ jobs:
             pnpm exec puppeteer browsers install chrome || { echo "❌ Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
 
             echo "📋 Copying ecosystem config to deployment directory"
-            cp ecosystem.config.js /var/www/html/ecosystem.config.js
+            cp ecosystem.config.js /var/www/theracure/ecosystem.config.js
 
             echo "🚀 Restarting Dashboard with PM2"
-            pm2 startOrRestart /var/www/html/ecosystem.config.js --env production --only dashboard
+            pm2 startOrRestart /var/www/theracure/ecosystem.config.js --env production --only dashboard
 
             echo "📨 Restarting SMS Worker with PM2"
-            pm2 startOrRestart /var/www/html/ecosystem.config.js --env production --only sms-worker
+            pm2 startOrRestart /var/www/theracure/ecosystem.config.js --env production --only sms-worker
 
             echo "✅ PM2 status check"
             pm2 status
