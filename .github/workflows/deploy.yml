@@ -68,9 +68,11 @@ jobs:
             cp ecosystem.config.js /var/www/theracure/ecosystem.config.js
 
             echo "🚀 Restarting Dashboard with PM2"
-            pm2 startOrRestart /var/www/theracure/ecosystem.config.js --env production --only dashboard
+            pm2 delete dashboard
+            pm2 start /var/www/theracure/ecosystem.config.js --env production --only dashboard
 
             echo "📨 Restarting SMS Worker with PM2"
+            pm2 delete sms-worker
             pm2 startOrRestart /var/www/theracure/ecosystem.config.js --env production --only sms-worker
 
             echo "✅ PM2 status check"

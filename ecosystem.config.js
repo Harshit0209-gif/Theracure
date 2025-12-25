@@ -2,10 +2,10 @@ module.exports = {
   apps: [
     {
       name: "dashboard",
-      script: "pnpm",
-      args: "start",
+      script: "node_modules/next/dist/bin/next",
+      args: "start -p 3001",
       cwd: "/var/www/theracure/Theracure-Dashboard",
-      env: {
+      env_production: {
         NODE_ENV: "production",
       },
       instances: 1,
@@ -19,10 +19,10 @@ module.exports = {
     },
     {
       name: "sms-worker",
-      script: "pnpm",
-      args: "worker:sms",
+      script: "node_modules/.bin/ts-node",
+      args: "-r tsconfig-paths/register workers/sms-worker.ts",
       cwd: "/var/www/theracure/Theracure-Dashboard",
-      env: {
+      env_production: {
         NODE_ENV: "production",
       },
       instances: 1,
