@@ -69,7 +69,7 @@ const generateAssessmentPDF = async (assessment: any) => {
         .trim();
     };
 
-    const renderSection = (label: string, value: any) => {
+    const renderSection = (label: string, value: any, fullWidth = false) => {
       if (!hasValue(value)) return "";
 
       let contentHtml = "";
@@ -90,7 +90,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           .join("");
 
         if (!items) return "";
-        contentHtml = `<div class="val-list">${items}</div>`;
+        contentHtml = `<div class="val-list ${fullWidth ? 'horizontal-list' : ''}">${items}</div>`;
       } else {
         return "";
       }
@@ -117,11 +117,47 @@ const generateAssessmentPDF = async (assessment: any) => {
         parts += `<div class="sub-item"><span class="sub-key">SPO2:</span> <span class="sub-val">${vitals.spo2}%</span></div>`;
 
       if (!parts) return "";
+      return parts;
+    };
 
-      return `
+    const renderExaminationSection = () => {
+       const vitalsHtml = renderVitalsText();
+       const motor = assessmentData?.motorExamination;
+       const neuro = assessmentData?.neurologicalExamination; // Corrected from neurologicalExam based on interface but using what's in assessmentData which seems to be neurologicalExamination in generator
+
+       // Check if there is anything to render
+       const hasVitals = !!vitalsHtml;
+       const hasMotor = hasValue(motor);
+       const hasNeuro = hasValue(neuro);
+
+       if (!hasVitals && !hasMotor && !hasNeuro) return "";
+
+       let content = "";
+       if (hasVitals) {
+           content += `<div class="exam-sub-group"><div class="exam-sub-title">Vitals</div><div class="val-list horizontal-list">${vitalsHtml}</div></div>`;
+       }
+       
+       if (hasMotor) {
+         // Re-use render logic for objects but inline
+         const items = Object.entries(motor)
+          .filter(([_, v]) => hasValue(v))
+          .map(([k, v]) => `<div class="sub-item"><span class="sub-key">${formatKey(k)}:</span><span class="sub-val">${v}</span></div>`)
+          .join("");
+         if (items) content += `<div class="exam-sub-group"><div class="exam-sub-title">Motor Examination</div><div class="val-list horizontal-list">${items}</div></div>`;
+       }
+
+       if (hasNeuro) {
+         const items = Object.entries(neuro)
+          .filter(([_, v]) => hasValue(v))
+          .map(([k, v]) => `<div class="sub-item"><span class="sub-key">${formatKey(k)}:</span><span class="sub-val">${v}</span></div>`)
+          .join("");
+         if (items) content += `<div class="exam-sub-group"><div class="exam-sub-title">Neurological Examination</div><div class="val-list horizontal-list">${items}</div></div>`;
+       }
+
+       return `
         <div class="section-block">
-          <div class="sec-title">On Examination (Vitals)</div>
-          <div class="sec-content"><div class="val-list horizontal-list">${parts}</div></div>
+          <div class="sec-title">On Examination</div>
+          <div class="sec-content">${content}</div>
         </div>`;
     };
 
@@ -164,6 +200,17 @@ const generateAssessmentPDF = async (assessment: any) => {
         </div>
       `;
     };
+    
+    const renderVAS = () => {
+        const pain = assessmentData?.painHistory;
+        const vas = pain?.vasScore;
+        // Check for array of scores if simple score is not present or we want both?
+        // Prompt says "VAS Score".
+        if (hasValue(vas)) {
+            return `<div class="vas-box"><strong>VAS Score:</strong> ${vas} / 10</div>`;
+        }
+        return "";
+    };
 
     // --- HTML Template ---
     const htmlTemplate = `
@@ -174,11 +221,11 @@ const generateAssessmentPDF = async (assessment: any) => {
     <title>OPD Assessment Sheet</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
-      @page { size: A4; margin: 8mm 8mm 12mm 8mm; }
+      @page { size: A4; margin: 6mm 8mm 10mm 8mm; }
       * { box-sizing: border-box; }
       body {
         font-family: 'Roboto', sans-serif;
-        font-size: 10pt;
+        font-size: 9.5pt;
         color: #000;
         margin: 0; padding: 0;
         line-height: 1.25;
@@ -188,54 +235,78 @@ const generateAssessmentPDF = async (assessment: any) => {
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         width: 60%; max-width: 500px; opacity: 0.08; z-index: -1000; filter: grayscale(100%);
       }
+      
       /* Header */
-      .header-wrapper { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 5px; border-bottom: 3px solid #00aeef; margin-bottom: 10px; background: rgba(255,255,255,0.9); }
-      .header-left { width: 50%; display: flex; flex-direction: column; align-items: flex-start; }
-      .logo-img { width: 220px; max-width: 100%; height: auto; object-fit: contain; display: block; margin-bottom: 2px; }
-      .clinic-address-block { font-size: 8.5pt; color: #222; text-align: left; line-height: 1.3; }
-      .address-line { display: block; }
-      .time-line { color: #ed1c24; font-weight: 700; margin-top: 2px; display: block; }
-      .contact-line { font-weight: 500; display: block; }
-      /* Doctor */
-      .header-right { width: 48%; display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding-top: 5px; }
-      .dr-name { font-size: 18pt; font-weight: 900; color: #ed1c24; margin-bottom: 5px; line-height: 1; }
-      .dr-section-qual { margin-bottom: 10px; }
-      .dr-qual { font-size: 9pt; font-weight: 700; color: #0054a6; }
-      .dr-section-exp { font-size: 8pt; color: #C71585; line-height: 1.3; }
-      .dr-exp-item { display: block; }
+      .header-wrapper { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 5px; border-bottom: 2px solid #00aeef; margin-bottom: 8px; }
+      .header-left { width: 55%; display: flex; flex-direction: column; align-items: flex-start; }
+      .logo-img { width: 280px; max-width: 100%; height: auto; object-fit: contain; display: block; margin-bottom: 5px; }
+      
+      .clinic-address-block { font-size: 8pt; color: #444; text-align: left; line-height: 1.35; margin-left: 2px; }
+      .address-line { display: block; font-weight: 500; }
+      .info-line { display: block; margin-top: 1px; }
+      .info-label { font-weight: 600; color: #222; }
+
+      /* Doctor Info */
+      .header-right { width: 45%; display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding-top: 5px; }
+      .dr-block { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+      .dr-line-1 { font-size: 16pt; font-weight: 900; color: #ed1c24; line-height: 1.1; } /* Name */
+      .dr-line-2 { font-size: 9pt; font-weight: 700; color: #0054a6; } /* Reg No */
+      .dr-line-3 { font-size: 9pt; font-weight: 600; color: #2e7d32; } /* Degrees */
+      .dr-line-4 { font-size: 8.5pt; font-weight: 500; color: #e65100; } /* Present Pos */
+      .dr-line-5 { font-size: 8pt; font-style: italic; color: #6a1b9a; } /* Prev Pos */
+
       /* Title */
-      .sheet-title { text-align: center; margin: 5px 0 15px 0; }
-      .title-badge { background-color: #1a237e; color: white; padding: 4px 25px; border-radius: 15px; font-weight: bold; font-size: 11pt; text-transform: uppercase; }
-      /* Patient */
-      .patient-grid { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 10pt; background: rgba(253, 253, 253, 0.9); padding: 5px; border: 1px solid #eee; border-radius: 4px; }
-      .pg-col { width: 49%; display: flex; flex-direction: column; gap: 5px; }
+      .sheet-title { text-align: center; margin: 5px 0 10px 0; }
+      .title-badge { background-color: #1a237e; color: white; padding: 3px 20px; border-radius: 12px; font-weight: bold; font-size: 10pt; text-transform: uppercase; }
+
+      /* Patient Grid */
+      .patient-grid { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 9pt; background: #f8f9fa; padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
+      .pg-col { width: 49%; display: flex; flex-direction: column; gap: 4px; }
       .info-row { display: flex; align-items: baseline; }
-      .info-label { color: #0054a6; font-weight: 600; min-width: 85px; font-size: 9pt; }
-      .info-val { flex: 1; border-bottom: 1px dotted #ccc; color: #000; padding-left: 5px; font-weight: 500; }
-      /* Content */
-      .content-area { display: flex; gap: 15px; position: relative; }
-      .col-text { width: 72%; }
-      .col-img { width: 28%; display: flex; flex-direction: column; align-items: center; }
+      .p-label { color: #0054a6; font-weight: 700; min-width: 75px; font-size: 8.5pt; }
+      .p-val { flex: 1; border-bottom: 1px dotted #ccc; color: #000; padding-left: 5px; font-weight: 500; }
+
+      /* Layout Containers */
+      .main-container { display: flex; flex-direction: column; gap: 8px; }
+      
+      /* History & Image Section */
+      .history-section-wrapper { display: flex; gap: 15px; }
+      .history-text-col { width: 70%; display: flex; flex-direction: column; gap: 8px; }
+      .history-img-col { width: 30%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; }
+
       /* Sections */
-      .section-block { margin-bottom: 10px; }
-      .sec-title { color: #0054a6; font-weight: 700; font-size: 10pt; margin-bottom: 2px; text-transform: uppercase; border-bottom: 1px solid #e0e0e0; display: inline-block; padding-bottom: 1px; }
-      .sec-content { font-size: 9.5pt; color: #333; padding-left: 2px; margin-top: 2px; }
+      .section-block { margin-bottom: 8px; width: 100%; }
+      .sec-title { color: #0054a6; font-weight: 700; font-size: 9.5pt; margin-bottom: 2px; text-transform: uppercase; border-bottom: 1px solid #e0e0e0; display: inline-block; padding-bottom: 1px; }
+      .sec-content { font-size: 9pt; color: #333; padding-left: 2px; margin-top: 2px; }
+      
       .val-list { display: flex; flex-direction: column; gap: 1px; }
-      .horizontal-list { flex-direction: row; flex-wrap: wrap; gap: 10px; }
+      .horizontal-list { flex-direction: row; flex-wrap: wrap; gap: 12px; }
       .sub-item { display: flex; align-items: baseline; }
-      .sub-key { font-weight: 600; color: #555; margin-right: 5px; font-size: 9pt; text-transform: capitalize; }
-      .val-text { white-space: pre-wrap; line-height: 1.35; text-align: justify; }
+      .sub-key { font-weight: 600; color: #555; margin-right: 4px; font-size: 8.5pt; }
+      .sub-val { font-size: 9pt; }
+      .val-text { white-space: pre-wrap; line-height: 1.3; text-align: justify; }
+
+      /* Examination Subgroups */
+      .exam-sub-group { margin-bottom: 4px; }
+      .exam-sub-title { font-size: 8.5pt; font-weight: 600; color: #444; text-decoration: underline; margin-bottom: 2px; }
+
       /* Images */
-      .body-img { width: 100%; max-width: 160px; opacity: 0.95; margin-top: 5px; margin-bottom: 15px; }
-      .diag-labels { display: flex; justify-content: space-between; width: 100%; max-width: 160px; font-size: 8pt; font-weight: bold; }
-      /* BMI */
-      .bmi-container { width: 100%; margin-top: 5px; padding: 5px; border: 1px solid #eee; border-radius: 4px; background: #fff; }
-      .bmi-title { font-size: 9pt; font-weight: bold; color: #333; text-align: center; margin-bottom: 3px; }
-      .bmi-bar { display: flex; height: 12px; width: 100%; border-radius: 6px; overflow: hidden; position: relative; margin-bottom: 3px; }
+      .body-img { width: 100%; max-width: 130px; opacity: 0.95; margin-bottom: 8px; }
+      .diag-labels { display: flex; justify-content: space-between; width: 100%; max-width: 130px; font-size: 7pt; font-weight: bold; margin-bottom: 2px; }
+
+      /* BMI & VAS */
+      .bmi-container { width: 100%; margin-top: 5px; padding: 4px; border: 1px solid #eee; border-radius: 4px; background: #fff; }
+      .bmi-title { font-size: 8pt; font-weight: bold; color: #333; text-align: center; margin-bottom: 2px; }
+      .bmi-bar { display: flex; height: 10px; width: 100%; border-radius: 5px; overflow: hidden; position: relative; margin-bottom: 2px; }
       .bmi-segment { height: 100%; }
       .seg-under { background: #f97316; } .seg-normal { background: #16a34a; } .seg-over { background: #eab308; } .seg-obese { background: #dc2626; }
-      .bmi-pointer { position: absolute; top: -6px; transform: translateX(-50%); color: #000; font-size: 8px; font-weight: bold; }
-      .bmi-labels { display: flex; justify-content: space-between; font-size: 6px; color: #666; text-transform: uppercase; font-weight: 600; }
+      .bmi-pointer { position: absolute; top: -5px; transform: translateX(-50%); color: #000; font-size: 7px; font-weight: bold; }
+      .bmi-labels { display: flex; justify-content: space-between; font-size: 5px; color: #666; text-transform: uppercase; font-weight: 600; }
+      
+      .vas-box { width: 100%; text-align: center; margin-top: 8px; padding: 4px; background: #ffebee; border-radius: 4px; font-size: 9pt; color: #c62828; border: 1px solid #ffcdd2; }
+
+      /* Footer Elements */
+      .signature-img { height: 40px; width: auto; max-width: 120px; display: block; margin-left: auto; margin-right: 0; }
     </style>
   </head>
   <body>
@@ -245,35 +316,30 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div class="header-left">
           ${logoBase64 ? `<img class="logo-img" src="${logoBase64}" />` : ""}
           <div class="clinic-address-block">
-            <span class="address-line">361/A, Basudevpur Road, Ground Floor</span>
+             <span class="address-line">361/A, Basudevpur Road, Ground Floor</span>
             <span class="address-line">'Nilanjana' Apartment, Shyamnagar</span>
             <span class="address-line">24 Pgs (N), Pin - 743127</span>
-            <span class="time-line">Time: Mon to Sat (9:00 AM to 7:00 PM)</span>
-            <span class="contact-line">Tel: (033) 3564 7255 | +91 9082125253</span>
+            <span class="info-line"><span class="info-label">Email:</span> contacts@mstheracure.com</span>
+            <span class="info-line"><span class="info-label">Web:</span> www.mstheracure.com</span>
+            <span class="info-line"><span class="info-label">Time:</span> Mon to Sat (9:00 AM - 8:00 PM)</span>
+            <span class="info-line"><span class="info-label">Ph:</span> 033-3564-7255 | 6290926667</span>
           </div>
         </div>
         <div class="header-right">
-          <div class="dr-name">${
-            therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"
-          }</div>
-          <div class="dr-section-qual">
-            <div class="dr-qual">${
-              therapist?.qualification ||
-              "B.P.T [W.B.U.H.S], CDNT<br>Co-Founder & Consultant Physiotherapist"
-            }</div>
-          </div>
-          <div class="dr-section-exp">
-            ${
-              therapist?.specialization
-                ? therapist.specialization
-                    .split(",")
-                    .map(
-                      (s: string) =>
-                        `<span class="dr-exp-item">• ${s.trim()}</span>`
-                    )
-                    .join("")
-                : `<span class="dr-exp-item">• Ex-Intern Physiotherapist of Belle Vue Clinic</span>`
-            }
+          <div class="dr-block">
+             <div class="dr-line-1">${
+               therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"
+             }</div>
+             <div class="dr-line-2">Reg No: ${therapist?.regNo || "L-48489"}</div>
+             <div class="dr-line-3">${
+               therapist?.qualification || "B.P.T [W.B.U.H.S], CDNT"
+             }</div>
+             <div class="dr-line-4">${
+                therapist?.specialization?.split(',')[0] || "Co-Founder & Consultant Physiotherapist"
+             }</div>
+             <div class="dr-line-5">${
+                therapist?.experiences || (therapist?.specialization?.includes(',') ? "Ex-Intern Physiotherapist of Belle Vue Clinic" : "")
+             }</div>
           </div>
         </div>
       </div>
@@ -282,29 +348,29 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       <div class="patient-grid">
         <div class="pg-col">
-          <div class="info-row"><span class="info-label">Name:</span><span class="info-val">${
+          <div class="info-row"><span class="p-label">Name:</span><span class="p-val">${
             patientInfo?.patientName ||
             patientInfo?.name ||
             assessmentData?.patientName ||
             ""
           }</span></div>
-          <div class="info-row"><span class="info-label">Age / Sex:</span><span class="info-val">${
+          <div class="info-row"><span class="p-label">Age / Sex:</span><span class="p-val">${
             patientInfo?.age || assessmentData?.age || ""
           } / ${
       patientInfo?.gender || assessmentData?.gender || ""
     }</span></div>
-          <div class="info-row"><span class="info-label">Chief C/O:</span><span class="info-val">${
+          <div class="info-row"><span class="p-label">Chief C/O:</span><span class="p-val">${
             assessmentData?.chiefComplaints || ""
           }</span></div>
         </div>
         <div class="pg-col">
-          <div class="info-row"><span class="info-label">Patient ID:</span><span class="info-val">${
+          <div class="info-row"><span class="p-label">Patient ID:</span><span class="p-val">${
             assessmentData?.patientId || patientInfo?.patientId || "THRC"
           }</span></div>
-          <div class="info-row"><span class="info-label">Date:</span><span class="info-val">${new Date(
+          <div class="info-row"><span class="p-label">Date:</span><span class="p-val">${new Date(
             assessmentData?.assessmentDate || Date.now()
           ).toLocaleDateString("en-IN")}</span></div>
-          <div class="info-row"><span class="info-label">Ht / Wt:</span><span class="info-val">${
+          <div class="info-row"><span class="p-label">Ht / Wt:</span><span class="p-val">${
             assessmentData?.vitals?.height || patientInfo?.height || "__"
           } cm | ${
       assessmentData?.vitals?.weight || patientInfo?.weight || "__"
@@ -312,56 +378,38 @@ const generateAssessmentPDF = async (assessment: any) => {
         </div>
       </div>
 
-      <div class="content-area">
-        <div class="col-text">
-          ${renderSection(
-            "History (H/O)",
-            assessmentData?.historyOfPresentIllness ||
-              assessmentData?.historyOfIllness
-          )}
-          
-          ${renderSection("Pain History", assessmentData?.painHistory)}
-          
-          ${renderVitalsText()}
-          
-          ${renderSection("On Observation", assessmentData?.onObservation)}
-          
-          ${renderSection("On Palpation", assessmentData?.onPalpation)}
-          
-          ${renderSection(
-            "Motor Examination",
-            assessmentData?.motorExamination
-          )}
+      <div class="main-container">
+          <!-- History and Image Row -->
+          <div class="history-section-wrapper">
+             <div class="history-text-col">
+                ${renderSection(
+                  "History",
+                  assessmentData?.historyOfPresentIllness ||
+                    assessmentData?.historyOfIllness
+                )}
+                ${renderSection("Medical History", assessmentData?.medicalHistory)}
+                ${renderSection("Pain History", assessmentData?.painHistory)}
+             </div>
+             <div class="history-img-col">
+                 ${
+                   bodyBase64
+                     ? `<div class="diag-labels"><span>R</span> <span>L</span> <span>L</span> <span>R</span></div><img src="${bodyBase64}" class="body-img" />`
+                     : ""
+                 }
+                 ${renderBMIChart()}
+                 ${renderVAS()}
+             </div>
+          </div>
 
-          ${renderSection(
-            "Neurological Examination",
-            assessmentData?.neurologicalExamination
-          )}
-
-          ${renderSection("Special Tests", assessmentData?.specialTests)}
-          ${renderSection(
-            "Differential Diagnosis",
-            assessmentData?.differentialDiagnosis
-          )}
+          <!-- Other Sections -->
+          ${renderSection("On Observation", assessmentData?.onObservation, true)}
+          ${renderSection("On Palpation", assessmentData?.onPalpation, true)}
+          ${renderExaminationSection()}
+          ${renderSection("Differential Diagnosis", assessmentData?.differentialDiagnosis)}
           ${renderSection("Investigations", assessmentData?.investigations)}
-          ${renderSection(
-            "Provisional Diagnosis",
-            assessmentData?.provisionalDiagnosis
-          )}
-          ${renderSection(
-            "Physiotherapy Management",
-            assessmentData?.physiotherapyMgmt
-          )}
-        </div>
-
-        <div class="col-img">
-          ${
-            bodyBase64
-              ? `<div class="diag-labels"><span>R</span> <span>L</span> <span>L</span> <span>R</span></div><img src="${bodyBase64}" class="body-img" />`
-              : ""
-          }
-          ${renderBMIChart()}
-        </div>
+          ${renderSection("Special Tests", assessmentData?.specialTests)}
+          ${renderSection("Provisional Diagnosis", assessmentData?.provisionalDiagnosis)}
+          ${renderSection("Physiotherapy Management", assessmentData?.physiotherapyMgmt)}
       </div>
     </div>
   </body>
@@ -376,15 +424,25 @@ const generateAssessmentPDF = async (assessment: any) => {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "8mm", right: "8mm", bottom: "15mm", left: "8mm" },
+      margin: { top: "6mm", right: "8mm", bottom: "12mm", left: "8mm" },
       displayHeaderFooter: true,
       headerTemplate: "<div></div>",
       footerTemplate: `
-        <div style="width: 100%; font-size: 10px; font-family: 'Roboto', sans-serif;">
-          <div style="margin-right: 40px; text-align: right; margin-bottom: 20px;">
-             <div style="font-family: serif; font-style: italic; font-weight: bold; font-size: 16px; color: #000;">Signature</div>
+        <div style="width: 100%; font-size: 10px; font-family: 'Roboto', sans-serif; padding-right: 8mm; padding-left: 8mm;">
+          <div style="display: flex; justify-content: flex-end; align-items: flex-end; margin-bottom: 10px;">
+             <div style="text-align: right;">
+                 <!-- Digital Signature Placeholder -->
+                 <div style="font-family: 'Dancing Script', cursive; font-size: 20px; color: #000; margin-bottom: 2px;">
+                    ${therapist?.user?.name || therapist?.name || "Signature"}
+                 </div>
+                 <div style="border-top: 1px solid #000; width: 150px; display: inline-block;"></div>
+                 <div style="font-size: 8px; font-weight: bold; margin-top: 1px;">DIGITAL SIGNATURE</div>
+             </div>
           </div>
-          <div style="background-color: #ed1c24; color: white; text-align: center; padding: 4px; font-weight: bold; font-size: 8px; -webkit-print-color-adjust: exact;">
+          <div style="text-align: center; margin-bottom: 5px; font-weight: bold; font-size: 10pt; color: #333;">
+             --- End of Prescription ---
+          </div>
+          <div style="background-color: #ed1c24; color: white; text-align: center; padding: 4px; font-weight: bold; font-size: 8px; -webkit-print-color-adjust: exact; border-radius: 2px;">
             IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
           </div>
         </div>
