@@ -19,8 +19,8 @@ module.exports = {
     },
     {
       name: "sms-worker",
-      script: "node_modules/.bin/ts-node",
-      args: "-r tsconfig-paths/register workers/sms-worker.ts",
+      script: "node_modules/ts-node/dist/bin.js",
+      args: "-r tsconfig-paths/register --compiler-options '{\"module\":\"CommonJS\"}' workers/sms-worker.ts",
       cwd: "/var/www/theracure/Theracure-Dashboard",
       env_production: {
         NODE_ENV: "production",
