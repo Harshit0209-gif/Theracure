@@ -297,8 +297,8 @@ export const PrescriptionDetailsView: React.FC<
               </div>
               <div>
                 <span className="text-gray-600">Gender</span>
-                <p className="font-medium">
-                  {prescription.patient.gender === "M" ? "Male" : "Female"}
+                <p className="font-medium capitalize">
+                  {prescription.patient.gender}
                 </p>
               </div>
             </div>

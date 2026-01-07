@@ -107,7 +107,6 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
         </Button>
       </DialogTrigger>
       <DialogContent
-        onClose={() => reset()}
         className="w-full max-w-6xl max-h-[95vh] overflow-y-auto p-0"
       >
         <div className="p-6">
@@ -120,7 +119,7 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
           {Object.keys(errors).length > 0 && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
               <p className="text-sm font-medium">
-                Please correct the errors below to continue ,
+                Please correct the errors below to continue.
               </p>
             </div>
           )}

@@ -220,7 +220,7 @@ export function PatientManagementSection() {
         </div>
       </div>
 
-      <div className="bg-white rounded-b-lg  bg-white">
+      <div className="bg-white rounded-b-lg">
         <Table>
           <TableHeader>
             <TableRow className="bg-indigo-700">
@@ -285,7 +285,7 @@ export function PatientManagementSection() {
                   <TableCell className="capitalize">{patient.gender}</TableCell>
                   <TableCell>{patient.phone || "N/A"}</TableCell>
                   <TableCell>
-                    <div className="flex items-center justify space-x-1">
+                    <div className="flex items-center space-x-1">
                       <Button
                         variant="ghost"
                         size="sm"

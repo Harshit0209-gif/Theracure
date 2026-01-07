@@ -18,7 +18,7 @@ export const createPatientSchema = z
       .or(z.literal(""))
       .nullable(),
     address: z.string().min(1, "Address is required"),
-    age: z.number().min(0, "Age must be a positive number"),
+    age: z.number().min(0, "Age must be a positive number").optional().nullable(),
     gender: z.enum(["Male", "Female", "Other"]),
     height: z
       .number()
