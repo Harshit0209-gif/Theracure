@@ -6,8 +6,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/contexts/auth-context";
@@ -45,6 +46,13 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
   } = useForm<PatientFormData>({
     resolver: zodResolver(createPatientSchema),
   });
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      reset();
+    }
+  }, [open, reset]);
 
   const onSubmit = async (data: PatientFormData) => {
     console.log("user ", user);
@@ -106,29 +114,32 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
           New Patient
         </Button>
       </DialogTrigger>
-      <DialogContent
-        className="w-full max-w-6xl max-h-[95vh] overflow-y-auto p-0"
-      >
-        <div className="p-6">
-          <DialogHeader className="mb-6">
+      <DialogContent className="w-full max-w-6xl h-[95vh] flex flex-col p-0 gap-0">
+        {/* Fixed Header */}
+        <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b bg-white">
+          <DialogHeader>
             <DialogTitle className="text-2xl font-semibold text-gray-900">
               New Patient Registration
             </DialogTitle>
           </DialogHeader>
 
           {Object.keys(errors).length > 0 && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mt-4">
               <p className="text-sm font-medium">
                 Please correct the errors below to continue.
               </p>
             </div>
           )}
+        </div>
 
+        {/* Scrollable Form Content */}
+        <ScrollArea className="flex-1 px-6">
           <form
+            id="patient-form"
             onSubmit={handleSubmit(onSubmit, (errors) => {
               console.log("Form submission failed with errors:", errors);
             })}
-            className="space-y-8"
+            className="space-y-8 py-6"
           >
             {/* Basic Information Section */}
             <div className="bg-gray-50 p-6 rounded-lg">
@@ -197,7 +208,7 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" sideOffset={5}>
                           <SelectItem value="Male">Male</SelectItem>
                           <SelectItem value="Female">Female</SelectItem>
                           <SelectItem value="Other">Other</SelectItem>
@@ -320,33 +331,35 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
                 </div>
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="flex justify-end items-center pt-6 border-t border-gray-200 gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                className="px-6 py-2"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 min-w-[160px]"
-              >
-                {isLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                    Adding...
-                  </div>
-                ) : (
-                  "Add Patient"
-                )}
-              </Button>
-            </div>
           </form>
+        </ScrollArea>
+
+        {/* Fixed Footer */}
+        <div className="flex-shrink-0 flex justify-end items-center px-6 py-4 border-t bg-white gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isLoading}
+            className="px-6 py-2"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="patient-form"
+            disabled={isLoading}
+            className="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 min-w-[160px]"
+          >
+            {isLoading ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                Adding...
+              </div>
+            ) : (
+              "Add Patient"
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
