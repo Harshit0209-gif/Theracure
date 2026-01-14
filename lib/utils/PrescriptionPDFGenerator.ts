@@ -78,12 +78,12 @@ const generateAssessmentPDF = async (assessment: any) => {
         contentHtml = `<div class="val-text">${value}</div>`;
       } else if (typeof value === "object" && !Array.isArray(value)) {
         const items = Object.entries(value)
-          .filter(([_, v]) => hasValue(v))
+          .filter(([k, v]) => hasValue(v))
           .map(
             ([k, v]) => `
             <div class="sub-item">
               <span class="sub-key">${formatKey(k)}:</span>
-              <span class="sub-val">${v}</span>
+              <span class="sub-val">${typeof v === 'object' ? JSON.stringify(v) : v}</span>
             </div>
           `
           )
@@ -123,7 +123,7 @@ const generateAssessmentPDF = async (assessment: any) => {
     const renderExaminationSection = () => {
        const vitalsHtml = renderVitalsText();
        const motor = assessmentData?.motorExamination;
-       const neuro = assessmentData?.neurologicalExamination; // Corrected from neurologicalExam based on interface but using what's in assessmentData which seems to be neurologicalExamination in generator
+       const neuro = assessmentData?.neurologicalExam || assessmentData?.neurologicalExamination;
 
        // Check if there is anything to render
        const hasVitals = !!vitalsHtml;
@@ -136,7 +136,7 @@ const generateAssessmentPDF = async (assessment: any) => {
        if (hasVitals) {
            content += `<div class="exam-sub-group"><div class="exam-sub-title">Vitals</div><div class="val-list horizontal-list">${vitalsHtml}</div></div>`;
        }
-       
+
        if (hasMotor) {
          // Re-use render logic for objects but inline
          const items = Object.entries(motor)
@@ -201,15 +201,74 @@ const generateAssessmentPDF = async (assessment: any) => {
       `;
     };
     
-    const renderVAS = () => {
-        const pain = assessmentData?.painHistory;
-        const vas = pain?.vasScore;
-        // Check for array of scores if simple score is not present or we want both?
-        // Prompt says "VAS Score".
-        if (hasValue(vas)) {
-            return `<div class="vas-box"><strong>VAS Score:</strong> ${vas} / 10</div>`;
+    const renderPainHistoryWithVAS = (painHistory: any) => {
+        if (!hasValue(painHistory)) return "";
+
+        let contentHtml = "";
+
+        // Render basic pain history fields (excluding vasScores)
+        const items = Object.entries(painHistory)
+          .filter(([k, v]) => {
+            if (k === 'vasScores') return false;
+            return hasValue(v);
+          })
+          .map(
+            ([k, v]) => `
+            <div class="sub-item">
+              <span class="sub-key">${formatKey(k)}:</span>
+              <span class="sub-val">${typeof v === 'object' ? JSON.stringify(v) : v}</span>
+            </div>
+          `
+          )
+          .join("");
+
+        if (items) {
+          contentHtml = `<div class="val-list">${items}</div>`;
         }
-        return "";
+
+        // Add VAS scores table if available
+        const vasScores = painHistory?.vasScores;
+        if (Array.isArray(vasScores) && vasScores.length > 0) {
+            const tableRows = vasScores
+                .map((entry: any) => `
+                    <tr>
+                        <td>${entry.location || '-'}</td>
+                        <td>${entry.activity || '-'}</td>
+                        <td>${entry.timeOfDay || '-'}</td>
+                        <td class="score-cell">${entry.vasScore}/10</td>
+                    </tr>
+                `)
+                .join('');
+
+            const vasTable = `
+                <div class="vas-table-container" style="margin-top: 8px;">
+                    <div class="vas-table-title">VAS Pain Scores</div>
+                    <table class="vas-table">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>Activity</th>
+                                <th>Time</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            contentHtml += vasTable;
+        }
+
+        if (!contentHtml) return "";
+
+        return `
+          <div class="section-block">
+            <div class="sec-title">Pain History</div>
+            <div class="sec-content">${contentHtml}</div>
+          </div>`;
     };
 
     // --- HTML Template ---
@@ -302,8 +361,18 @@ const generateAssessmentPDF = async (assessment: any) => {
       .seg-under { background: #f97316; } .seg-normal { background: #16a34a; } .seg-over { background: #eab308; } .seg-obese { background: #dc2626; }
       .bmi-pointer { position: absolute; top: -5px; transform: translateX(-50%); color: #000; font-size: 7px; font-weight: bold; }
       .bmi-labels { display: flex; justify-content: space-between; font-size: 5px; color: #666; text-transform: uppercase; font-weight: 600; }
-      
+
       .vas-box { width: 100%; text-align: center; margin-top: 8px; padding: 4px; background: #ffebee; border-radius: 4px; font-size: 9pt; color: #c62828; border: 1px solid #ffcdd2; }
+
+      /* VAS Table */
+      .vas-table-container { width: 100%; margin-top: 8px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: #fff; }
+      .vas-table-title { font-size: 8pt; font-weight: bold; color: #fff; background: #c62828; padding: 3px 6px; text-align: center; }
+      .vas-table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+      .vas-table thead { background: #f5f5f5; }
+      .vas-table th { padding: 3px 4px; text-align: left; font-weight: 600; color: #444; border-bottom: 2px solid #ddd; font-size: 7pt; }
+      .vas-table td { padding: 3px 4px; border-bottom: 1px solid #eee; color: #333; }
+      .vas-table tbody tr:last-child td { border-bottom: none; }
+      .vas-table .score-cell { font-weight: bold; color: #c62828; text-align: center; }
 
       /* Footer Elements */
       .signature-img { height: 40px; width: auto; max-width: 120px; display: block; margin-left: auto; margin-right: 0; }
@@ -388,7 +457,10 @@ const generateAssessmentPDF = async (assessment: any) => {
                     assessmentData?.historyOfIllness
                 )}
                 ${renderSection("Medical History", assessmentData?.medicalHistory)}
-                ${renderSection("Pain History", assessmentData?.painHistory)}
+                ${renderSection("Surgical History", assessmentData?.surgicalHistory)}
+                ${renderSection("Occupational History", assessmentData?.occupationalHistory)}
+                ${renderSection("Environmental History", assessmentData?.environmentalHistory)}
+                ${renderPainHistoryWithVAS(assessmentData?.painHistory)}
              </div>
              <div class="history-img-col">
                  ${
@@ -397,7 +469,6 @@ const generateAssessmentPDF = async (assessment: any) => {
                      : ""
                  }
                  ${renderBMIChart()}
-                 ${renderVAS()}
              </div>
           </div>
 
@@ -410,6 +481,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           ${renderSection("Special Tests", assessmentData?.specialTests)}
           ${renderSection("Provisional Diagnosis", assessmentData?.provisionalDiagnosis)}
           ${renderSection("Physiotherapy Management", assessmentData?.physiotherapyMgmt)}
+          ${renderSection("Additional Notes", assessmentData?.notes)}
       </div>
     </div>
   </body>

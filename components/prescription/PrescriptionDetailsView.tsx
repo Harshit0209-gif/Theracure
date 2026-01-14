@@ -140,6 +140,7 @@ export const PrescriptionDetailsView: React.FC<
         Object.values(value).some((v: any) => {
           if (typeof v === "string") return v.trim() !== "";
           if (typeof v === "number") return v !== 0;
+          if (Array.isArray(v)) return v.length > 0;
           return v !== null && v !== undefined;
         });
 
@@ -150,12 +151,80 @@ export const PrescriptionDetailsView: React.FC<
           <h4 className="font-medium text-gray-900">{label}</h4>
           <div className="space-y-2 pl-4 border-l-2 border-gray-100">
             {Object.entries(value).map(([key, val]: [string, any]) => {
+              // Skip vasScores array - it will be displayed separately
+              if (key === "vasScores" && Array.isArray(val)) {
+                if (val.length === 0) return null;
+
+                return (
+                  <div key={key} className="space-y-2">
+                    <span className="text-sm text-gray-600 font-semibold">
+                      VAS Pain Scores:
+                    </span>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border border-gray-200 rounded-lg text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">Location</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">Activity</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">Time</th>
+                            <th className="px-3 py-2 text-center font-semibold text-gray-700 border-b">Score</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {val.map((score: any, index: number) => (
+                            <tr key={score.id || index} className="border-b last:border-b-0 hover:bg-gray-50">
+                              <td className="px-3 py-2 text-gray-700">{score.location || '-'}</td>
+                              <td className="px-3 py-2 text-gray-700">{score.activity || '-'}</td>
+                              <td className="px-3 py-2 text-gray-700">{score.timeOfDay || '-'}</td>
+                              <td className="px-3 py-2 text-center">
+                                <Badge variant="destructive" className="font-bold">
+                                  {score.vasScore}/10
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              }
+
               if (
                 !val ||
                 (typeof val === "string" && val.trim() === "") ||
-                (typeof val === "number" && val === 0)
+                (typeof val === "number" && val === 0) ||
+                (Array.isArray(val) && val.length === 0)
               )
                 return null;
+
+              // Handle other arrays
+              if (Array.isArray(val)) {
+                return (
+                  <div key={key} className="flex flex-col">
+                    <span className="text-sm text-gray-600 capitalize">
+                      {key.replace(/([A-Z])/g, " $1").trim()}:
+                    </span>
+                    <span className="text-sm text-gray-900 font-medium">
+                      {val.join(", ")}
+                    </span>
+                  </div>
+                );
+              }
+
+              // Handle objects
+              if (typeof val === "object" && val !== null) {
+                return (
+                  <div key={key} className="flex flex-col">
+                    <span className="text-sm text-gray-600 capitalize">
+                      {key.replace(/([A-Z])/g, " $1").trim()}:
+                    </span>
+                    <span className="text-sm text-gray-900 font-medium">
+                      {JSON.stringify(val)}
+                    </span>
+                  </div>
+                );
+              }
 
               return (
                 <div key={key} className="flex justify-between">
