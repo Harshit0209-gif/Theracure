@@ -29,41 +29,32 @@ FROM node:20-bookworm-slim AS runner
 
 RUN apt-get update && apt-get install -y \
     chromium \
-    chromium-sandbox \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
     fonts-liberation \
     libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
     libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
     libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
     libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    libxss1 \
-    libxtst6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxext6 \
+    libgtk-3-0 \
     ca-certificates \
-    openssl \
     && rm -rf /var/lib/apt/lists/*
 
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV CHROMIUM_FLAGS="\
+--no-sandbox \
+--disable-setuid-sandbox \
+--disable-dev-shm-usage \
+--disable-gpu \
+--disable-crash-reporter \
+--disable-features=Crashpad \
+--disable-background-networking \
+--disable-default-apps \
+--disable-extensions \
+"
+
+RUN chmod 1777 /tmp
+
 
 WORKDIR /app
 

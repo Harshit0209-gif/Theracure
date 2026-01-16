@@ -22,6 +22,8 @@ const generateAssessmentPDF = async (assessment: any) => {
         "--no-first-run",
         "--no-zygote",
         "--disable-gpu",
+        "--disable-crash-reporter",
+        "--disable-breakpad",
       ],
       timeout: 30000,
     });
@@ -49,7 +51,6 @@ const generateAssessmentPDF = async (assessment: any) => {
       return Boolean(value);
     };
 
-    // Helper to format keys like "vasScore" -> "VAS Score" or "rom" -> "ROM"
     const formatKey = (key: string) => {
       const upperKeys = ["rom", "arom", "prom", "vas", "hmf", "bp", "spo2"];
 
@@ -83,14 +84,18 @@ const generateAssessmentPDF = async (assessment: any) => {
             ([k, v]) => `
             <div class="sub-item">
               <span class="sub-key">${formatKey(k)}:</span>
-              <span class="sub-val">${typeof v === 'object' ? JSON.stringify(v) : v}</span>
+              <span class="sub-val">${
+                typeof v === "object" ? JSON.stringify(v) : v
+              }</span>
             </div>
           `
           )
           .join("");
 
         if (!items) return "";
-        contentHtml = `<div class="val-list ${fullWidth ? 'horizontal-list' : ''}">${items}</div>`;
+        contentHtml = `<div class="val-list ${
+          fullWidth ? "horizontal-list" : ""
+        }">${items}</div>`;
       } else {
         return "";
       }
@@ -121,40 +126,54 @@ const generateAssessmentPDF = async (assessment: any) => {
     };
 
     const renderExaminationSection = () => {
-       const vitalsHtml = renderVitalsText();
-       const motor = assessmentData?.motorExamination;
-       const neuro = assessmentData?.neurologicalExam || assessmentData?.neurologicalExamination;
+      const vitalsHtml = renderVitalsText();
+      const motor = assessmentData?.motorExamination;
+      const neuro =
+        assessmentData?.neurologicalExam ||
+        assessmentData?.neurologicalExamination;
 
-       // Check if there is anything to render
-       const hasVitals = !!vitalsHtml;
-       const hasMotor = hasValue(motor);
-       const hasNeuro = hasValue(neuro);
+      // Check if there is anything to render
+      const hasVitals = !!vitalsHtml;
+      const hasMotor = hasValue(motor);
+      const hasNeuro = hasValue(neuro);
 
-       if (!hasVitals && !hasMotor && !hasNeuro) return "";
+      if (!hasVitals && !hasMotor && !hasNeuro) return "";
 
-       let content = "";
-       if (hasVitals) {
-           content += `<div class="exam-sub-group"><div class="exam-sub-title">Vitals</div><div class="val-list horizontal-list">${vitalsHtml}</div></div>`;
-       }
+      let content = "";
+      if (hasVitals) {
+        content += `<div class="exam-sub-group"><div class="exam-sub-title">Vitals</div><div class="val-list horizontal-list">${vitalsHtml}</div></div>`;
+      }
 
-       if (hasMotor) {
-         // Re-use render logic for objects but inline
-         const items = Object.entries(motor)
+      if (hasMotor) {
+        // Re-use render logic for objects but inline
+        const items = Object.entries(motor)
           .filter(([_, v]) => hasValue(v))
-          .map(([k, v]) => `<div class="sub-item"><span class="sub-key">${formatKey(k)}:</span><span class="sub-val">${v}</span></div>`)
+          .map(
+            ([k, v]) =>
+              `<div class="sub-item"><span class="sub-key">${formatKey(
+                k
+              )}:</span><span class="sub-val">${v}</span></div>`
+          )
           .join("");
-         if (items) content += `<div class="exam-sub-group"><div class="exam-sub-title">Motor Examination</div><div class="val-list horizontal-list">${items}</div></div>`;
-       }
+        if (items)
+          content += `<div class="exam-sub-group"><div class="exam-sub-title">Motor Examination</div><div class="val-list horizontal-list">${items}</div></div>`;
+      }
 
-       if (hasNeuro) {
-         const items = Object.entries(neuro)
+      if (hasNeuro) {
+        const items = Object.entries(neuro)
           .filter(([_, v]) => hasValue(v))
-          .map(([k, v]) => `<div class="sub-item"><span class="sub-key">${formatKey(k)}:</span><span class="sub-val">${v}</span></div>`)
+          .map(
+            ([k, v]) =>
+              `<div class="sub-item"><span class="sub-key">${formatKey(
+                k
+              )}:</span><span class="sub-val">${v}</span></div>`
+          )
           .join("");
-         if (items) content += `<div class="exam-sub-group"><div class="exam-sub-title">Neurological Examination</div><div class="val-list horizontal-list">${items}</div></div>`;
-       }
+        if (items)
+          content += `<div class="exam-sub-group"><div class="exam-sub-title">Neurological Examination</div><div class="val-list horizontal-list">${items}</div></div>`;
+      }
 
-       return `
+      return `
         <div class="section-block">
           <div class="sec-title">On Examination</div>
           <div class="sec-content">${content}</div>
@@ -200,47 +219,51 @@ const generateAssessmentPDF = async (assessment: any) => {
         </div>
       `;
     };
-    
+
     const renderPainHistoryWithVAS = (painHistory: any) => {
-        if (!hasValue(painHistory)) return "";
+      if (!hasValue(painHistory)) return "";
 
-        let contentHtml = "";
+      let contentHtml = "";
 
-        // Render basic pain history fields (excluding vasScores)
-        const items = Object.entries(painHistory)
-          .filter(([k, v]) => {
-            if (k === 'vasScores') return false;
-            return hasValue(v);
-          })
-          .map(
-            ([k, v]) => `
+      // Render basic pain history fields (excluding vasScores)
+      const items = Object.entries(painHistory)
+        .filter(([k, v]) => {
+          if (k === "vasScores") return false;
+          return hasValue(v);
+        })
+        .map(
+          ([k, v]) => `
             <div class="sub-item">
               <span class="sub-key">${formatKey(k)}:</span>
-              <span class="sub-val">${typeof v === 'object' ? JSON.stringify(v) : v}</span>
+              <span class="sub-val">${
+                typeof v === "object" ? JSON.stringify(v) : v
+              }</span>
             </div>
           `
+        )
+        .join("");
+
+      if (items) {
+        contentHtml = `<div class="val-list">${items}</div>`;
+      }
+
+      // Add VAS scores table if available
+      const vasScores = painHistory?.vasScores;
+      if (Array.isArray(vasScores) && vasScores.length > 0) {
+        const tableRows = vasScores
+          .map(
+            (entry: any) => `
+                    <tr>
+                        <td>${entry.location || "-"}</td>
+                        <td>${entry.activity || "-"}</td>
+                        <td>${entry.timeOfDay || "-"}</td>
+                        <td class="score-cell">${entry.vasScore}/10</td>
+                    </tr>
+                `
           )
           .join("");
 
-        if (items) {
-          contentHtml = `<div class="val-list">${items}</div>`;
-        }
-
-        // Add VAS scores table if available
-        const vasScores = painHistory?.vasScores;
-        if (Array.isArray(vasScores) && vasScores.length > 0) {
-            const tableRows = vasScores
-                .map((entry: any) => `
-                    <tr>
-                        <td>${entry.location || '-'}</td>
-                        <td>${entry.activity || '-'}</td>
-                        <td>${entry.timeOfDay || '-'}</td>
-                        <td class="score-cell">${entry.vasScore}/10</td>
-                    </tr>
-                `)
-                .join('');
-
-            const vasTable = `
+        const vasTable = `
                 <div class="vas-table-container" style="margin-top: 8px;">
                     <div class="vas-table-title">VAS Pain Scores</div>
                     <table class="vas-table">
@@ -259,12 +282,12 @@ const generateAssessmentPDF = async (assessment: any) => {
                 </div>
             `;
 
-            contentHtml += vasTable;
-        }
+        contentHtml += vasTable;
+      }
 
-        if (!contentHtml) return "";
+      if (!contentHtml) return "";
 
-        return `
+      return `
           <div class="section-block">
             <div class="sec-title">Pain History</div>
             <div class="sec-content">${contentHtml}</div>
@@ -397,17 +420,25 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div class="header-right">
           <div class="dr-block">
              <div class="dr-line-1">${
-               therapist?.user?.name || therapist?.name || "Dr. Diksha Palit (PT)"
+               therapist?.user?.name ||
+               therapist?.name ||
+               "Dr. Diksha Palit (PT)"
              }</div>
-             <div class="dr-line-2">Reg No: ${therapist?.regNo || "L-48489"}</div>
+             <div class="dr-line-2">Reg No: ${
+               therapist?.regNo || "L-48489"
+             }</div>
              <div class="dr-line-3">${
                therapist?.qualification || "B.P.T [W.B.U.H.S], CDNT"
              }</div>
              <div class="dr-line-4">${
-                therapist?.specialization?.split(',')[0] || "Co-Founder & Consultant Physiotherapist"
+               therapist?.specialization?.split(",")[0] ||
+               "Co-Founder & Consultant Physiotherapist"
              }</div>
              <div class="dr-line-5">${
-                therapist?.experiences || (therapist?.specialization?.includes(',') ? "Ex-Intern Physiotherapist of Belle Vue Clinic" : "")
+               therapist?.experiences ||
+               (therapist?.specialization?.includes(",")
+                 ? "Ex-Intern Physiotherapist of Belle Vue Clinic"
+                 : "")
              }</div>
           </div>
         </div>
@@ -456,10 +487,22 @@ const generateAssessmentPDF = async (assessment: any) => {
                   assessmentData?.historyOfPresentIllness ||
                     assessmentData?.historyOfIllness
                 )}
-                ${renderSection("Medical History", assessmentData?.medicalHistory)}
-                ${renderSection("Surgical History", assessmentData?.surgicalHistory)}
-                ${renderSection("Occupational History", assessmentData?.occupationalHistory)}
-                ${renderSection("Environmental History", assessmentData?.environmentalHistory)}
+                ${renderSection(
+                  "Medical History",
+                  assessmentData?.medicalHistory
+                )}
+                ${renderSection(
+                  "Surgical History",
+                  assessmentData?.surgicalHistory
+                )}
+                ${renderSection(
+                  "Occupational History",
+                  assessmentData?.occupationalHistory
+                )}
+                ${renderSection(
+                  "Environmental History",
+                  assessmentData?.environmentalHistory
+                )}
                 ${renderPainHistoryWithVAS(assessmentData?.painHistory)}
              </div>
              <div class="history-img-col">
@@ -473,14 +516,27 @@ const generateAssessmentPDF = async (assessment: any) => {
           </div>
 
           <!-- Other Sections -->
-          ${renderSection("On Observation", assessmentData?.onObservation, true)}
+          ${renderSection(
+            "On Observation",
+            assessmentData?.onObservation,
+            true
+          )}
           ${renderSection("On Palpation", assessmentData?.onPalpation, true)}
           ${renderExaminationSection()}
-          ${renderSection("Differential Diagnosis", assessmentData?.differentialDiagnosis)}
+          ${renderSection(
+            "Differential Diagnosis",
+            assessmentData?.differentialDiagnosis
+          )}
           ${renderSection("Investigations", assessmentData?.investigations)}
           ${renderSection("Special Tests", assessmentData?.specialTests)}
-          ${renderSection("Provisional Diagnosis", assessmentData?.provisionalDiagnosis)}
-          ${renderSection("Physiotherapy Management", assessmentData?.physiotherapyMgmt)}
+          ${renderSection(
+            "Provisional Diagnosis",
+            assessmentData?.provisionalDiagnosis
+          )}
+          ${renderSection(
+            "Physiotherapy Management",
+            assessmentData?.physiotherapyMgmt
+          )}
           ${renderSection("Additional Notes", assessmentData?.notes)}
       </div>
     </div>

@@ -2,11 +2,7 @@ import puppeteer from "puppeteer";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  InvoiceItem,
-  InvoicePayload,
-  TransactionStatus,
-} from "@/types/invoice";
+import { InvoicePayload, TransactionStatus } from "@/types/invoice";
 
 // Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -26,21 +22,21 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
         "--no-first-run",
         "--no-zygote",
         "--disable-gpu",
+        "--disable-crash-reporter",
+        "--disable-breakpad",
       ],
-      timeout: 30000, // 30 second timeout
+      timeout: 30000,
     });
 
     const page = await browser.newPage();
 
-    // Set timeout for page operations
     page.setDefaultTimeout(30000);
 
-    // Generate HTML template with data
     const htmlTemplate = await generateInvoiceHTML(invoiceData);
 
     await page.setContent(htmlTemplate, {
       waitUntil: "networkidle0",
-      timeout: 30000
+      timeout: 30000,
     });
 
     const pdfBuffer = await page.pdf({
@@ -59,7 +55,11 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
     return pdfBuffer;
   } catch (error) {
     console.error("Invoice PDF generation error:", error);
-    throw new Error(`Failed to generate invoice PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to generate invoice PDF: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   } finally {
     if (browser) {
       await browser.close();
@@ -67,10 +67,8 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
   }
 };
 
-// Function to convert image to base64
 const getImageAsBase64 = async () => {
   try {
-    // Alternative paths to try
     const alternativePaths = [
       path.resolve(process.cwd(), "public/apple-touch-icon.png"),
       path.resolve(process.cwd(), "public", "apple-touch-icon.png"),
@@ -92,18 +90,19 @@ const getImageAsBase64 = async () => {
     }
 
     if (!imageBuffer) {
-      console.warn("Logo image not found at any of the expected paths:", alternativePaths);
+      console.warn(
+        "Logo image not found at any of the expected paths:",
+        alternativePaths
+      );
       return null;
     }
 
     console.log("Logo image found at:", foundPath);
 
-    // Convert to base64
     const base64String = imageBuffer.toString("base64");
 
-    // Determine MIME type based on file extension
     const ext = foundPath ? path.extname(foundPath).toLowerCase() : "";
-    let mimeType = "image/png"; // default
+    let mimeType = "image/png";
 
     switch (ext) {
       case ".jpg":
@@ -136,7 +135,6 @@ const calculateTotalPaid = (transactions?: any[]) => {
     transactions
       .filter((t) => t.status === TransactionStatus.SUCCESS)
       .reduce((sum, t) => {
-        // Round each transaction amount before adding
         const transactionAmount = parseFloat(t.amount.toFixed(2));
         return sum + transactionAmount;
       }, 0)
@@ -144,13 +142,12 @@ const calculateTotalPaid = (transactions?: any[]) => {
   );
 };
 
-// Helper function to get payment methods from transactions
 const getPaymentMethods = (transactions?: any[]) => {
   if (!transactions || transactions.length === 0) return "N/A";
   const methods = transactions
     .filter((t) => t.status === TransactionStatus.SUCCESS && t.paymentMethod)
     .map((t) => t.paymentMethod)
-    .filter((method, index, self) => self.indexOf(method) === index); // unique methods
+    .filter((method, index, self) => self.indexOf(method) === index);
   return methods.length > 0 ? methods.join(", ") : "N/A";
 };
 
