@@ -147,6 +147,7 @@ export interface S3UploadConfig {
   bucketName: string;
   accessKeyId: string;
   secretAccessKey: string;
+  region?: string;
 }
 
 export interface S3UploadResult {

@@ -1,84 +1,87 @@
-name: Deploy Theracure Dashboard
+name: Dashboard Deploy (Staged)
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  deploy:
+  pull:
+    name: Pull latest code
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Deploy to Utho Cloud via SSH
-        uses: appleboy/ssh-action@master
+      - name: Pull code on server
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 157.20.214.173
-          username: root
-          key: ${{ secrets.UTHO_INSTANCE_PRIVATE_KEY }}
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/dashboard
+            git fetch origin
+            git reset --hard origin/main
+
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: pull
+    steps:
+      - name: Build image on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/dashboard
+
+            docker stop dashboard || true
+            docker rm dashboard || true
+
+            docker images | grep theracure-dashboard | awk '{print $3}' | xargs -r docker rmi -f
+
+            docker build -t theracure-dashboard:latest .
+
+  run:
+    name: Run container
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Run dashboard container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -e
 
-            echo "💾 Saving deploy private key for Git pull"
-            echo "${{ secrets.DEPLOY_KEY }}" > /root/.ssh/github_deploy_key
-            chmod 600 /root/.ssh/github_deploy_key
+            docker run -d \
+              --name dashboard \
+              --env-file /var/www/theracure/.env.dashboard \
+              -p 3001:3001 \
+              --restart unless-stopped \
+              theracure-dashboard:latest
 
-            cd /var/www/theracure/Theracure-Dashboard
+  healthcheck:
+    name: Stability check
+    runs-on: ubuntu-latest
+    needs: run
+    steps:
+      - name: Verify container health
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
 
-            GIT_SSH_COMMAND="ssh -i /root/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-            git pull origin main
+            sleep 10
 
-            echo "🔐 Exporting all environment variables from GitHub Secrets"
-            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            export NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}"
-            export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
-            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            export UTHO_ACCESS_KEY="${{ secrets.UTHO_ACCESS_KEY }}"
-            export UTHO_SECRET_KEY="${{ secrets.UTHO_SECRET_KEY }}"
-            export UTHO_REGION="${{ secrets.UTHO_REGION }}"
-            export UTHO_S3_BUCKET_NAME="${{ secrets.UTHO_S3_BUCKET_NAME }}"
-            export UTHO_ENDPOINT="${{ secrets.UTHO_ENDPOINT }}"
-            export UTHO_CDN="${{ secrets.UTHO_CDN }}"
-            export MSG91_AUTH_KEY="${{ secrets.MSG91_AUTH_KEY }}"
-            export URL_EXPIRY_SECONDS="${{ secrets.URL_EXPIRY_SECONDS }}"
-            export NODE_ENV="production"
+            docker ps | grep dashboard
 
-            echo "📦 Installing dependencies"
-            pnpm install
+            curl -f http://127.0.0.1:3001 || exit 1
 
-            echo "⚙️ Generating Prisma client"
-            pnpm prisma generate
-
-            echo "🔧 Generating TypeScript enums"
-            pnpm run generate:enums
-
-            echo "⚙️ Building the application"
-            pnpm build
-
-            echo "🗄️ Running Prisma migrations"
-            pnpm prisma migrate deploy || { echo "❌ Error: Failed to deploy Prisma migrations. Exiting."; exit 1; }
-
-            echo "🧑‍💻 Installing Puppeteer Chrome"
-            pnpm exec puppeteer browsers install chrome || { echo "❌ Error: Failed to install Chrome for Puppeteer. Exiting."; exit 1; }
-
-            echo "📋 Copying ecosystem config to deployment directory"
-            cp ecosystem.config.js /var/www/theracure/ecosystem.config.js
-
-            echo "🚀 Restarting Dashboard with PM2"
-            pm2 delete dashboard || true
-            pm2 start /var/www/theracure/ecosystem.config.js --env production --only dashboard
-
-            echo "📨 Restarting SMS Worker with PM2"
-            pm2 delete sms-worker || true
-            pm2 start /var/www/theracure/ecosystem.config.js --env production --only sms-worker
-
-            echo "✅ PM2 status check"
-            pm2 status
-
-            echo "💾 Saving PM2 process list"
-            pm2 save
-
-            echo "🎉 Deployment complete!"
+            docker logs --tail 50 dashboard

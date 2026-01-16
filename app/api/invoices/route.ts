@@ -2,22 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { InvoiceStatus, TransactionStatus } from "@prisma/client";
-import { s3Service } from "@/lib/services/s3-service";
+import { storageService } from "@/lib/services/storage-factory";
 import generateInvoicePDF from "@/lib/utils/InvoicePDFGenerator";
 import { sendSMSNotification } from "@/config/smsConfig";
-
-const createInvoiceSchema = z.object({
-  id: z.string().optional(),
-  patientId: z.string().min(1, "Patient ID is required"),
-  patientName: z.string().min(1, "Patient name is required"),
-  date: z.string().datetime(),
-  totalAmount: z.number().min(0, "Total amount must be positive"),
-  amountPaid: z.number().min(0, "Amount paid must be positive").default(0),
-  status: z.enum(["DUE", "PAID", "CANCELLED"]).default("DUE"),
-  paymentMethod: z.string().optional(),
-  notes: z.string().optional(),
-  createdBy: z.string().optional(),
-});
 
 export async function GET(request: NextRequest) {
   try {
@@ -219,7 +206,7 @@ export async function POST(request: NextRequest) {
         ? pdfBuffer
         : Buffer.from(pdfBuffer);
 
-      const uploadResult = await s3Service.uploadFile(
+      const uploadResult = await storageService.uploadFile(
         fileName,
         bufferData,
         "application/pdf"
@@ -239,7 +226,7 @@ export async function POST(request: NextRequest) {
 
     if (invoice.patient?.phone && pdfPath) {
       try {
-        const presignedUrl = await s3Service.generatePresignedUrl(
+        const presignedUrl = await storageService.generatePresignedUrl(
           pdfPath,
           parseInt(process.env.URL_EXPIRY_SECONDS || "604800", 10)
         );

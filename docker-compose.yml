@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      # Add other environment variables as needed
+    env_file:
+      - .env
+    restart: unless-stopped
+    # Uncomment below if you need to connect to a database service
+    # depends_on:
+    #   - db
+    # Uncomment below for local file storage persistence
+    # volumes:
+    #   - uploads_data:/app/uploads
+# Uncomment if using local storage or database
+# volumes:
+#   postgres_data:
+#   uploads_data:

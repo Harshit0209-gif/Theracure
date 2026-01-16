@@ -7,7 +7,7 @@ import {
   UploadMetadata,
   UploadResult,
 } from "@/types/emr";
-import { s3Service } from "./s3-service";
+import { storageService } from "./storage-factory";
 import { metadata } from "@/app/layout";
 
 export class EMRService {
@@ -53,7 +53,7 @@ export class EMRService {
 
       const filePath = `emr/${metadata.patientId}/${uniqueFileName}`;
 
-      const s3Result = await s3Service.uploadFile(
+      const s3Result = await storageService.uploadFile(
         filePath,
         file.buffer,
         file.mimeType || "application/octet-stream"
@@ -160,7 +160,7 @@ export class EMRService {
         throw new Error("File not found in database");
       }
 
-      const s3Result = await s3Service.deleteFile(fileRecord.filePath);
+      const s3Result = await storageService.deleteFile(fileRecord.filePath);
 
       if (!s3Result.success) {
         throw new Error(s3Result.error || "Failed to delete file from S3");
@@ -197,7 +197,7 @@ export class EMRService {
       throw new Error("File not found in database");
     }
 
-    return await s3Service.generatePresignedUrl(fileRecord.filePath);
+    return await storageService.generatePresignedUrl(fileRecord.filePath);
   }
 
   /**
