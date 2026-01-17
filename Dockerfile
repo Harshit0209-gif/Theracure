@@ -72,7 +72,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
-# Install Prisma in isolated directory and generate client
+
 RUN mkdir /tmp/prisma-gen && \
     cp -r ./prisma /tmp/prisma-gen/ && \
     cd /tmp/prisma-gen && \
@@ -89,6 +89,18 @@ RUN mkdir -p /app/uploads
 
 
 RUN chown -R nextjs:nodejs /app
+
+RUN mkdir -p /home/nextjs/.cache \
+             /home/nextjs/.config \
+             /home/nextjs/.config/chromium \
+             /home/nextjs/.local/share \
+             /tmp/chromium \
+ && chown -R nextjs:nodejs /home/nextjs /tmp/chromium \
+ && chmod 700 /tmp/chromium
+
+ENV HOME=/home/nextjs
+ENV XDG_RUNTIME_DIR=/tmp/chromium
+
 
 USER nextjs
 

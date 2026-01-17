@@ -58,11 +58,12 @@ jobs:
             set -e
 
             docker run -d \
-              --name dashboard \
-              --env-file /var/www/theracure/.env.dashboard \
-              -p 3001:3001 \
-              --restart unless-stopped \
-              theracure-dashboard:latest
+            --name dashboard \
+            --env-file /var/www/theracure/.env.dashboard \
+            -p 3001:3001 \
+            --restart unless-stopped \
+            --shm-size=1g \
+            theracure-dashboard:latest
 
   healthcheck:
     name: Stability check
