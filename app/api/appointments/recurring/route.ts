@@ -16,20 +16,18 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Invalid appointments data" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Validate each appointment and check for conflicts
     const validationResults = await Promise.all(
       appointments.map(async (appointment, index) => {
         try {
-          // Check if therapist is available for this specific date and time
           const isAvailable = await checkTherapistAvailability(
             appointment.therapistId,
             appointment.appointmentDate,
             appointment.appointmentStartTime,
-            appointment.appointmentEndTime
+            appointment.appointmentEndTime,
           );
 
           // Check for existing appointments at the same time
@@ -106,12 +104,12 @@ export async function POST(request: NextRequest) {
             error: (error as Error).message,
           };
         }
-      })
+      }),
     );
 
     // Check for conflicts
     const conflicts = validationResults.filter(
-      (result) => !result.isAvailable || result.hasConflict
+      (result) => !result.isAvailable || result.hasConflict,
     );
 
     if (conflicts.length > 0) {
@@ -125,7 +123,7 @@ export async function POST(request: NextRequest) {
               : "Therapist not available",
           })),
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -187,7 +185,7 @@ export async function POST(request: NextRequest) {
       },
       {
         timeout: 30000,
-      }
+      },
     );
 
     return NextResponse.json({
@@ -202,7 +200,7 @@ export async function POST(request: NextRequest) {
         error: "Failed to create recurring appointments",
         details: (error as Error).message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -212,7 +210,7 @@ async function checkTherapistAvailability(
   therapistId: string,
   date: string,
   startTime: string,
-  endTime: string
+  endTime: string,
 ) {
   try {
     // Get therapist's schedule for the day of the week
@@ -230,19 +228,33 @@ async function checkTherapistAvailability(
       return false; // Therapist doesn't work on this day
     }
 
-    // Check if the requested time falls within working hours
-    const requestedStart = new Date(`2000-01-01T${startTime}:00`);
-    const requestedEnd = new Date(`2000-01-01T${endTime}:00`);
+    const startDateTime = new Date(startTime);
+    const endDateTime = new Date(endTime);
+
+    const requestedStartStr = startDateTime.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Kolkata",
+    });
+    const requestedEndStr = endDateTime.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Kolkata",
+    });
+
+    const requestedStart = new Date(`2000-01-01T${requestedStartStr}:00`);
+    const requestedEnd = new Date(`2000-01-01T${requestedEndStr}:00`);
     const scheduleStart = new Date(
-      `2000-01-01T${therapistSchedule.startTime}:00`
+      `2000-01-01T${therapistSchedule.startTime}:00`,
     );
     const scheduleEnd = new Date(`2000-01-01T${therapistSchedule.endTime}:00`);
 
     if (requestedStart < scheduleStart || requestedEnd > scheduleEnd) {
-      return false; // Outside working hours
+      return false;
     }
 
-    // Check for breaks/unavailable periods
     const breaks = await prisma.therapistTimeSlot.findMany({
       where: {
         therapistId,
@@ -255,13 +267,12 @@ async function checkTherapistAvailability(
       const breakStart = new Date(`2000-01-01T${breakPeriod.startTime}:00`);
       const breakEnd = new Date(`2000-01-01T${breakPeriod.endTime}:00`);
 
-      // Check if appointment overlaps with break
       if (
         (requestedStart < breakEnd && requestedEnd > breakStart) ||
         (requestedStart >= breakStart && requestedStart < breakEnd) ||
         (requestedEnd > breakStart && requestedEnd <= breakEnd)
       ) {
-        return false; // Conflicts with break
+        return false;
       }
     }
 

@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching appointments:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch appointments" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: "Missing required fields",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -145,9 +145,18 @@ export async function POST(req: NextRequest) {
     const startTime = new Date(appointmentStartTime);
     const endTime = new Date(appointmentEndTime);
 
-    // Format times to HH:mm string format for comparison
-    const startTimeStr = startTime.toTimeString().slice(0, 5);
-    const endTimeStr = endTime.toTimeString().slice(0, 5);
+    const startTimeStr = startTime.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Kolkata",
+    });
+    const endTimeStr = endTime.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Kolkata",
+    });
 
     console.log("Formatted times:", {
       startTimeStr,
@@ -166,7 +175,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: "End time must be after start time",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -185,7 +194,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: "Therapist not found",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -214,7 +223,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: "Therapist is not available during this time slot",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -251,7 +260,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: "Therapist already has an appointment during this time",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -327,7 +336,7 @@ export async function POST(req: NextRequest) {
         success: false,
         error: "Failed to create appointment",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

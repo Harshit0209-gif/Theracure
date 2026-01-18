@@ -23,6 +23,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm prisma:generate
 RUN pnpm generate:enums
 RUN pnpm build
+RUN pnpm build:worker
 
 
 FROM node:20-bookworm-slim AS runner
@@ -71,6 +72,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/workers/sms-worker.js ./workers/
+COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 
 RUN mkdir /tmp/prisma-gen && \
@@ -87,6 +90,8 @@ RUN mkdir /tmp/prisma-gen && \
 
 RUN mkdir -p /app/uploads
 
+
+RUN chmod +x /app/docker-entrypoint.sh
 
 RUN chown -R nextjs:nodejs /app
 
@@ -110,4 +115,4 @@ EXPOSE 3001
 ENV PORT=3001
 
 
-CMD ["node", "server.js"]
+CMD ["/app/docker-entrypoint.sh"]

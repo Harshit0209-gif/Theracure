@@ -28,3 +28,11 @@ yarn-error.log*
 settings.json
 .DS_Store
 .claude
+
+# testing
+/coverage
+*.lcov
+
+# compiled workers
+/workers/*.js
+!/workers/*.ts

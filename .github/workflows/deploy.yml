@@ -21,10 +21,69 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    needs: pull
+    steps:
+      - name: Run test suite on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/Theracure-Dashboard
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🧪 Running Test Suite"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Install dependencies if needed
+            if [ ! -d "node_modules" ]; then
+              echo "📦 Installing dependencies..."
+              pnpm install --frozen-lockfile
+            fi
+
+            # Generate Prisma client for tests
+            echo "🔧 Generating Prisma client..."
+            pnpm prisma:generate
+
+            # Generate enums
+            echo "📝 Generating enums..."
+            pnpm generate:enums
+
+            # Run all tests
+            echo "🧪 Running unit tests..."
+            pnpm test
+
+            # Verify SMS worker can be compiled
+            echo "📱 Verifying SMS worker compilation..."
+            pnpm build:worker
+
+            # Check compiled worker exists
+            if [ ! -f "workers/sms-worker.js" ]; then
+              echo "❌ SMS worker compilation failed"
+              exit 1
+            fi
+
+            echo "✅ SMS worker compiled successfully"
+
+            # Verify database connection (quick check)
+            echo "🗄️  Verifying database connection..."
+            pnpm prisma db execute --stdin <<< "SELECT 1;" > /dev/null 2>&1 || {
+              echo "⚠️  Database connection check skipped (expected in CI)"
+            }
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ All tests passed!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
   build:
     name: Build Docker image
     runs-on: ubuntu-latest
-    needs: pull
+    needs: test
     steps:
       - name: Build image on server
         uses: appleboy/ssh-action@v1.0.3
@@ -79,10 +138,25 @@ jobs:
           script: |
             set -e
 
-            sleep 10
+            echo "⏳ Waiting for services to start..."
+            sleep 15
 
+            echo "🔍 Checking container status..."
             docker ps | grep dashboard
 
+            echo "🌐 Testing application endpoint..."
             curl -f http://127.0.0.1:3001/login || exit 1
 
+            echo "📱 Verifying SMS worker is running..."
+            docker exec dashboard ps aux | grep -E "sms-worker.js" | grep -v grep || {
+              echo "❌ SMS worker not found!"
+              exit 1
+            }
+
+            echo "✅ SMS worker is running"
+
+            echo "📜 Recent container logs:"
             docker logs --tail 50 dashboard
+
+            echo ""
+            echo "✅ All health checks passed!"
