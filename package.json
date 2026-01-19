@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:worker": "tsc workers/sms-worker.ts --outDir workers --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --resolveJsonModule --target es2020 --lib es2020 --strict false",
+    "build:worker": "tsc --project tsconfig.worker.json",
     "start": "next start -p 3001",
     "lint": "next lint",
     "test": "vitest run",

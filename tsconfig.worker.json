@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2020",
+    "lib": ["es2020"],
+    "outDir": ".",
+    "rootDir": ".",
+    "noEmit": false,
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "workers/sms-worker.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "app",
+    "components",
+    "contexts",
+    "hooks",
+    "lib/api",
+    "lib/utils/InvoicePDFGenerator.ts",
+    "lib/utils/PrescriptionPDFGenerator.ts",
+    "lib/utils/invoiceActions.ts",
+    "lib/validations"
+  ]
+}
