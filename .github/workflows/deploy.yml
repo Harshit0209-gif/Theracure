@@ -79,23 +79,43 @@ jobs:
           script: |
             set -e
 
-            echo "⏳ Waiting for services to start..."
-            sleep 15
-
             echo "🔍 Checking container status..."
             docker ps | grep dashboard
 
-            echo "🌐 Testing application endpoint..."
-            curl -f http://127.0.0.1:3001/login || exit 1
+            echo "📜 Checking container logs for errors..."
+            docker logs --tail 20 dashboard
 
+            echo ""
+            echo "⏳ Waiting for application to be ready..."
+
+            # Retry curl up to 12 times (60 seconds total)
+            for i in {1..12}; do
+              echo "Attempt $i/12: Testing http://127.0.0.1:3001/login"
+              if curl -f -s http://127.0.0.1:3001/login > /dev/null 2>&1; then
+                echo "✅ Application is responding!"
+                break
+              fi
+              if [ $i -eq 12 ]; then
+                echo "❌ Application failed to respond after 60 seconds"
+                echo "📜 Full container logs:"
+                docker logs dashboard
+                exit 1
+              fi
+              sleep 5
+            done
+
+            echo ""
             echo "📱 Verifying SMS worker is running..."
             docker exec dashboard ps aux | grep -E "sms-worker.js" | grep -v grep || {
               echo "❌ SMS worker not found!"
+              echo "📜 Container logs:"
+              docker logs dashboard
               exit 1
             }
 
             echo "✅ SMS worker is running"
 
+            echo ""
             echo "📜 Recent container logs:"
             docker logs --tail 50 dashboard
 

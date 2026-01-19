@@ -17,7 +17,11 @@
     }
   },
   "include": [
-    "workers/sms-worker.ts"
+    "workers/sms-worker.ts",
+    "lib/prisma.ts",
+    "lib/mail/sendSMS.ts",
+    "config/smsTemplatesMap.ts",
+    "lib/generated/smsEnums.ts"
   ],
   "exclude": [
     "node_modules",

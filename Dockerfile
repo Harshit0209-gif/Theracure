@@ -72,7 +72,14 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+
+# Copy compiled worker and its dependencies
 COPY --from=builder /app/workers/sms-worker.js ./workers/
+COPY --from=builder /app/lib/prisma.js ./lib/
+COPY --from=builder /app/lib/mail/sendSMS.js ./lib/mail/
+COPY --from=builder /app/config/smsTemplatesMap.js ./config/
+COPY --from=builder /app/lib/generated/smsEnums.js ./lib/generated/
+
 COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 
