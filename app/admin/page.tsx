@@ -57,7 +57,7 @@ interface TodayAppointment {
 const formatGrowthPercentage = (
   percentage: number,
   isPositive: boolean,
-  label = "from last month"
+  label = "from last month",
 ): React.ReactNode => {
   const Icon = isPositive ? TrendingUp : TrendingDown;
   const color = isPositive ? "text-green-500" : "text-red-500";
@@ -179,7 +179,7 @@ const AppointmentsTable: React.FC<{
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded-full text-xs ${getStatusConfig(
-                      appointment.status
+                      appointment.status,
                     )}`}
                   >
                     {appointment.status.charAt(0).toUpperCase() +
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
               patientStats
                 ? formatGrowthPercentage(
                     patientStats.totalPatients.growthPercentage,
-                    patientStats.totalPatients.isGrowthPositive
+                    patientStats.totalPatients.isGrowthPositive,
                   )
                 : "Loading..."
             }
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
               revenueStats?.revenue
                 ? formatGrowthPercentage(
                     revenueStats.revenue.growthPercentage,
-                    revenueStats.revenue.isGrowthPositive
+                    revenueStats.revenue.isGrowthPositive,
                   )
                 : "Loading..."
             }
@@ -386,7 +386,7 @@ export default function AdminDashboard() {
               <CardTitle className="text-lg font-semibold">
                 Today's Consultations
               </CardTitle>
-              <Link href="/consultations">
+              <Link href="/appointments">
                 <Button variant="ghost" size="sm">
                   View All
                 </Button>

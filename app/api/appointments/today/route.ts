@@ -30,7 +30,7 @@ export async function GET() {
       success: true,
       data: appointments.map((apt) => ({
         id: apt.id,
-        patientName: apt.patient.patientName,
+        patientName: apt.patient?.patientName || "Unknown Patient",
         therapistName: apt.therapist.name,
         time: apt.appointmentStartTime.toISOString(),
         status: apt.status,

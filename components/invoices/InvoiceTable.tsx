@@ -93,11 +93,13 @@ export const InvoiceTable: React.FC<InvoiceTableProps> = ({
               <TableRow key={invoice.id} className="hover:bg-gray-50">
                 <TableCell className="font-medium">{invoice.id}</TableCell>
                 <TableCell>
-                  <p className="font-medium">{invoice.patient.patientName}</p>
+                  <p className="font-medium">
+                    {invoice.patient?.patientName || "No Patient"}
+                  </p>
                 </TableCell>
                 <TableCell>{new Date(invoice.date).toLocaleString()}</TableCell>
                 <TableCell className="font-semibold">
-                  {invoice.totalAmount}
+                  ₹{invoice.totalAmount.toFixed(2)}
                 </TableCell>
                 <TableCell>
                   <Badge
@@ -150,7 +152,7 @@ export const InvoiceTable: React.FC<InvoiceTableProps> = ({
                             onClick={() => {
                               toast({
                                 title: "Payment reminder sent",
-                                description: `Reminder sent to ${invoice.patient.patientName} for payment`,
+                                description: `Reminder sent to ${invoice.patient?.patientName || "patient"} for payment`,
                               });
                             }}
                           >
@@ -164,11 +166,11 @@ export const InvoiceTable: React.FC<InvoiceTableProps> = ({
                         onClick={() => {
                           navigator.clipboard.writeText(
                             `Invoice Details:\nID: ${invoice.id}\nPatient: ${
-                              invoice.patient.patientName
+                              invoice.patient?.patientName || "No Patient"
                             }\nDate: ${new Date(
                               invoice.date
-                            ).toLocaleString()}\nAmount: ${
-                              invoice.totalAmount
+                            ).toLocaleString()}\nAmount: ₹${
+                              invoice.totalAmount.toFixed(2)
                             }\nStatus: ${invoice.status}`
                           );
                           toast({

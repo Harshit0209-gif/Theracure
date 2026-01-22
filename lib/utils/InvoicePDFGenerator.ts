@@ -658,11 +658,15 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                   </td>
                   <td class="text-center">${item.quantity}</td>
                   <td class="text-center">${item.price.toLocaleString(
-                    "en-IN"
+                    "en-IN",
+                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
                   )}</td>
                   <td class="text-center">${(
                     item.price * item.quantity
-                  ).toLocaleString("en-IN")}</td>
+                  ).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}</td>
                 </tr>
               `
                 )
@@ -677,7 +681,8 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
             <tr>
               <td class="totals-label">Subtotal:</td>
               <td class="totals-value">₹${displaySubTotal.toLocaleString(
-                "en-IN"
+                "en-IN",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
               )}</td>
             </tr>
             ${
@@ -686,7 +691,8 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
             <tr>
               <td class="totals-label">Discount (${displayOffer}%):</td>
               <td class="totals-value" style="color: #059669;">- ₹${displayDiscount.toLocaleString(
-                "en-IN"
+                "en-IN",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
               )}</td>
             </tr>
             `
@@ -695,13 +701,15 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
             <tr class="total-final">
               <td class="totals-label">Total Amount:</td>
               <td class="totals-value">₹${displayTotalAmount.toLocaleString(
-                "en-IN"
+                "en-IN",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
               )}</td>
             </tr>
             <tr>
               <td class="totals-label">Amount Paid:</td>
               <td class="totals-value paid-amount">₹${displayAmountPaid.toLocaleString(
-                "en-IN"
+                "en-IN",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
               )}</td>
             </tr>
             <tr>
@@ -713,7 +721,10 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                   displayBalance <= 0 ? "paid-amount" : "due-amount"
                 }"
               >
-                ₹${Math.abs(displayBalance).toLocaleString("en-IN")}
+                ₹${Math.abs(displayBalance).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
             </tr>
           </table>

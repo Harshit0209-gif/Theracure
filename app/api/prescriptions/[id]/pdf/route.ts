@@ -70,14 +70,14 @@ export async function GET(
     // Generate PDF
     const pdfBuffer = await generateAssessmentPDF({
       patientInfo: {
-        id: prescription.patient.id,
-        patientName: prescription.patient.patientName,
-        age: prescription.patient.age,
-        gender: prescription.patient.gender,
-        phone: prescription.patient.phone || "",
-        email: prescription.patient.email || "",
-        createdAt: prescription.patient.createdAt,
-        updatedAt: prescription.patient.updatedAt,
+        id: prescription.patient?.id || "N/A",
+        patientName: prescription.patient?.patientName || "Deleted Patient",
+        age: prescription.patient?.age || 0,
+        gender: prescription.patient?.gender || "Other",
+        phone: prescription.patient?.phone || "",
+        email: prescription.patient?.email || "",
+        createdAt: prescription.patient?.createdAt || new Date(),
+        updatedAt: prescription.patient?.updatedAt || new Date(),
       },
       assessmentData,
       therapist: prescription.therapist,
@@ -88,7 +88,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="assessment-${prescription.patient.patientName}-${id}.pdf"`,
+        "Content-Disposition": `attachment; filename="assessment-${prescription.patient?.patientName || "deleted"}-${id}.pdf"`,
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });

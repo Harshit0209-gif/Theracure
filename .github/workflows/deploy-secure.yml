@@ -1,0 +1,313 @@
+name: Secure Dashboard Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: theracure-dashboard
+  CONTAINER_NAME: dashboard
+
+jobs:
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Enable pnpm
+        run: coreutils enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run npm audit
+        run: |
+          echo "🔍 Running security audit..."
+          pnpm audit --audit-level=high || true
+          pnpm audit --json > audit-report.json || true
+
+      - name: Check for suspicious packages
+        run: |
+          echo "🔍 Checking for packages with install scripts..."
+          # List all packages with postinstall, preinstall, or install scripts
+          find node_modules -name package.json -exec grep -l "postinstall\|preinstall\|install\":" {} \; | head -20 || true
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit
+          path: audit-report.json
+          retention-days: 30
+
+  build-and-scan:
+    name: Build & Scan Docker Image
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image locally
+        run: |
+          echo "🏗️ Building Docker image..."
+          # Use Dockerfile.secure if it exists, otherwise use Dockerfile
+          if [ -f "Dockerfile.secure" ]; then
+            docker build -f Dockerfile.secure -t ${{ env.IMAGE_NAME }}:test .
+          else
+            docker build -t ${{ env.IMAGE_NAME }}:test .
+          fi
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.IMAGE_NAME }}:test"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "0" # Don't fail the build, just report
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Run container security checks
+        run: |
+          echo "🔍 Checking Docker image..."
+          docker history ${{ env.IMAGE_NAME }}:test
+          docker inspect ${{ env.IMAGE_NAME }}:test
+
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: build-and-scan
+    steps:
+      - name: Pull code on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/Theracure-Dashboard
+            git fetch origin
+            git reset --hard origin/main
+
+      - name: Pre-deployment checks
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/Theracure-Dashboard
+
+            echo "📊 Current container stats (before deployment):"
+            docker stats --no-stream ${{ env.CONTAINER_NAME }} || echo "Container not running"
+
+            echo "📋 Current process count:"
+            docker exec ${{ env.CONTAINER_NAME }} ps aux | wc -l || echo "Container not running"
+
+      - name: Build Docker image on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/Theracure-Dashboard
+
+            echo "🛑 Stopping old container..."
+            docker stop ${{ env.CONTAINER_NAME }} || true
+            docker rm ${{ env.CONTAINER_NAME }} || true
+
+            echo "🗑️ Removing old images..."
+            docker images -q ${{ env.IMAGE_NAME }} | xargs -r docker rmi -f
+
+            echo "🏗️ Building new image with security hardening..."
+            # Use Dockerfile.secure if exists, otherwise use regular Dockerfile
+            if [ -f "Dockerfile.secure" ]; then
+              docker build --no-cache --pull -f Dockerfile.secure -t ${{ env.IMAGE_NAME }}:latest .
+            else
+              docker build --no-cache --pull -t ${{ env.IMAGE_NAME }}:latest .
+            fi
+
+            echo "✅ Image built successfully"
+
+      - name: Run container with security hardening
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/Theracure-Dashboard
+
+            echo "🚀 Starting container with security measures..."
+            docker run -d \
+              --name ${{ env.CONTAINER_NAME }} \
+              --env-file /var/www/theracure/.env.dashboard \
+              -p 3001:3001 \
+              --restart unless-stopped \
+              --cpus="2" \
+              --memory="1g" \
+              --memory-swap="1g" \
+              --pids-limit=100 \
+              --security-opt=no-new-privileges:true \
+              --read-only \
+              --tmpfs /tmp:rw,noexec,nosuid,size=100m \
+              --tmpfs /app/uploads:rw,noexec,nosuid,size=500m \
+              --shm-size=1g \
+              ${{ env.IMAGE_NAME }}:latest
+
+            echo "✅ Container started with security hardening"
+
+  healthcheck:
+    name: Health & Security Verification
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Verify container health
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "🔍 Checking container status..."
+            docker ps | grep ${{ env.CONTAINER_NAME }}
+
+            echo ""
+            echo "⏳ Waiting for application to be ready (60 seconds max)..."
+            for i in {1..12}; do
+              echo "Attempt $i/12: Testing http://127.0.0.1:3001/login"
+              if curl -f -s http://127.0.0.1:3001/login > /dev/null 2>&1; then
+                echo "✅ Application is responding!"
+                break
+              fi
+              if [ $i -eq 12 ]; then
+                echo "❌ Application failed to respond"
+                docker logs ${{ env.CONTAINER_NAME }}
+                exit 1
+              fi
+              sleep 5
+            done
+
+            echo ""
+            echo "📱 Verifying SMS worker..."
+            docker exec ${{ env.CONTAINER_NAME }} ps aux | grep -E "sms-worker.js" | grep -v grep || {
+              echo "❌ SMS worker not found!"
+              docker logs ${{ env.CONTAINER_NAME }}
+              exit 1
+            }
+            echo "✅ SMS worker is running"
+
+      - name: Security verification
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "🔒 Running security checks..."
+
+            echo ""
+            echo "1️⃣ Checking for suspicious processes..."
+            PROC_COUNT=$(docker exec ${{ env.CONTAINER_NAME }} ps aux | wc -l)
+            echo "   Process count: $PROC_COUNT"
+            if [ "$PROC_COUNT" -gt 15 ]; then
+              echo "   ⚠️ WARNING: High process count detected!"
+              docker exec ${{ env.CONTAINER_NAME }} ps aux
+            fi
+
+            echo ""
+            echo "2️⃣ Checking for known malware signatures..."
+            if docker exec ${{ env.CONTAINER_NAME }} ps aux | grep -qE 'uEb782bv|xmrig|cryptonight|minerd|ccminer'; then
+              echo "   🚨 CRITICAL: Malware detected!"
+              docker exec ${{ env.CONTAINER_NAME }} ps aux
+              exit 1
+            else
+              echo "   ✅ No known malware signatures found"
+            fi
+
+            echo ""
+            echo "3️⃣ Checking resource usage..."
+            docker stats --no-stream ${{ env.CONTAINER_NAME }}
+
+            echo ""
+            echo "4️⃣ Checking active processes..."
+            docker exec ${{ env.CONTAINER_NAME }} ps aux
+
+            echo ""
+            echo "5️⃣ Checking network connections..."
+            docker exec ${{ env.CONTAINER_NAME }} netstat -tuln 2>/dev/null || echo "netstat not available (expected in minimal images)"
+
+            echo ""
+            echo "✅ All security checks passed!"
+
+      - name: Save deployment snapshot
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/theracure/Theracure-Dashboard
+
+            SNAPSHOT_DIR="deployment-snapshots/$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$SNAPSHOT_DIR"
+
+            echo "📸 Saving deployment snapshot to: $SNAPSHOT_DIR"
+            docker exec ${{ env.CONTAINER_NAME }} ps aux > "$SNAPSHOT_DIR/processes.txt"
+            docker stats --no-stream ${{ env.CONTAINER_NAME }} > "$SNAPSHOT_DIR/stats.txt"
+            docker inspect ${{ env.CONTAINER_NAME }} > "$SNAPSHOT_DIR/inspect.json"
+            docker logs --tail 100 ${{ env.CONTAINER_NAME }} > "$SNAPSHOT_DIR/logs.txt" 2>&1
+
+            echo "✅ Snapshot saved"
+
+            # Keep only last 10 snapshots
+            cd deployment-snapshots
+            ls -t | tail -n +11 | xargs -r rm -rf
+
+      - name: Send deployment notification
+        if: always()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ DEPLOYMENT COMPLETE"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Container: ${{ env.CONTAINER_NAME }}"
+            echo "Image: ${{ env.IMAGE_NAME }}:latest"
+            echo "Time: $(date)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "📊 Current Stats:"
+            docker stats --no-stream ${{ env.CONTAINER_NAME }}
+            echo ""
+            echo "Monitor with: docker logs -f ${{ env.CONTAINER_NAME }}"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

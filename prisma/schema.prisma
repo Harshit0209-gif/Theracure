@@ -221,7 +221,7 @@ model TherapistTimeSlot {
 
 model Appointment {
   id                    String            @id @default(uuid()) @map("appointment_id")
-  patientId             String            @map("patient_id") @db.VarChar(20)
+  patientId             String?           @map("patient_id") @db.VarChar(20)
   therapistId           String            @map("therapist_id")
   appointmentStartTime  DateTime          @map("appointment_start_time")
   appointmentEndTime    DateTime          @map("appointment_end_time")
@@ -241,7 +241,7 @@ model Appointment {
   
   
   // Relations
-  patient               Patient           @relation("PatientAssignments", fields: [patientId], references: [id], onDelete: Cascade)
+  patient               Patient?          @relation("PatientAssignments", fields: [patientId], references: [id], onDelete: SetNull)
   therapist             User              @relation("TherapistAppointments", fields: [therapistId], references: [id], onDelete: Restrict, map: "therapist_assignments_user_fkey")
   therapistInfo         Therapist         @relation("TherapistAppointments", fields: [therapistId], references: [id], map: "therapist_assignments_therapist_fkey")
   createdBy             User              @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -257,7 +257,7 @@ model Appointment {
 model Prescription {
   id                String         @id @default(uuid()) @map("prescription_id")
   sessionId         String         @map("session_id")
-  patientId         String         @map("patient_id") @db.VarChar(20)
+  patientId         String?        @map("patient_id") @db.VarChar(20)
   therapistId       String         @map("therapist_id")
   pdfUrl            String?        @map("pdf_url")
   createdAt         DateTime       @default(now()) @map("created_at")
@@ -265,7 +265,7 @@ model Prescription {
 
   // Relations
   session           TherapySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  patient           Patient        @relation("PatientPrescriptions", fields: [patientId], references: [id])
+  patient           Patient?       @relation("PatientPrescriptions", fields: [patientId], references: [id], onDelete: SetNull)
   therapist         Therapist      @relation("TherapistPrescriptions", fields: [therapistId], references: [id])
   
 
@@ -277,7 +277,7 @@ model Prescription {
 
 model Invoice {
   id              String    @id @map("invoice_id")
-  patientId       String    @map("patient_id")
+  patientId       String?   @map("patient_id")
   date            DateTime  @default(now())
   subTotal        Float     @map("sub_total")
   totalAmount     Float     @map("total_amount")
@@ -292,7 +292,7 @@ model Invoice {
   updatedAt       DateTime @updatedAt
   createdBy       String
 
-  patient         Patient  @relation(fields: [patientId], references: [id])
+  patient         Patient?  @relation(fields: [patientId], references: [id], onDelete: SetNull)
   invoiceItems     InvoiceItem[] @relation("InvoiceToItems")
   transactions    Transaction[] @relation("InvoiceToTransactions")
 
@@ -341,7 +341,7 @@ model InvoiceItem {
 
 model TherapySession {
   id              String    @id @default(uuid()) @map("session_id")
-  patientId       String    @map("patient_id") @db.VarChar(20)
+  patientId       String?   @map("patient_id") @db.VarChar(20)
   therapistId     String    @map("therapist_id")
   sessionNotes    String?   @map("session_notes") @db.Text
   sessionDate     DateTime  @map("session_date") @default(now())
@@ -352,7 +352,7 @@ model TherapySession {
 
   // Relations
   prescriptions   Prescription[]
-  patient         Patient            @relation("PatientTherapySessions", fields: [patientId], references: [id])
+  patient         Patient?            @relation("PatientTherapySessions", fields: [patientId], references: [id], onDelete: SetNull)
   therapist       Therapist          @relation("TherapistTherapySessions", fields: [therapistId], references: [id])
 
   @@map("therapy_sessions")
@@ -386,7 +386,7 @@ model Consultation {
 
 model MedicalRecord {
   id               String   @id @default(uuid()) @db.Uuid
-  patientId        String   @map("patient_id") 
+  patientId        String?  @map("patient_id") 
   documentType     DocumentType @map("document_type")
   fileName         String   @map("file_name")
   originalFileName String   @map("original_file_name")
@@ -402,7 +402,7 @@ model MedicalRecord {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   //relation
-  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient          Patient?  @relation(fields: [patientId], references: [id], onDelete: SetNull)
   uploadedByUser   User     @relation("MedicalRecordUploader", fields: [uploadedBy], references: [id])
 
   @@index([patientId])

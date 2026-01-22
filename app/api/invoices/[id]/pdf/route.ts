@@ -51,11 +51,11 @@ export async function GET(
     // Prepare payload for PDF generation
     const invoicePayload: InvoicePayload = {
       patientInfo: {
-        id: invoice.patient.id,
-        patientName: invoice.patient.patientName,
-        email: invoice.patient.email || "",
-        phone: invoice.patient.phone || "",
-        address: invoice.patient.address || "",
+        id: invoice.patient?.id || "N/A",
+        patientName: invoice.patient?.patientName || "Deleted Patient",
+        email: invoice.patient?.email || "",
+        phone: invoice.patient?.phone || "",
+        address: invoice.patient?.address || "",
       },
       invoiceDetails: {
         id: invoice.id,
@@ -88,7 +88,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="invoice-${invoice.patient.patientName}-${id}.pdf"`,
+        "Content-Disposition": `attachment; filename="invoice-${invoice.patient?.patientName || "deleted"}-${id}.pdf"`,
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });
