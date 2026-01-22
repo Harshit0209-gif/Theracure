@@ -109,7 +109,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       if (data.success) {
         toast({
           title: "Payment Processed",
-          description: `Successfully processed payment of ₹${amount} for ${invoice.patient.patientName}`,
+          description: `Successfully processed payment of ₹${amount} for ${invoice.patient?.patientName || "patient"}`,
         });
         onPaymentSuccess();
         onClose();
@@ -147,7 +147,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">Patient</p>
               <p className="font-semibold text-lg">
-                {invoice.patient.patientName}
+                {invoice.patient?.patientName || "No Patient"}
               </p>
             </div>
 

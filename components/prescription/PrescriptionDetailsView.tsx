@@ -353,21 +353,21 @@ export const PrescriptionDetailsView: React.FC<
               <div>
                 <span className="text-gray-600">Name</span>
                 <p className="font-medium">
-                  {prescription.patient.patientName}
+                  {prescription.patient?.patientName || "N/A"}
                 </p>
               </div>
               <div>
                 <span className="text-gray-600">ID</span>
-                <p className="font-medium">{prescription.patient.id}</p>
+                <p className="font-medium">{prescription.patient?.id || "N/A"}</p>
               </div>
               <div>
                 <span className="text-gray-600">Age</span>
-                <p className="font-medium">{prescription.patient.age} years</p>
+                <p className="font-medium">{prescription.patient?.age || "N/A"} years</p>
               </div>
               <div>
                 <span className="text-gray-600">Gender</span>
                 <p className="font-medium capitalize">
-                  {prescription.patient.gender}
+                  {prescription.patient?.gender || "N/A"}
                 </p>
               </div>
             </div>
@@ -375,9 +375,9 @@ export const PrescriptionDetailsView: React.FC<
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-gray-400" />
-                <span>{prescription.patient.phone}</span>
+                <span>{prescription.patient?.phone || "N/A"}</span>
               </div>
-              {prescription.patient.email && (
+              {prescription.patient?.email && (
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-gray-400" />
                   <span>{prescription.patient.email}</span>

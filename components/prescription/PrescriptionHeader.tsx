@@ -32,7 +32,7 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
           <div className="flex items-center gap-4 text-indigo-100">
             <span className="flex items-center gap-1">
               <User className="h-4 w-4" />
-              {prescription.patient.patientName}
+              {prescription.patient?.patientName || "No Patient"}
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />

@@ -132,8 +132,8 @@ export function PrescriptionManagementSection() {
         const transformedPrescriptions: Prescription[] = data.prescriptions.map(
           (prescription) => ({
             id: prescription.id,
-            patientId: prescription.patient.id,
-            patientName: prescription.patient.patientName,
+            patientId: prescription.patient?.id || "N/A",
+            patientName: prescription.patient?.patientName || "No Patient",
             prescribedBy: prescription.therapist.user.name,
             prescriptionDate: prescription.createdAt || "Not specified",
             createdAt: prescription.createdAt,

@@ -153,7 +153,7 @@ export function AppointmentCard({ appointment, onAppointmentUpdated }: Appointme
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
-          <h3 className="text-lg font-semibold">{appointment.patient.patientName}</h3>
+          <h3 className="text-lg font-semibold">{appointment.patient?.patientName || "No Patient"}</h3>
           <p className="text-sm text-gray-500">{appointment.therapyType}</p>
         </div>
         <div className="flex items-center space-x-2">
