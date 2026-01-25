@@ -36,3 +36,4 @@ settings.json
 # compiled workers
 /workers/*.js
 !/workers/*.ts
+.vscode/settings.json

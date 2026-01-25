@@ -50,16 +50,16 @@ RUN ls -la .next/standalone && \
 # Stage 3: Production Runner (Debian-based for Chromium)
 FROM node:20.18.1-bookworm-slim AS runner
 
-# Install only required packages with specific versions
+# Install only required packages (use latest available versions)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium=130.0.6723.58-1~deb12u1 \
-    fonts-liberation=1:1.07.4-11 \
-    libnss3=2:3.87.1-1 \
-    libatk-bridge2.0-0=2.46.0-5 \
-    libxkbcommon0=1.5.0-1 \
-    libgbm1=22.3.6-1+deb12u1 \
-    libgtk-3-0=3.24.38-2~deb12u2 \
-    ca-certificates=20230311 \
+    chromium \
+    fonts-liberation \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libxkbcommon0 \
+    libgbm1 \
+    libgtk-3-0 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -159,7 +159,7 @@ USER nextjs
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001', (r) => process.exit(r.statusCode === 200 ? 0 : 1))" || exit 1
+  CMD node -e "require('http').get('http://localhost:3001/login', (r) => process.exit(r.statusCode === 200 ? 0 : 1))" || exit 1
 
 # Expose port
 EXPOSE 3001

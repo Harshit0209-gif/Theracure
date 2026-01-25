@@ -62,10 +62,14 @@ export function InvoicesSection() {
   const [selectedInvoiceForDetails, setSelectedInvoiceForDetails] =
     useState<Invoice>();
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const paginatedInvoices = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return invoices.slice(startIndex, startIndex + pageSize);
+  }, [invoices, page, pageSize]);
 
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedServices, setSelectedServices] = useState<PurchasedService[]>(
-    []
+    [],
   );
   const [printPayload, setPrintPayload] = useState<InvoicePayload | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -75,7 +79,7 @@ export function InvoicesSection() {
   const [invoiceDetails, setInvoiceDetails] = useState<Invoice>(defaultInvoice);
 
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>(
-    defaultPaymentDetails
+    defaultPaymentDetails,
   );
 
   const fetchServices = useCallback(async () => {
@@ -129,7 +133,7 @@ export function InvoicesSection() {
         setIsSearching(false);
       }
     },
-    [toast]
+    [toast],
   );
 
   const debouncedSearch = useMemo(
@@ -148,7 +152,7 @@ export function InvoicesSection() {
           }));
         }
       }, 500),
-    [fetchPatientDetails]
+    [fetchPatientDetails],
   );
 
   const handleidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,8 +166,8 @@ export function InvoicesSection() {
     if (existingService) {
       setSelectedServices(
         selectedServices.map((s) =>
-          s.id === service.id ? { ...s, quantity: s.quantity + 1 } : s
-        )
+          s.id === service.id ? { ...s, quantity: s.quantity + 1 } : s,
+        ),
       );
     } else {
       setSelectedServices([...selectedServices, { ...service, quantity: 1 }]);
@@ -176,8 +180,8 @@ export function InvoicesSection() {
     } else {
       setSelectedServices(
         selectedServices.map((s) =>
-          s.id === serviceId ? { ...s, quantity } : s
-        )
+          s.id === serviceId ? { ...s, quantity } : s,
+        ),
       );
     }
   };
@@ -342,7 +346,7 @@ export function InvoicesSection() {
               const transactionAmount = parseFloat(t.amount.toFixed(2));
               return sum + transactionAmount;
             }, 0)
-            .toFixed(2)
+            .toFixed(2),
         )
       : parseFloat(invoice.amountPaid.toFixed(2));
 
@@ -362,13 +366,50 @@ export function InvoicesSection() {
         invoice.status === "PAID"
           ? PaymentStatus.PAID
           : invoice.status === "DUE"
-          ? PaymentStatus.PENDING
-          : PaymentStatus.PENDING,
+            ? PaymentStatus.PENDING
+            : PaymentStatus.PENDING,
     };
 
     const payload = mapInvoiceToPrintPayload(invoice, invoicePaymentDetails);
     setPrintPayload(payload);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleDirectPrint = (invoice: Invoice) => {
+    const amountPaidFromTransactions = invoice.transactions
+      ? parseFloat(
+          invoice.transactions
+            .filter((t) => t.status === TransactionStatus.SUCCESS)
+            .reduce((sum, t) => {
+              const transactionAmount = parseFloat(t.amount.toFixed(2));
+              return sum + transactionAmount;
+            }, 0)
+            .toFixed(2),
+        )
+      : parseFloat(invoice.amountPaid.toFixed(2));
+
+    const subTotal = parseFloat(invoice.subTotal.toFixed(2));
+    const totalAmount = parseFloat(invoice.totalAmount.toFixed(2));
+    const discount = calculateDiscount(subTotal, invoice.offer || 0);
+    const balance = calculateBalance(totalAmount, amountPaidFromTransactions);
+
+    const invoicePaymentDetails: PaymentDetails = {
+      totalAmount: totalAmount,
+      amountPaid: amountPaidFromTransactions,
+      subTotal: subTotal,
+      offer: invoice.offer || 0,
+      discount: discount,
+      balance: balance,
+      status:
+        invoice.status === "PAID"
+          ? PaymentStatus.PAID
+          : invoice.status === "DUE"
+            ? PaymentStatus.PENDING
+            : PaymentStatus.PENDING,
+    };
+
+    const payload = mapInvoiceToPrintPayload(invoice, invoicePaymentDetails);
+    handlePrintInvoice(payload);
   };
 
   function InvoiceCardViewer() {
@@ -504,11 +545,12 @@ export function InvoicesSection() {
 
         {/* Invoices Table */}
         <InvoiceTable
-          invoices={invoices}
+          invoices={paginatedInvoices}
           page={page}
           totalPages={totalPages}
           setPage={setPage}
           handleViewDetails={handleViewDetails}
+          handleDirectPrint={handleDirectPrint}
         />
       </div>
       <InvoiceDetailsModal
