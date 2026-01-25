@@ -40,13 +40,25 @@ jobs:
           # List all packages with postinstall, preinstall, or install scripts
           find node_modules -name package.json -exec grep -l "postinstall\|preinstall\|install\":" {} \; | head -20 || true
 
+      - name: Display audit results
+        run: |
+          echo "🔍 NPM Audit Results:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          if [ -f audit-report.json ]; then
+            cat audit-report.json | jq -r '.vulnerabilities // "No critical vulnerabilities"' || cat audit-report.json
+          else
+            echo "No audit report generated"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
       - name: Upload audit report
+        if: false # Disabled due to storage quota - results are displayed above
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: security-audit
           path: audit-report.json
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: warn
 
   build-and-scan:
@@ -83,15 +95,18 @@ jobs:
         if: always()
         run: |
           echo "🔍 Trivy Security Scan Results:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           cat trivy-results.txt || echo "No vulnerabilities file found"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Upload Trivy results as artifact
-        if: always()
+        if: false # Disabled due to storage quota - results are displayed above
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: trivy-security-scan
           path: trivy-results.txt
-          retention-days: 30
+          retention-days: 1
           if-no-files-found: warn
 
       - name: Run container security checks
