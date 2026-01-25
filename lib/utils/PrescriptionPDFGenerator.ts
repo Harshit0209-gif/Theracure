@@ -14,6 +14,7 @@ const generateAssessmentPDF = async (assessment: any) => {
   try {
     browser = await puppeteer.launch({
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -24,6 +25,9 @@ const generateAssessmentPDF = async (assessment: any) => {
         "--disable-gpu",
         "--disable-crash-reporter",
         "--disable-breakpad",
+        "--disable-features=VizDisplayCompositor",
+        "--single-process",
+        "--no-crash-upload",
       ],
       timeout: 30000,
     });

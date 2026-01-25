@@ -197,7 +197,7 @@ jobs:
               --pids-limit=100 \
               --security-opt=no-new-privileges:true \
               --read-only \
-              --tmpfs /tmp:rw,noexec,nosuid,size=100m \
+              --tmpfs /tmp:rw,noexec,nosuid,size=200m \
               --tmpfs /app/uploads:rw,noexec,nosuid,size=500m \
               --shm-size=1g \
               ${{ env.IMAGE_NAME }}:latest

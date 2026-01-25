@@ -139,16 +139,19 @@ RUN mkdir -p /app/uploads && \
     mkdir -p /home/nextjs/.cache && \
     mkdir -p /home/nextjs/.config/chromium && \
     mkdir -p /home/nextjs/.local/share && \
-    mkdir -p /tmp/chromium
+    mkdir -p /tmp/chromium && \
+    mkdir -p /tmp/chrome-crash-dumps
 
 # Set permissions
-RUN chown -R nextjs:nodejs /app /home/nextjs /tmp/chromium && \
+RUN chown -R nextjs:nodejs /app /home/nextjs /tmp/chromium /tmp/chrome-crash-dumps && \
     chmod 700 /tmp/chromium && \
+    chmod 700 /tmp/chrome-crash-dumps && \
     chmod +x /app/docker-entrypoint.sh
 
 # Environment for Chromium
 ENV HOME=/home/nextjs
 ENV XDG_RUNTIME_DIR=/tmp/chromium
+ENV CHROME_CRASH_DUMP_DIR=/tmp/chrome-crash-dumps
 
 # Security: Remove write permissions from application code
 RUN chmod -R 555 /app && \
