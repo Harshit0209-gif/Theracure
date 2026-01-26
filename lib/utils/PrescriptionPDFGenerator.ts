@@ -14,7 +14,8 @@ const generateAssessmentPDF = async (assessment: any) => {
   try {
     browser = await puppeteer.launch({
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -23,11 +24,10 @@ const generateAssessmentPDF = async (assessment: any) => {
         "--no-first-run",
         "--no-zygote",
         "--disable-gpu",
-        "--disable-crash-reporter",
-        "--disable-breakpad",
+        "--user-data-dir=/tmp/chromium-user-data",
+        "--crash-dumps-dir=/tmp/chrome-crash-dumps",
         "--disable-features=VizDisplayCompositor",
         "--single-process",
-        "--no-crash-upload",
       ],
       timeout: 30000,
     });
@@ -92,7 +92,7 @@ const generateAssessmentPDF = async (assessment: any) => {
                 typeof v === "object" ? JSON.stringify(v) : v
               }</span>
             </div>
-          `
+          `,
           )
           .join("");
 
@@ -155,8 +155,8 @@ const generateAssessmentPDF = async (assessment: any) => {
           .map(
             ([k, v]) =>
               `<div class="sub-item"><span class="sub-key">${formatKey(
-                k
-              )}:</span><span class="sub-val">${v}</span></div>`
+                k,
+              )}:</span><span class="sub-val">${v}</span></div>`,
           )
           .join("");
         if (items)
@@ -169,8 +169,8 @@ const generateAssessmentPDF = async (assessment: any) => {
           .map(
             ([k, v]) =>
               `<div class="sub-item"><span class="sub-key">${formatKey(
-                k
-              )}:</span><span class="sub-val">${v}</span></div>`
+                k,
+              )}:</span><span class="sub-val">${v}</span></div>`,
           )
           .join("");
         if (items)
@@ -199,7 +199,7 @@ const generateAssessmentPDF = async (assessment: any) => {
       const maxScale = 40;
       const positionPercent = Math.min(
         100,
-        Math.max(0, ((bmiValue - minScale) / (maxScale - minScale)) * 100)
+        Math.max(0, ((bmiValue - minScale) / (maxScale - minScale)) * 100),
       );
 
       return `
@@ -243,7 +243,7 @@ const generateAssessmentPDF = async (assessment: any) => {
                 typeof v === "object" ? JSON.stringify(v) : v
               }</span>
             </div>
-          `
+          `,
         )
         .join("");
 
@@ -263,7 +263,7 @@ const generateAssessmentPDF = async (assessment: any) => {
                         <td>${entry.timeOfDay || "-"}</td>
                         <td class="score-cell">${entry.vasScore}/10</td>
                     </tr>
-                `
+                `,
           )
           .join("");
 
@@ -461,8 +461,8 @@ const generateAssessmentPDF = async (assessment: any) => {
           <div class="info-row"><span class="p-label">Age / Sex:</span><span class="p-val">${
             patientInfo?.age || assessmentData?.age || ""
           } / ${
-      patientInfo?.gender || assessmentData?.gender || ""
-    }</span></div>
+            patientInfo?.gender || assessmentData?.gender || ""
+          }</span></div>
           <div class="info-row"><span class="p-label">Chief C/O:</span><span class="p-val">${
             assessmentData?.chiefComplaints || ""
           }</span></div>
@@ -472,13 +472,13 @@ const generateAssessmentPDF = async (assessment: any) => {
             assessmentData?.patientId || patientInfo?.patientId || "THRC"
           }</span></div>
           <div class="info-row"><span class="p-label">Date:</span><span class="p-val">${new Date(
-            assessmentData?.assessmentDate || Date.now()
+            assessmentData?.assessmentDate || Date.now(),
           ).toLocaleDateString("en-IN")}</span></div>
           <div class="info-row"><span class="p-label">Ht / Wt:</span><span class="p-val">${
             assessmentData?.vitals?.height || patientInfo?.height || "__"
           } cm | ${
-      assessmentData?.vitals?.weight || patientInfo?.weight || "__"
-    } kg</span></div>
+            assessmentData?.vitals?.weight || patientInfo?.weight || "__"
+          } kg</span></div>
         </div>
       </div>
 
@@ -489,23 +489,23 @@ const generateAssessmentPDF = async (assessment: any) => {
                 ${renderSection(
                   "History",
                   assessmentData?.historyOfPresentIllness ||
-                    assessmentData?.historyOfIllness
+                    assessmentData?.historyOfIllness,
                 )}
                 ${renderSection(
                   "Medical History",
-                  assessmentData?.medicalHistory
+                  assessmentData?.medicalHistory,
                 )}
                 ${renderSection(
                   "Surgical History",
-                  assessmentData?.surgicalHistory
+                  assessmentData?.surgicalHistory,
                 )}
                 ${renderSection(
                   "Occupational History",
-                  assessmentData?.occupationalHistory
+                  assessmentData?.occupationalHistory,
                 )}
                 ${renderSection(
                   "Environmental History",
-                  assessmentData?.environmentalHistory
+                  assessmentData?.environmentalHistory,
                 )}
                 ${renderPainHistoryWithVAS(assessmentData?.painHistory)}
              </div>
@@ -523,23 +523,23 @@ const generateAssessmentPDF = async (assessment: any) => {
           ${renderSection(
             "On Observation",
             assessmentData?.onObservation,
-            true
+            true,
           )}
           ${renderSection("On Palpation", assessmentData?.onPalpation, true)}
           ${renderExaminationSection()}
           ${renderSection(
             "Differential Diagnosis",
-            assessmentData?.differentialDiagnosis
+            assessmentData?.differentialDiagnosis,
           )}
           ${renderSection("Investigations", assessmentData?.investigations)}
           ${renderSection("Special Tests", assessmentData?.specialTests)}
           ${renderSection(
             "Provisional Diagnosis",
-            assessmentData?.provisionalDiagnosis
+            assessmentData?.provisionalDiagnosis,
           )}
           ${renderSection(
             "Physiotherapy Management",
-            assessmentData?.physiotherapyMgmt
+            assessmentData?.physiotherapyMgmt,
           )}
           ${renderSection("Additional Notes", assessmentData?.notes)}
       </div>
@@ -587,7 +587,7 @@ const generateAssessmentPDF = async (assessment: any) => {
     throw new Error(
       `Failed to generate assessment PDF: ${
         error instanceof Error ? error.message : "Unknown error"
-      }`
+      }`,
     );
   } finally {
     if (browser) await browser.close();

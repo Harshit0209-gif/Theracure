@@ -1,56 +1,39 @@
-# Enhanced Secure Dockerfile for Physio Dashboard
-# Use specific versions to ensure reproducibility and security
-
+# =========================
 # Stage 1: Dependencies
+# =========================
 FROM node:20.18.1-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
-# Add security labels
-LABEL maintainer="security@theracure.com"
-LABEL security.scan="required"
-LABEL version="1.0.0"
-
 WORKDIR /app
-
-# Install only production dependencies first (better caching)
 COPY package.json pnpm-lock.yaml* ./
 COPY prisma ./prisma/
-
-# Use frozen lockfile for security - exact versions only
 RUN pnpm install --frozen-lockfile --prod=false
 
-# Verify no suspicious scripts were run
-RUN echo "✅ Dependencies installed" && \
-    find node_modules -type f -executable -ls | head -20 || true
 
-
+# =========================
 # Stage 2: Builder
+# =========================
 FROM node:20.18.1-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
-
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Disable telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build application
-RUN pnpm prisma:generate && \
-    pnpm generate:enums && \
-    pnpm build && \
-    pnpm build:worker
-
-# Verify build output
-RUN ls -la .next/standalone && \
-    echo "✅ Build completed successfully"
+RUN pnpm prisma:generate \
+ && pnpm generate:enums \
+ && pnpm build \
+ && pnpm build:worker
 
 
-# Stage 3: Production Runner (Debian-based for Chromium)
+# =========================
+# Stage 3: Production Runner
+# =========================
 FROM node:20.18.1-bookworm-slim AS runner
 
-# Install only required packages (use latest available versions)
+# ---- Chromium runtime deps ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
@@ -60,112 +43,57 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgbm1 \
     libgtk-3-0 \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+ && rm -rf /var/lib/apt/lists/*
 
-# Security: Remove package manager to prevent runtime installation
-RUN rm -rf /usr/bin/apt* /usr/bin/dpkg* /var/lib/dpkg /var/lib/apt
-
-# Puppeteer configuration
+# ---- Puppeteer config ----
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Chromium security flags
-ENV CHROMIUM_FLAGS="\
---no-sandbox \
---disable-setuid-sandbox \
---disable-dev-shm-usage \
---disable-gpu \
---disable-crash-reporter \
---disable-features=Crashpad \
---disable-background-networking \
---disable-default-apps \
---disable-extensions \
---disable-sync \
---disable-translate \
---metrics-recording-only \
---mute-audio \
---no-first-run \
---safebrowsing-disable-auto-update \
-"
-
-# Secure /tmp
-RUN chmod 1777 /tmp
-
 WORKDIR /app
 
-# Production environment
+# ---- Runtime env ----
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3001
-
-# Limit Node.js memory to prevent abuse
 ENV NODE_OPTIONS="--max-old-space-size=768 --max-http-header-size=16384"
 
-# Create non-root user with specific UID/GID
-RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 --gid nodejs --shell /bin/false --home /app nextjs
+# ---- Create non-root user ----
+RUN groupadd --system --gid 1001 nodejs \
+ && useradd --system --uid 1001 --gid nodejs --shell /bin/false --home /home/nextjs nextjs
 
-# Copy built application from builder
+# ---- Copy build output ----
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Copy compiled worker and its dependencies
 COPY --from=builder --chown=nextjs:nodejs /app/workers/sms-worker.js ./workers/
 COPY --from=builder --chown=nextjs:nodejs /app/lib/prisma.js ./lib/
 COPY --from=builder --chown=nextjs:nodejs /app/lib/mail/sendSMS.js ./lib/mail/
 COPY --from=builder --chown=nextjs:nodejs /app/config/smsTemplatesMap.js ./config/
 COPY --from=builder --chown=nextjs:nodejs /app/lib/generated/smsEnums.js ./lib/generated/
-
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Generate Prisma client in production
-RUN mkdir /tmp/prisma-gen && \
-    cp -r ./prisma /tmp/prisma-gen/ && \
-    cd /tmp/prisma-gen && \
-    npm init -y && \
-    npm install prisma@6.19.0 @prisma/client@6.19.0 && \
-    npx prisma generate && \
-    mkdir -p /app/node_modules && \
-    rm -rf /app/node_modules/.prisma /app/node_modules/@prisma && \
-    cp -r node_modules/.prisma /app/node_modules/ && \
-    cp -r node_modules/@prisma /app/node_modules/ && \
-    rm -rf /tmp/prisma-gen
+# ---- Chromium required directories (FIX) ----
+RUN mkdir -p \
+    /home/nextjs/.cache \
+    /home/nextjs/.config/chromium \
+    /home/nextjs/.local/share \
+    /tmp/chromium-user-data \
+    /tmp/chrome-crash-dumps \
+ && chown -R nextjs:nodejs /home/nextjs /tmp/chromium-user-data /tmp/chrome-crash-dumps \
+ && chmod 700 /tmp/chromium-user-data /tmp/chrome-crash-dumps \
+ && chmod +x /app/docker-entrypoint.sh
 
-# Create necessary directories
-RUN mkdir -p /app/uploads && \
-    mkdir -p /home/nextjs/.cache && \
-    mkdir -p /home/nextjs/.config/chromium && \
-    mkdir -p /home/nextjs/.local/share && \
-    mkdir -p /tmp/chromium && \
-    mkdir -p /tmp/chrome-crash-dumps
-
-# Set permissions
-RUN chown -R nextjs:nodejs /app /home/nextjs /tmp/chromium /tmp/chrome-crash-dumps && \
-    chmod 700 /tmp/chromium && \
-    chmod 700 /tmp/chrome-crash-dumps && \
-    chmod +x /app/docker-entrypoint.sh
-
-# Environment for Chromium
+# ---- Chromium environment ----
 ENV HOME=/home/nextjs
-ENV XDG_RUNTIME_DIR=/tmp/chromium
-ENV CHROME_CRASH_DUMP_DIR=/tmp/chrome-crash-dumps
+ENV XDG_RUNTIME_DIR=/tmp/chromium-user-data
 
-# Security: Remove write permissions from application code
-RUN chmod -R 555 /app && \
-    chmod 755 /app/uploads
+# ---- Lock application code ----
+RUN chmod -R 555 /app && chmod 755 /app/uploads || true
 
-# Switch to non-root user
 USER nextjs
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/login', (r) => process.exit(r.statusCode === 200 ? 0 : 1))" || exit 1
-
-# Expose port
 EXPOSE 3001
 
-# Start application
 CMD ["/app/docker-entrypoint.sh"]

@@ -14,7 +14,8 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
   try {
     browser = await puppeteer.launch({
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -23,11 +24,10 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
         "--no-first-run",
         "--no-zygote",
         "--disable-gpu",
-        "--disable-crash-reporter",
-        "--disable-breakpad",
+        "--user-data-dir=/tmp/chromium-user-data",
+        "--crash-dumps-dir=/tmp/chrome-crash-dumps",
         "--disable-features=VizDisplayCompositor",
         "--single-process",
-        "--no-crash-upload",
       ],
       timeout: 30000,
     });
@@ -62,7 +62,7 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
     throw new Error(
       `Failed to generate invoice PDF: ${
         error instanceof Error ? error.message : "Unknown error"
-      }`
+      }`,
     );
   } finally {
     if (browser) {
@@ -96,7 +96,7 @@ const getImageAsBase64 = async () => {
     if (!imageBuffer) {
       console.warn(
         "Logo image not found at any of the expected paths:",
-        alternativePaths
+        alternativePaths,
       );
       return null;
     }
@@ -142,7 +142,7 @@ const calculateTotalPaid = (transactions?: any[]) => {
         const transactionAmount = parseFloat(t.amount.toFixed(2));
         return sum + transactionAmount;
       }, 0)
-      .toFixed(2)
+      .toFixed(2),
   );
 };
 
@@ -159,13 +159,13 @@ const getPaymentMethods = (transactions?: any[]) => {
 const getLatestTransactionDate = (transactions?: any[]) => {
   if (!transactions || transactions.length === 0) return null;
   const successfulTransactions = transactions.filter(
-    (t) => t.status === TransactionStatus.SUCCESS
+    (t) => t.status === TransactionStatus.SUCCESS,
   );
   if (successfulTransactions.length === 0) return null;
   const latest = successfulTransactions.sort(
     (a, b) =>
       new Date(b.transactionDate).getTime() -
-      new Date(a.transactionDate).getTime()
+      new Date(a.transactionDate).getTime(),
   )[0];
   return latest.transactionDate;
 };
@@ -178,11 +178,11 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
 
   // Calculate amount paid from transactions
   const amountPaidFromTransactions = calculateTotalPaid(
-    invoiceDetails.transactions
+    invoiceDetails.transactions,
   );
   const paymentMethods = getPaymentMethods(invoiceDetails.transactions);
   const latestPaymentDate = getLatestTransactionDate(
-    invoiceDetails.transactions
+    invoiceDetails.transactions,
   );
 
   // Get the logo as base64
@@ -563,7 +563,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           </div>
           <div class="text-right">
             <div class="invoice-date">Date: ${new Date(
-              invoiceDetails.date
+              invoiceDetails.date,
             ).toLocaleDateString("en-IN")}</div>
             <div class="invoice-date">Status: ${invoiceDetails.status}</div>
           </div>
@@ -604,7 +604,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                 ? `<div class="detail-item">
                   <span class="detail-label">Last Payment Date:</span>
                   <span class="detail-value">${new Date(
-                    latestPaymentDate
+                    latestPaymentDate,
                   ).toLocaleDateString("en-IN")}</span>
                 </div>`
                 : ""
@@ -661,10 +661,10 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                     }</div>
                   </td>
                   <td class="text-center">${item.quantity}</td>
-                  <td class="text-center">${item.price.toLocaleString(
-                    "en-IN",
-                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                  )}</td>
+                  <td class="text-center">${item.price.toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}</td>
                   <td class="text-center">${(
                     item.price * item.quantity
                   ).toLocaleString("en-IN", {
@@ -672,7 +672,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                     maximumFractionDigits: 2,
                   })}</td>
                 </tr>
-              `
+              `,
                 )
                 .join("")}
             </tbody>
@@ -686,7 +686,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
               <td class="totals-label">Subtotal:</td>
               <td class="totals-value">₹${displaySubTotal.toLocaleString(
                 "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
               )}</td>
             </tr>
             ${
@@ -696,7 +696,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
               <td class="totals-label">Discount (${displayOffer}%):</td>
               <td class="totals-value" style="color: #059669;">- ₹${displayDiscount.toLocaleString(
                 "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
               )}</td>
             </tr>
             `
@@ -706,14 +706,14 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
               <td class="totals-label">Total Amount:</td>
               <td class="totals-value">₹${displayTotalAmount.toLocaleString(
                 "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
               )}</td>
             </tr>
             <tr>
               <td class="totals-label">Amount Paid:</td>
               <td class="totals-value paid-amount">₹${displayAmountPaid.toLocaleString(
                 "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
               )}</td>
             </tr>
             <tr>
