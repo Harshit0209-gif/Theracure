@@ -154,7 +154,7 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 items-start">
                     <div>
                       <Label className="text-xs">Location</Label>
                       <Input

@@ -3,34 +3,33 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { InvoicePayload, TransactionStatus } from "@/types/invoice";
+import { PUPPETEER_CONFIG } from "@/config/puppeteer.config";
+import os from "os";
 
-// Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
   let browser;
+  let tmpDir: string | null = null;
 
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath:
-        process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
+    // 1. Create a unique temporary directory
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "puppeteer-"));
+
+    // 2. Create a dynamic launch config
+    const launchConfig = {
+      ...PUPPETEER_CONFIG,
       args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-gpu",
-        "--user-data-dir=/tmp/chromium-user-data",
-        "--crash-dumps-dir=/tmp/chrome-crash-dumps",
-        "--disable-features=VizDisplayCompositor",
-        "--single-process",
+        ...PUPPETEER_CONFIG.args,
+        `--user-data-dir=${tmpDir}`,
+        `--crash-dumps-dir=${tmpDir}`,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
       ],
-      timeout: 30000,
-    });
+    };
+
+    browser = await puppeteer.launch(launchConfig);
 
     const page = await browser.newPage();
 
@@ -67,6 +66,14 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
   } finally {
     if (browser) {
       await browser.close();
+    }
+    // 4. Clean up the temporary directory
+    if (tmpDir) {
+      try {
+        await fs.rm(tmpDir, { recursive: true, force: true });
+      } catch (e) {
+        console.error(`Failed to clean up temporary directory ${tmpDir}:`, e);
+      }
     }
   }
 };
@@ -131,8 +138,6 @@ const getImageAsBase64 = async () => {
   }
 };
 
-// Helper function to calculate total paid from transactions with 2 decimal accuracy
-// Rounds each transaction amount before summing to prevent floating point drift
 const calculateTotalPaid = (transactions?: any[]) => {
   if (!transactions || transactions.length === 0) return 0;
   return parseFloat(
@@ -180,7 +185,10 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
   const amountPaidFromTransactions = calculateTotalPaid(
     invoiceDetails.transactions,
   );
-  const paymentMethods = getPaymentMethods(invoiceDetails.transactions);
+  let paymentMethods = getPaymentMethods(invoiceDetails.transactions);
+  if (paymentMethods === "N/A") {
+    paymentMethods = invoiceDetails.paymentMethod || "N/A";
+  }
   const latestPaymentDate = getLatestTransactionDate(
     invoiceDetails.transactions,
   );
@@ -204,8 +212,6 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           price: service.price,
         })) || [];
 
-  // For new invoices, use paymentDetails values; for existing invoices, use invoiceDetails
-  // Check if this is a new invoice by seeing if invoiceDetails has zero values
   const isNewInvoice =
     invoiceDetails.subTotal === 0 && invoiceDetails.totalAmount === 0;
 

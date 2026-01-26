@@ -3,6 +3,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { getImagesAsBase64 } from "./imageUtils.node";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
+import { PUPPETEER_CONFIG } from "@/config/puppeteer.config";
+import os from "os";
+import fs from "fs/promises";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,26 +14,21 @@ const generateAssessmentPDF = async (assessment: any) => {
   const { patientInfo, therapist, assessmentData } = assessment;
 
   let browser;
+  let tmpDir: string | null = null;
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath:
-        process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "puppeteer-"));
+
+    const launchConfig = {
+      ...PUPPETEER_CONFIG,
       args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-gpu",
-        "--user-data-dir=/tmp/chromium-user-data",
-        "--crash-dumps-dir=/tmp/chrome-crash-dumps",
-        "--disable-features=VizDisplayCompositor",
-        "--single-process",
+        ...PUPPETEER_CONFIG.args,
+        `--user-data-dir=${tmpDir}`,
+        `--crash-dumps-dir=${tmpDir}`,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
       ],
-      timeout: 30000,
-    });
+    };
+    browser = await puppeteer.launch(launchConfig);
 
     const page = await browser.newPage();
     page.setDefaultTimeout(30000);
@@ -43,7 +41,7 @@ const generateAssessmentPDF = async (assessment: any) => {
     const logoBase64 = images["apple-touch-icon.png"];
     const bodyBase64 = images["humen-body.jpg"];
 
-    // --- Helper Functions ---
+    // --- Helper Functions (Same as before) ---
     const hasValue = (value: any): boolean => {
       if (value === null || value === undefined) return false;
       if (typeof value === "string") return value.trim() !== "";
@@ -57,8 +55,6 @@ const generateAssessmentPDF = async (assessment: any) => {
 
     const formatKey = (key: string) => {
       const upperKeys = ["rom", "arom", "prom", "vas", "hmf", "bp", "spo2"];
-
-      // Check if the key starts with any of the upperKeys
       for (const k of upperKeys) {
         if (key.toLowerCase().startsWith(k)) {
           return key
@@ -67,7 +63,6 @@ const generateAssessmentPDF = async (assessment: any) => {
             .trim();
         }
       }
-      // Default: camelCase to Title Case
       return key
         .replace(/([A-Z])/g, " $1")
         .replace(/^./, (str) => str.toUpperCase())
@@ -76,7 +71,6 @@ const generateAssessmentPDF = async (assessment: any) => {
 
     const renderSection = (label: string, value: any, fullWidth = false) => {
       if (!hasValue(value)) return "";
-
       let contentHtml = "";
 
       if (typeof value === "string" || typeof value === "number") {
@@ -114,7 +108,6 @@ const generateAssessmentPDF = async (assessment: any) => {
     const renderVitalsText = () => {
       const vitals = assessmentData?.vitals;
       if (!vitals) return "";
-
       let parts = "";
       if (vitals.bloodPressure?.systolic)
         parts += `<div class="sub-item"><span class="sub-key">BP:</span> <span class="sub-val">${vitals.bloodPressure.systolic}/${vitals.bloodPressure.diastolic}</span></div>`;
@@ -124,8 +117,6 @@ const generateAssessmentPDF = async (assessment: any) => {
         parts += `<div class="sub-item"><span class="sub-key">Temp:</span> <span class="sub-val">${vitals.temperature}°F</span></div>`;
       if (vitals.spo2)
         parts += `<div class="sub-item"><span class="sub-key">SPO2:</span> <span class="sub-val">${vitals.spo2}%</span></div>`;
-
-      if (!parts) return "";
       return parts;
     };
 
@@ -136,7 +127,6 @@ const generateAssessmentPDF = async (assessment: any) => {
         assessmentData?.neurologicalExam ||
         assessmentData?.neurologicalExamination;
 
-      // Check if there is anything to render
       const hasVitals = !!vitalsHtml;
       const hasMotor = hasValue(motor);
       const hasNeuro = hasValue(neuro);
@@ -147,9 +137,7 @@ const generateAssessmentPDF = async (assessment: any) => {
       if (hasVitals) {
         content += `<div class="exam-sub-group"><div class="exam-sub-title">Vitals</div><div class="val-list horizontal-list">${vitalsHtml}</div></div>`;
       }
-
       if (hasMotor) {
-        // Re-use render logic for objects but inline
         const items = Object.entries(motor)
           .filter(([_, v]) => hasValue(v))
           .map(
@@ -162,7 +150,6 @@ const generateAssessmentPDF = async (assessment: any) => {
         if (items)
           content += `<div class="exam-sub-group"><div class="exam-sub-title">Motor Examination</div><div class="val-list horizontal-list">${items}</div></div>`;
       }
-
       if (hasNeuro) {
         const items = Object.entries(neuro)
           .filter(([_, v]) => hasValue(v))
@@ -192,16 +179,13 @@ const generateAssessmentPDF = async (assessment: any) => {
         const calculated = calculateSimpleBMI(vitals.weight, vitals.height);
         if (calculated) bmiValue = calculated.bmi;
       }
-
       if (!bmiValue) return "";
-
       const minScale = 15;
       const maxScale = 40;
       const positionPercent = Math.min(
         100,
         Math.max(0, ((bmiValue - minScale) / (maxScale - minScale)) * 100),
       );
-
       return `
         <div class="bmi-container">
            <div class="bmi-title">BMI Index: ${bmiValue} kg/m²</div>
@@ -215,10 +199,7 @@ const generateAssessmentPDF = async (assessment: any) => {
               </div>
            </div>
            <div class="bmi-labels">
-              <span>Under</span>
-              <span>Normal</span>
-              <span>Over</span>
-              <span>Obese</span>
+              <span>Under</span><span>Normal</span><span>Over</span><span>Obese</span>
            </div>
         </div>
       `;
@@ -229,7 +210,7 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       let contentHtml = "";
 
-      // Render basic pain history fields (excluding vasScores)
+      // 1. Render basic pain history text fields first
       const items = Object.entries(painHistory)
         .filter(([k, v]) => {
           if (k === "vasScores") return false;
@@ -251,42 +232,60 @@ const generateAssessmentPDF = async (assessment: any) => {
         contentHtml = `<div class="val-list">${items}</div>`;
       }
 
-      // Add VAS scores table if available
+      // 2. Render the Visual VAS Table
       const vasScores = painHistory?.vasScores;
       if (Array.isArray(vasScores) && vasScores.length > 0) {
+        // Helper to get color based on score
+        const getPainColor = (score: number) => {
+          if (score <= 3) return "#22c55e"; // Green (Mild)
+          if (score <= 6) return "#eab308"; // Yellow/Orange (Moderate)
+          return "#ef4444"; // Red (Severe)
+        };
+
         const tableRows = vasScores
-          .map(
-            (entry: any) => `
-                    <tr>
-                        <td>${entry.location || "-"}</td>
-                        <td>${entry.activity || "-"}</td>
-                        <td>${entry.timeOfDay || "-"}</td>
-                        <td class="score-cell">${entry.vasScore}/10</td>
-                    </tr>
-                `,
-          )
+          .map((entry: any) => {
+            const score = parseInt(entry.vasScore) || 0;
+            const color = getPainColor(score);
+            const percent = (score / 10) * 100;
+
+            return `
+              <tr class="vas-row">
+                  <td class="vas-cell" style="font-weight:500;">${entry.location || "-"}</td>
+                  <td class="vas-cell">${entry.activity || "-"}</td>
+                  <td class="vas-cell">${entry.timeOfDay || "-"}</td>
+                  <td class="vas-cell" style="width: 120px;">
+                    <div class="vas-visual-container">
+                      <div class="vas-bar-bg">
+                        <div class="vas-bar-fill" style="width: ${percent}%; background-color: ${color};"></div>
+                      </div>
+                      <span class="vas-badge" style="color: ${color};">${score}/10</span>
+                    </div>
+                  </td>
+              </tr>
+            `;
+          })
           .join("");
 
-        const vasTable = `
-                <div class="vas-table-container" style="margin-top: 8px;">
-                    <div class="vas-table-title">VAS Pain Scores</div>
-                    <table class="vas-table">
-                        <thead>
-                            <tr>
-                                <th>Location</th>
-                                <th>Activity</th>
-                                <th>Time</th>
-                                <th>Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+        const vasTableHtml = `
+            <div class="vas-section-wrapper">
+                <div class="vas-header-label">Pain Scale Assessment (VAS)</div>
+                <table class="vas-modern-table">
+                    <thead>
+                        <tr>
+                            <th width="25%">Location</th>
+                            <th width="25%">Activity</th>
+                            <th width="20%">Time</th>
+                            <th width="30%">Severity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            </div>
+        `;
 
-        contentHtml += vasTable;
+        contentHtml += vasTableHtml;
       }
 
       if (!contentHtml) return "";
@@ -298,7 +297,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           </div>`;
     };
 
-    // --- HTML Template ---
+    // --- HTML Template (REWRITTEN) ---
     const htmlTemplate = `
   <!DOCTYPE html>
   <html>
@@ -307,64 +306,218 @@ const generateAssessmentPDF = async (assessment: any) => {
     <title>OPD Assessment Sheet</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+      /* Assuming A4 Paper */
       @page { size: A4; margin: 6mm 8mm 10mm 8mm; }
       * { box-sizing: border-box; }
       body {
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Roboto', sans-serif; /* Fallback, closer match might be Arial Narrow */
         font-size: 9.5pt;
         color: #000;
         margin: 0; padding: 0;
         line-height: 1.25;
       }
+      
+      /* --- HEADER STYLES --- */
+      .header-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-bottom: 8px;
+        /* Thick light blue bottom border */
+        border-bottom: 6px solid #8fcbe5; 
+        margin-bottom: 12px;
+      }
+      
+      /* Header Left (Address & Logo) */
+      .header-left {
+        width: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      /* Logo Area */
+      .logo-wrapper {
+        margin-bottom: 8px;
+        /* Ensure logo area is big enough */
+        min-height: 40px; 
+      }
+      .logo-img {
+        width: 250px;
+        max-width: 100%;
+        height: auto;
+        object-fit: contain;
+        display: block;
+      }
+      
+      /* Address Text Styling */
+      .clinic-address {
+        font-size: 8.5pt;
+        color: #231f20; /* Dark Grey/Black */
+        line-height: 1.35;
+        font-family: 'Roboto', sans-serif;
+      }
+      .addr-row { display: block; margin-bottom: 1px; }
+      
+      /* Colors for Labels */
+      .lbl-blue { color: #0054a6; font-weight: 700; }
+      .lbl-red  { color: #ed1c24; font-weight: 700; }
+      .txt-red  { color: #ed1c24; font-weight: 500; }
+      .txt-blue { color: #0054a6; }
+      
+      /* Header Right (Doctor Info) */
+      .header-right {
+        width: 50%; /* Adjusted for balance */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+        padding-left: 10px;
+      }
+      
+      /* Doctor Name - Large Red */
+      .dr-name {
+        font-size: 20pt;
+        font-weight: 900;
+        color: #ed1c24; /* Red */
+        line-height: 1.1;
+        margin-bottom: 2px;
+        letter-spacing: -0.5px;
+      }
+      
+      /* Qualifications - Blue */
+      .dr-degrees {
+        font-size: 8.5pt;
+        font-weight: 700;
+        color: #0054a6; /* Dark Blue */
+        margin-bottom: 2px;
+        line-height: 1.2;
+      }
+      
+      /* Reg No - Standard */
+      .dr-reg {
+        font-size: 8pt;
+        color: #333;
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+      
+      /* Sr. Consultant - Pink/Magenta */
+      .dr-title {
+        font-size: 9.5pt;
+        font-weight: 600;
+        color: #ec008c; /* Magenta/Pink */
+        margin-bottom: 1px;
+      }
+      
+      /* Previous Exp - Purple */
+      .dr-exp {
+        font-size: 8.5pt;
+        color: #662d91; /* Purple */
+        font-weight: 500;
+        line-height: 1.25;
+      }
+        /* --- NEW VAS TABLE STYLES --- */
+      .vas-section-wrapper {
+        margin-top: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #fff;
+      }
+      
+      .vas-header-label {
+        background: #f8fafc;
+        padding: 5px 10px;
+        font-size: 8pt;
+        font-weight: 700;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .vas-modern-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .vas-modern-table th {
+        text-align: left;
+        padding: 6px 10px;
+        font-size: 7.5pt;
+        color: #64748b;
+        font-weight: 600;
+        background-color: #ffffff;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .vas-row {
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .vas-row:last-child {
+        border-bottom: none;
+      }
+
+      .vas-cell {
+        padding: 6px 10px;
+        font-size: 8.5pt;
+        color: #334155;
+        vertical-align: middle;
+      }
+
+      /* Visual Bars */
+      .vas-visual-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .vas-bar-bg {
+        flex: 1;
+        height: 6px;
+        background-color: #e2e8f0;
+        border-radius: 3px;
+        overflow: hidden;
+        min-width: 50px;
+      }
+      
+      .vas-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+      }
+      
+      .vas-badge {
+        font-weight: 800;
+        font-size: 9pt;
+        min-width: 35px;
+        text-align: right;
+      }
+
       /* Watermark */
       .watermark {
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         width: 60%; max-width: 500px; opacity: 0.08; z-index: -1000; filter: grayscale(100%);
       }
-      
-      /* Header */
-      .header-wrapper { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 5px; border-bottom: 2px solid #00aeef; margin-bottom: 8px; }
-      .header-left { width: 55%; display: flex; flex-direction: column; align-items: flex-start; }
-      .logo-img { width: 280px; max-width: 100%; height: auto; object-fit: contain; display: block; margin-bottom: 5px; }
-      
-      .clinic-address-block { font-size: 8pt; color: #444; text-align: left; line-height: 1.35; margin-left: 2px; }
-      .address-line { display: block; font-weight: 500; }
-      .info-line { display: block; margin-top: 1px; }
-      .info-label { font-weight: 600; color: #222; }
 
-      /* Doctor Info */
-      .header-right { width: 45%; display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding-top: 5px; }
-      .dr-block { display: flex; flex-direction: column; gap: 2px; width: 100%; }
-      .dr-line-1 { font-size: 16pt; font-weight: 900; color: #ed1c24; line-height: 1.1; } /* Name */
-      .dr-line-2 { font-size: 9pt; font-weight: 700; color: #0054a6; } /* Reg No */
-      .dr-line-3 { font-size: 9pt; font-weight: 600; color: #2e7d32; } /* Degrees */
-      .dr-line-4 { font-size: 8.5pt; font-weight: 500; color: #e65100; } /* Present Pos */
-      .dr-line-5 { font-size: 8pt; font-style: italic; color: #6a1b9a; } /* Prev Pos */
-
-      /* Title */
+      /* --- BODY & CONTENT STYLES (Existing) --- */
       .sheet-title { text-align: center; margin: 5px 0 10px 0; }
       .title-badge { background-color: #1a237e; color: white; padding: 3px 20px; border-radius: 12px; font-weight: bold; font-size: 10pt; text-transform: uppercase; }
 
-      /* Patient Grid */
       .patient-grid { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 9pt; background: #f8f9fa; padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
       .pg-col { width: 49%; display: flex; flex-direction: column; gap: 4px; }
       .info-row { display: flex; align-items: baseline; }
       .p-label { color: #0054a6; font-weight: 700; min-width: 75px; font-size: 8.5pt; }
       .p-val { flex: 1; border-bottom: 1px dotted #ccc; color: #000; padding-left: 5px; font-weight: 500; }
 
-      /* Layout Containers */
       .main-container { display: flex; flex-direction: column; gap: 8px; }
-      
-      /* History & Image Section */
       .history-section-wrapper { display: flex; gap: 15px; }
       .history-text-col { width: 70%; display: flex; flex-direction: column; gap: 8px; }
       .history-img-col { width: 30%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; }
 
-      /* Sections */
       .section-block { margin-bottom: 8px; width: 100%; }
       .sec-title { color: #0054a6; font-weight: 700; font-size: 9.5pt; margin-bottom: 2px; text-transform: uppercase; border-bottom: 1px solid #e0e0e0; display: inline-block; padding-bottom: 1px; }
       .sec-content { font-size: 9pt; color: #333; padding-left: 2px; margin-top: 2px; }
-      
       .val-list { display: flex; flex-direction: column; gap: 1px; }
       .horizontal-list { flex-direction: row; flex-wrap: wrap; gap: 12px; }
       .sub-item { display: flex; align-items: baseline; }
@@ -372,15 +525,11 @@ const generateAssessmentPDF = async (assessment: any) => {
       .sub-val { font-size: 9pt; }
       .val-text { white-space: pre-wrap; line-height: 1.3; text-align: justify; }
 
-      /* Examination Subgroups */
       .exam-sub-group { margin-bottom: 4px; }
       .exam-sub-title { font-size: 8.5pt; font-weight: 600; color: #444; text-decoration: underline; margin-bottom: 2px; }
-
-      /* Images */
       .body-img { width: 100%; max-width: 130px; opacity: 0.95; margin-bottom: 8px; }
       .diag-labels { display: flex; justify-content: space-between; width: 100%; max-width: 130px; font-size: 7pt; font-weight: bold; margin-bottom: 2px; }
 
-      /* BMI & VAS */
       .bmi-container { width: 100%; margin-top: 5px; padding: 4px; border: 1px solid #eee; border-radius: 4px; background: #fff; }
       .bmi-title { font-size: 8pt; font-weight: bold; color: #333; text-align: center; margin-bottom: 2px; }
       .bmi-bar { display: flex; height: 10px; width: 100%; border-radius: 5px; overflow: hidden; position: relative; margin-bottom: 2px; }
@@ -390,8 +539,6 @@ const generateAssessmentPDF = async (assessment: any) => {
       .bmi-labels { display: flex; justify-content: space-between; font-size: 5px; color: #666; text-transform: uppercase; font-weight: 600; }
 
       .vas-box { width: 100%; text-align: center; margin-top: 8px; padding: 4px; background: #ffebee; border-radius: 4px; font-size: 9pt; color: #c62828; border: 1px solid #ffcdd2; }
-
-      /* VAS Table */
       .vas-table-container { width: 100%; margin-top: 8px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: #fff; }
       .vas-table-title { font-size: 8pt; font-weight: bold; color: #fff; background: #c62828; padding: 3px 6px; text-align: center; }
       .vas-table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
@@ -400,54 +547,72 @@ const generateAssessmentPDF = async (assessment: any) => {
       .vas-table td { padding: 3px 4px; border-bottom: 1px solid #eee; color: #333; }
       .vas-table tbody tr:last-child td { border-bottom: none; }
       .vas-table .score-cell { font-weight: bold; color: #c62828; text-align: center; }
-
-      /* Footer Elements */
       .signature-img { height: 40px; width: auto; max-width: 120px; display: block; margin-left: auto; margin-right: 0; }
+
     </style>
   </head>
   <body>
     ${logoBase64 ? `<img class="watermark" src="${logoBase64}" />` : ""}
     <div class="page">
+      
       <div class="header-wrapper">
+        
         <div class="header-left">
-          ${logoBase64 ? `<img class="logo-img" src="${logoBase64}" />` : ""}
-          <div class="clinic-address-block">
-             <span class="address-line">361/A, Basudevpur Road, Ground Floor</span>
-            <span class="address-line">'Nilanjana' Apartment, Shyamnagar</span>
-            <span class="address-line">24 Pgs (N), Pin - 743127</span>
-            <span class="info-line"><span class="info-label">Email:</span> contacts@mstheracure.com</span>
-            <span class="info-line"><span class="info-label">Web:</span> www.mstheracure.com</span>
-            <span class="info-line"><span class="info-label">Time:</span> Mon to Sat (9:00 AM - 8:00 PM)</span>
-            <span class="info-line"><span class="info-label">Ph:</span> 033-3564-7255 | 6290926667</span>
+          <div class="logo-wrapper">
+             ${
+               logoBase64
+                 ? `<img class="logo-img" src="${logoBase64}" />`
+                 : '<div style="font-weight:900; font-size:18pt; color:#222;">THERA-CURE</div>'
+             }
+          </div>
+          <div class="clinic-address">
+             <div class="addr-row">
+                <span class="lbl-blue">Address:</span> 361/A, Basudevpur Road, Ground Floor,
+             </div>
+             <div class="addr-row">
+                Nilanjana Apartment, Shyamnagar, 24 Pgs. (N), Pin - 743127
+             </div>
+             <div class="addr-row txt-red">
+                Time: Monday to Saturday (9:00 AM to 1:00 PM & 5:00 PM to 8:00 PM)
+             </div>
+             <div class="addr-row">
+                <span class="lbl-blue">Tel:</span> (033) 3564 7255 | (+91) 8582973652 <span class="txt-blue">(ONLY FOR EMERGENCY)</span>
+             </div>
+             <div class="addr-row">
+                <span class="lbl-blue">Email:</span> contacts@mstheracure.com | <span class="lbl-blue">Website :</span> www.mstheracure.com
+             </div>
           </div>
         </div>
+
         <div class="header-right">
-          <div class="dr-block">
-             <div class="dr-line-1">${
-               therapist?.user?.name ||
-               therapist?.name ||
-               "Dr. Diksha Palit (PT)"
-             }</div>
-             <div class="dr-line-2">Reg No: ${
-               therapist?.regNo || "L-48489"
-             }</div>
-             <div class="dr-line-3">${
-               therapist?.qualification || "B.P.T [W.B.U.H.S], CDNT"
-             }</div>
-             <div class="dr-line-4">${
+          <div class="dr-name">
+            ${therapist?.user?.name || therapist?.name || "Dr. Mainak Sur (PT)"}
+          </div>
+          
+          <div class="dr-degrees">
+            ${
+              therapist?.qualification ||
+              "B.P.T [W.B.U.H.S], M.P.T (Neurology) [W.B.U.H.S]"
+            }
+          </div>
+
+          <div class="dr-title">
+             ${
                therapist?.specialization?.split(",")[0] ||
-               "Co-Founder & Consultant Physiotherapist"
-             }</div>
-             <div class="dr-line-5">${
+               "Sr. Consultant, Manual Physical Therapist"
+             }
+          </div>
+
+          <div class="dr-exp">
+             ${
                therapist?.experiences ||
-               (therapist?.specialization?.includes(",")
-                 ? "Ex-Intern Physiotherapist of Belle Vue Clinic"
-                 : "")
-             }</div>
+               `Ex-Head of the Dept. of Physiotherapy, Swami Vivekananda University, Barrackpore
+Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol
+Ex-Physiotherapist, Portea Medical`
+             }
           </div>
         </div>
       </div>
-
       <div class="sheet-title"><span class="title-badge">OPD ASSESSMENT SHEET</span></div>
 
       <div class="patient-grid">
@@ -483,7 +648,6 @@ const generateAssessmentPDF = async (assessment: any) => {
       </div>
 
       <div class="main-container">
-          <!-- History and Image Row -->
           <div class="history-section-wrapper">
              <div class="history-text-col">
                 ${renderSection(
@@ -519,7 +683,6 @@ const generateAssessmentPDF = async (assessment: any) => {
              </div>
           </div>
 
-          <!-- Other Sections -->
           ${renderSection(
             "On Observation",
             assessmentData?.onObservation,
@@ -563,7 +726,6 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div style="width: 100%; font-size: 10px; font-family: 'Roboto', sans-serif; padding-right: 8mm; padding-left: 8mm;">
           <div style="display: flex; justify-content: flex-end; align-items: flex-end; margin-bottom: 10px;">
              <div style="text-align: right;">
-                 <!-- Digital Signature Placeholder -->
                  <div style="font-family: 'Dancing Script', cursive; font-size: 20px; color: #000; margin-bottom: 2px;">
                     ${therapist?.user?.name || therapist?.name || "Signature"}
                  </div>
@@ -572,9 +734,9 @@ const generateAssessmentPDF = async (assessment: any) => {
              </div>
           </div>
           <div style="text-align: center; margin-bottom: 5px; font-weight: bold; font-size: 10pt; color: #333;">
-             --- End of Prescription ---
+              --- End of Prescription ---
           </div>
-          <div style="background-color: #ed1c24; color: white; text-align: center; padding: 4px; font-weight: bold; font-size: 8px; -webkit-print-color-adjust: exact; border-radius: 2px;">
+          <div style="background-color: #0054a6; color: white; text-align: center; padding: 4px; font-weight: bold; font-size: 8px; -webkit-print-color-adjust: exact; border-radius: 2px;">
             IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
           </div>
         </div>
@@ -591,6 +753,13 @@ const generateAssessmentPDF = async (assessment: any) => {
     );
   } finally {
     if (browser) await browser.close();
+    if (tmpDir) {
+      try {
+        await fs.rm(tmpDir, { recursive: true, force: true });
+      } catch (e) {
+        console.error(`Failed to clean up temporary directory ${tmpDir}:`, e);
+      }
+    }
   }
 };
 

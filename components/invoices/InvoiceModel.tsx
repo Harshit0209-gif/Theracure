@@ -358,19 +358,20 @@ export const InvoiceDetailsModal = ({
           )}
         </div>
 
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={() => setIsDetailsModalOpen(false)}
           >
-            Close
+            Cancel
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => handlePrintInvoice()}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
-          </div>
+          <Button
+            onClick={() => handlePrintInvoice()}
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print Invoice
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

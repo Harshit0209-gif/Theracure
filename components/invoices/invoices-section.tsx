@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Plus, Printer, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +46,7 @@ import { InvoiceStatsCards } from "./InvoiceStatsCard";
 import { PatientInfoSection } from "./PatientInfoSection";
 import { ServiceSelection } from "./ServiceSelection";
 import { SelectedServicesSection } from "./SelectedServiceSection";
-import { InvoiceTable } from "./InvoiceTable";
+import { InvoiceList } from "./InvoiceList";
 import { InvoiceDetailsSection } from "./InvoiceDetailsSection";
 
 export function InvoicesSection() {
@@ -55,17 +56,35 @@ export function InvoicesSection() {
   const [patientFound, setPatientFound] = useState(false);
   const [services, setServices] = useState<PurchasedService[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isServicesLoading, setIsServicesLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 5;
-  const totalPages = Math.ceil(invoices.length / pageSize);
+
+  const filteredInvoices = useMemo(() => {
+    if (!searchQuery) return invoices;
+    return invoices.filter(
+      (invoice) =>
+        invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        invoice.patient.patientName
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        invoice.patient.id.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [invoices, searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredInvoices.length / pageSize);
   const [selectedInvoiceForDetails, setSelectedInvoiceForDetails] =
     useState<Invoice>();
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const paginatedInvoices = useMemo(() => {
     const startIndex = (page - 1) * pageSize;
-    return invoices.slice(startIndex, startIndex + pageSize);
-  }, [invoices, page, pageSize]);
+    return filteredInvoices.slice(startIndex, startIndex + pageSize);
+  }, [filteredInvoices, page, pageSize]);
 
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedServices, setSelectedServices] = useState<PurchasedService[]>(
@@ -541,23 +560,38 @@ export function InvoicesSection() {
         </div>
 
         {/* Stats Cards */}
-        {user?.role == UserRole.ADMIN ? InvoiceCardViewer() : null}
+        {user?.role == UserRole.ADMIN ? <InvoiceCardViewer /> : null}
 
-        {/* Invoices Table */}
-        <InvoiceTable
-          invoices={paginatedInvoices}
-          page={page}
-          totalPages={totalPages}
-          setPage={setPage}
-          handleViewDetails={handleViewDetails}
-          handleDirectPrint={handleDirectPrint}
-        />
+        {/* Recent Invoices Section */}
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-gray-800">Recent Invoices</h3>
+            <div className="w-full max-w-xs">
+              <Input
+                placeholder="Search by Invoice ID, Patient Name, or Patient ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-white"
+              />
+            </div>
+          </div>
+          <InvoiceList
+            invoices={paginatedInvoices}
+            page={page}
+            totalPages={totalPages}
+            setPage={setPage}
+            handleViewDetails={handleViewDetails}
+            handleDirectPrint={handleDirectPrint}
+          />
+        </div>
       </div>
       <InvoiceDetailsModal
         printPayload={printPayload}
         isDetailsModalOpen={isDetailsModalOpen}
         setIsDetailsModalOpen={setIsDetailsModalOpen}
-        handlePrintInvoice={handlePrintInvoice}
+        handlePrintInvoice={() =>
+          printPayload && handlePrintInvoice(printPayload)
+        }
       />
     </>
   );

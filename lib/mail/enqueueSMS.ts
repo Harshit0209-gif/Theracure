@@ -13,23 +13,28 @@ function formatPhoneNumber(phone: string): string {
     throw new Error("Phone number is required");
   }
 
-  let cleaned = phone.replace(/[\s\-\(\)]/g, "");
+  // Split by common delimiters and find the first valid number
+  const potentialNumbers = phone.split(/[\s\/\,;]+/);
 
-  if (cleaned.startsWith("+")) {
-    cleaned = cleaned.substring(1);
+  for (const potentialNumber of potentialNumbers) {
+    let cleaned = potentialNumber.replace(/[\s\-\(\)]/g, "");
+
+    // Remove country code if present
+    if (cleaned.startsWith("+91")) {
+      cleaned = cleaned.substring(3);
+    } else if (cleaned.startsWith("91") && cleaned.length > 10) {
+      cleaned = cleaned.substring(2);
+    }
+
+    // After stripping country codes, we should have a 10-digit number
+    if (cleaned.length === 10 && /^\d+$/.test(cleaned)) {
+      return "91" + cleaned;
+    }
   }
 
-  if (!cleaned.startsWith("91")) {
-    cleaned = "91" + cleaned;
-  }
-
-  if (cleaned.length !== 12 || !/^\d+$/.test(cleaned)) {
-    throw new Error(
-      `Invalid phone number format: ${phone}. Expected format: 919XXXXXXXXX (10 digits after country code)`
-    );
-  }
-
-  return cleaned;
+  throw new Error(
+    `No valid 10-digit phone number found in: ${phone}. Expected format: 91XXXXXXXXXX`
+  );
 }
 
 export async function enqueueSMS({ type, phone, variables }: EnqueueSMSParams) {
