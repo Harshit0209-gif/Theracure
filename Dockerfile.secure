@@ -1,96 +1,98 @@
 # =========================
 # Stage 1: Dependencies
 # =========================
-FROM node:20.18.1-alpine AS deps
+FROM node:20.18.1-bookworm-slim AS deps
+
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
+
 COPY package.json pnpm-lock.yaml* ./
 COPY prisma ./prisma/
-RUN pnpm install --frozen-lockfile --prod=false
+
+RUN pnpm install --frozen-lockfile
 
 
 # =========================
 # Stage 2: Builder
 # =========================
-FROM node:20.18.1-alpine AS builder
+FROM node:20.18.1-bookworm-slim AS builder
+
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
+
+# Copy node_modules from deps
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN pnpm prisma:generate \
- && pnpm generate:enums \
- && pnpm build \
- && pnpm build:worker
+# Build and generate Prisma (same OS as production = correct binaries!)
+RUN pnpm generate:enums && \
+    pnpm build && \
+    pnpm build:worker && \
+    npx prisma generate
 
 
 # =========================
-# Stage 3: Production Runner
+# Stage 3: Production
 # =========================
-FROM node:20.18.1-bookworm-slim AS runner
+FROM node:20.18.1-bookworm-slim
 
-# ---- Chromium runtime deps ----
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
-    fonts-liberation \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libxkbcommon0 \
-    libgbm1 \
-    libgtk-3-0 \
-    ca-certificates \
- && rm -rf /var/lib/apt/lists/*
-
-# ---- Puppeteer config ----
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# Install Chromium and dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        chromium \
+        fonts-liberation \
+        libnss3 \
+        libatk-bridge2.0-0 \
+        libxkbcommon0 \
+        libgbm1 \
+        libgtk-3-0 \
+        ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# ---- Runtime env ----
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3001
-ENV NODE_OPTIONS="--max-old-space-size=768 --max-http-header-size=16384"
+# Environment variables
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3001 \
+    NODE_OPTIONS="--max-old-space-size=768 --max-http-header-size=16384" \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    HOME=/home/nextjs \
+    XDG_RUNTIME_DIR=/tmp/chromium-user-data
 
-# ---- Create non-root user ----
-RUN groupadd --system --gid 1001 nodejs \
- && useradd --system --uid 1001 --gid nodejs --shell /bin/false --home /home/nextjs nextjs
+# Create user and directories
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs nextjs && \
+    mkdir -p /home/nextjs/.cache /home/nextjs/.config/chromium \
+             /home/nextjs/.local/share /tmp/chromium-user-data \
+             /tmp/chrome-crash-dumps /app/uploads && \
+    chown -R nextjs:nodejs /home/nextjs /tmp/chromium-user-data \
+                           /tmp/chrome-crash-dumps /app/uploads && \
+    chmod 700 /tmp/chromium-user-data /tmp/chrome-crash-dumps
 
-# ---- Copy build output ----
+# Copy Next.js standalone output (includes minimal node_modules)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy Prisma files AND generated client
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-COPY --from=builder --chown=nextjs:nodejs /app/workers/sms-worker.js ./workers/
-COPY --from=builder --chown=nextjs:nodejs /app/lib/prisma.js ./lib/
-COPY --from=builder --chown=nextjs:nodejs /app/lib/mail/sendSMS.js ./lib/mail/
-COPY --from=builder --chown=nextjs:nodejs /app/config/smsTemplatesMap.js ./config/
-COPY --from=builder --chown=nextjs:nodejs /app/lib/generated/smsEnums.js ./lib/generated/
+# Copy worker and config files
+COPY --from=builder --chown=nextjs:nodejs /app/workers ./workers
+COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
+COPY --from=builder --chown=nextjs:nodejs /app/config ./config
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
-# ---- Chromium required directories (FIX) ----
-RUN mkdir -p \
-    /home/nextjs/.cache \
-    /home/nextjs/.config/chromium \
-    /home/nextjs/.local/share \
-    /tmp/chromium-user-data \
-    /tmp/chrome-crash-dumps \
- && chown -R nextjs:nodejs /home/nextjs /tmp/chromium-user-data /tmp/chrome-crash-dumps \
- && chmod 700 /tmp/chromium-user-data /tmp/chrome-crash-dumps \
- && chmod +x /app/docker-entrypoint.sh
-
-# ---- Chromium environment ----
-ENV HOME=/home/nextjs
-ENV XDG_RUNTIME_DIR=/tmp/chromium-user-data
-
-# ---- Lock application code ----
-RUN chmod -R 555 /app && chmod 755 /app/uploads || true
+# Set permissions
+RUN chmod +x /app/docker-entrypoint.sh && \
+    chmod -R 555 /app && \
+    chmod 755 /app/uploads
 
 USER nextjs
 
