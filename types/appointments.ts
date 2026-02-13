@@ -14,6 +14,7 @@ export interface Appointment {
   createdById: string;
   createdAt: string;
   notes?: string;
+  cubicleId?: string;
 
   service?: Service;
 
@@ -36,6 +37,13 @@ export interface Appointment {
     name: string;
     email: string;
   };
+
+  cubicle?: {
+    id: string;
+    name: string;
+    roomNumber?: string;
+    location?: string;
+  };
 }
 export interface AppointmentTableProps {
   appointments: Appointment[];
@@ -51,12 +59,14 @@ export interface EditAppointmentData {
   serviceCatagory: ServiceCategory;
   serviceName: string;
   notes: string;
+  cubicleId: string;
 }
 
 export const DefaultEditAppointmentData: EditAppointmentData = {
   serviceCatagory: ServiceCategory.MANUAL_THERAPY,
   serviceName: "",
   notes: "",
+  cubicleId: "",
 };
 
 export interface RescheduleAppointmentData {

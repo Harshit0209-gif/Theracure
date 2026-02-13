@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Save, User } from "lucide-react";
+import { Edit, Save, User, Home } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Appointment,
@@ -27,6 +27,14 @@ import { formatDate, formatTime } from "@/lib/utils/utils";
 import { ServiceCategory } from "@/lib/generated/serviceEnums";
 import { AllServiceCatagory, ServiceCategoryLabel } from "@/lib/service";
 import { Service } from "@prisma/client";
+
+interface Cubicle {
+  id: string;
+  name: string;
+  roomNumber?: string;
+  location?: string;
+  status: string;
+}
 
 interface EditAppointmentDialogProps {
   isOpen: boolean;
@@ -47,6 +55,8 @@ export function EditAppointmentDialog({
   const [actionLoading, setActionLoading] = useState(false);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory>();
   const [services, setServices] = useState<Service[]>([]);
+  const [cubicles, setCubicles] = useState<Cubicle[]>([]);
+  const [loadingCubicles, setLoadingCubicles] = useState(false);
 
   const fetchAllServices = async () => {
     try {
@@ -70,6 +80,31 @@ export function EditAppointmentDialog({
     }
   };
 
+  const fetchCubicles = async () => {
+    try {
+      setLoadingCubicles(true);
+      const res = await fetch("/api/cubicles");
+      const data = await res.json();
+
+      if (!data.success) throw new Error("Failed to fetch cubicles");
+
+      // Filter only active cubicles
+      const activeCubicles = data.cubicles.filter(
+        (c: Cubicle) => c.status === "ACTIVE"
+      );
+      setCubicles(activeCubicles);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "Failed to load cubicles.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCubicles(false);
+    }
+  };
+
   useEffect(() => {
     if (appointment && isOpen) {
       setEditData({
@@ -77,8 +112,10 @@ export function EditAppointmentDialog({
           appointment.service?.category || ServiceCategory.MANUAL_THERAPY,
         serviceName: appointment.service?.name || "",
         notes: appointment.notes || "",
+        cubicleId: appointment.cubicleId || "",
       });
       fetchAllServices();
+      fetchCubicles();
     }
   }, [appointment, isOpen]);
 
@@ -96,6 +133,7 @@ export function EditAppointmentDialog({
         body: JSON.stringify({
           serviceId: services.find((s) => s.name === editData.serviceName)?.id,
           notes: editData.notes,
+          cubicleId: editData.cubicleId || null,
         }),
       });
 
@@ -204,6 +242,48 @@ export function EditAppointmentDialog({
                     ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Cubicle Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="cubicle" className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Cubicle / Room
+              </Label>
+              <Select
+                value={editData.cubicleId || "no-cubicle"}
+                onValueChange={(value) =>
+                  setEditData({ ...editData, cubicleId: value === "no-cubicle" ? "" : value })
+                }
+                disabled={loadingCubicles}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingCubicles ? "Loading cubicles..." : "Select Cubicle"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-cubicle">No Cubicle</SelectItem>
+                  {cubicles.map((cubicle) => (
+                    <SelectItem key={cubicle.id} value={cubicle.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{cubicle.name}</span>
+                        {(cubicle.roomNumber || cubicle.location) && (
+                          <span className="text-xs text-gray-500">
+                            {[cubicle.roomNumber, cubicle.location]
+                              .filter(Boolean)
+                              .join(" • ")}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {appointment?.cubicle && (
+                <p className="text-xs text-gray-500">
+                  Current: {appointment.cubicle.name}
+                  {appointment.cubicle.roomNumber && ` (${appointment.cubicle.roomNumber})`}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

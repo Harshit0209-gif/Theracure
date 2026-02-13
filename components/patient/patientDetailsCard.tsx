@@ -22,6 +22,7 @@ import {
   Calendar,
   User,
   Activity,
+  Pill,
 } from "lucide-react";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
 import { Patient } from "@/types/patient";
@@ -29,6 +30,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
 import { EMRTableView } from "./emr-table-view";
 import { EMRUploadDialog } from "./emr-upload-dialog";
+import { PrescriptionTableView } from "./prescription-table-view";
 
 // Clean Info Display Component
 const InfoDisplay = ({
@@ -278,28 +280,54 @@ export const PatientDetailsCard = ({
 
           {/* EMR Tab */}
           <TabsContent value="emr" className="w-full ">
-            <div className="space-y-6">
-              {/* EMR Header with Upload Button */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Electronic Medical Records
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Patient's medical documents, prescriptions, and reports
-                  </p>
+            <div className="space-y-8">
+              {/* Prescriptions Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <Pill className="h-5 w-5 text-blue-600" />
+                  <div className="space-y-0.5">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Prescriptions
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      All prescriptions issued for this patient
+                    </p>
+                  </div>
                 </div>
-                <EMRUploadDialog
+
+                {/* Prescription Table */}
+                <PrescriptionTableView
                   patientId={patient.id}
-                  onUploadComplete={handleEMRUploadComplete}
+                  refreshTrigger={emrRefreshTrigger}
                 />
               </div>
 
-              {/* EMR Table */}
-              <EMRTableView
-                patientId={patient.id}
-                refreshTrigger={emrRefreshTrigger}
-              />
+              {/* Medical Documents Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                    <div className="space-y-0.5">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Medical Documents
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Uploaded medical records, reports, and documents
+                      </p>
+                    </div>
+                  </div>
+                  <EMRUploadDialog
+                    patientId={patient.id}
+                    onUploadComplete={handleEMRUploadComplete}
+                  />
+                </div>
+
+                {/* EMR Table */}
+                <EMRTableView
+                  patientId={patient.id}
+                  refreshTrigger={emrRefreshTrigger}
+                />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

@@ -111,6 +111,7 @@ export const RoleAllowedRoutes: Record<UserRole, string[]> = {
     "/consultation",
     "/analytics",
     "/services",
+    "/cubicles",
     "/prescriptions",
     "/profile",
     "/support",

@@ -42,10 +42,10 @@ import {
   Repeat,
   CalendarDays,
   Info,
+  Home,
 } from "lucide-react";
 import { Service } from "@/types/service";
 import {
-  AvailablePeriod,
   RecurringPreview,
   TherapistAvailability,
 } from "@/types/appointments";
@@ -75,20 +75,15 @@ export function ScheduleNewDialog({
   onAppointmentCreated,
 }: ScheduleNewDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [therapists, setTherapists] = useState([]);
   const [services, setServices] = useState<Service[]>([]);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
     []
   );
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
-  const [availablePeriods, setAvailablePeriods] = useState<AvailablePeriod[]>(
-    []
-  );
   const [therapistSchedule, setTherapistSchedule] = useState<
     TherapistAvailability[]
   >([]);
-  const [existingAppointments, setExistingAppointments] = useState([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
@@ -100,6 +95,9 @@ export function ScheduleNewDialog({
   >([]);
 
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [cubicleAvailability, setCubicleAvailability] = useState<any>(null);
+  const [isCheckingCubicles, setIsCheckingCubicles] = useState(false);
+  const [selectedCubicleId, setSelectedCubicleId] = useState<string>("");
   const { user } = useAuth();
 
   const form = useForm<AppointmentFormData>({
@@ -151,7 +149,6 @@ export function ScheduleNewDialog({
   // Fetch initial data when dialog opens
   useEffect(() => {
     if (open) {
-      fetchPatients();
       fetchTherapists();
       fetchData();
     }
@@ -194,17 +191,26 @@ export function ScheduleNewDialog({
     }
   }, [watchedValues.therapistId, watchedValues.appointmentDate]);
 
-  const fetchPatients = async () => {
-    try {
-      const response = await fetch("/api/patients?limit=100");
-      const data = await response.json();
-      if (data.success) {
-        setPatients(data.patients);
-      }
-    } catch (error) {
-      console.error("Error fetching patients:", error);
+  // Check cubicle availability when date and time changes
+  useEffect(() => {
+    if (
+      watchedValues.appointmentDate &&
+      watchedValues.startTime &&
+      watchedValues.endTime
+    ) {
+      checkCubicleAvailability(
+        watchedValues.appointmentDate,
+        watchedValues.startTime,
+        watchedValues.endTime
+      );
+    } else {
+      setCubicleAvailability(null);
     }
-  };
+  }, [
+    watchedValues.appointmentDate,
+    watchedValues.startTime,
+    watchedValues.endTime,
+  ]);
 
   function debounceAsync<F extends (...args: any[]) => Promise<void>>(
     fn: F,
@@ -287,21 +293,42 @@ export function ScheduleNewDialog({
           dayOfWeek: slot.weekDay,
           startTime: slot.startTime,
           endTime: slot.endTime,
-        }));
+        })) || [];
       setTherapistSchedule(schedule);
-
-      const availablePeriods: AvailablePeriod[] =
-        therapistData.availablePeriods.map((period: any) => ({
-          startTime: period.startTime,
-          endTime: period.endTime,
-          available: period.available,
-          duration: period.duration,
-        }));
-      setAvailablePeriods(availablePeriods);
     } catch (error) {
       console.error("Error checking availability:", error);
+      setTherapistSchedule([]);
     } finally {
       setIsCheckingAvailability(false);
+    }
+  };
+
+  const checkCubicleAvailability = async (
+    date: string,
+    startTime: string,
+    endTime: string
+  ) => {
+    setIsCheckingCubicles(true);
+    try {
+      const startDateTime = new Date(`${date}T${startTime}`).toISOString();
+      const endDateTime = new Date(`${date}T${endTime}`).toISOString();
+
+      const response = await fetch(
+        `/api/cubicles/availability?startTime=${startDateTime}&endTime=${endDateTime}`
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        setCubicleAvailability(data.availability);
+      } else {
+        console.error("Error checking cubicle availability:", data.error);
+        setCubicleAvailability(null);
+      }
+    } catch (error) {
+      console.error("Error checking cubicle availability:", error);
+      setCubicleAvailability(null);
+    } finally {
+      setIsCheckingCubicles(false);
     }
   };
 
@@ -374,11 +401,24 @@ export function ScheduleNewDialog({
   };
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":");
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return `${displayHour}:${minutes} ${ampm}`;
+    // Check if time is an ISO string or just HH:MM
+    if (time.includes('T') || time.includes('Z')) {
+      // It's an ISO datetime string
+      const date = new Date(time);
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? "PM" : "AM";
+      const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      const displayMinutes = minutes.toString().padStart(2, '0');
+      return `${displayHour}:${displayMinutes} ${ampm}`;
+    } else {
+      // It's HH:MM format
+      const [hours, minutes] = time.split(":");
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${displayHour}:${minutes} ${ampm}`;
+    }
   };
 
   const calculateDuration = (startTime: string, endTime: string) => {
@@ -517,24 +557,6 @@ export function ScheduleNewDialog({
       return;
     }
 
-    // Check if selected time falls within available periods
-    const isValidTime = availablePeriods.some(
-      (period) =>
-        period.available &&
-        data.startTime >= period.startTime &&
-        data.endTime <= period.endTime
-    );
-
-    if (!isValidTime) {
-      toast({
-        title: "Invalid Time Selection",
-        description:
-          "The selected time is not within available periods. Please choose a valid time range.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setIsLoading(true);
       setServerError(null);
@@ -595,6 +617,7 @@ export function ScheduleNewDialog({
           ).toISOString(),
           createdById: user.id,
           service: selectedService,
+          cubicleId: selectedCubicleId || undefined,
         };
 
         const response = await fetch("/api/appointments", {
@@ -1055,66 +1078,306 @@ export function ScheduleNewDialog({
             </div>
           )}
 
-          {/* Availability Status */}
+          {/* Therapist Availability Status */}
           {watchedValues.therapistId && watchedValues.appointmentDate && (
             <div className="space-y-2">
-              <Label>Availability Status</Label>
+              <Label className="flex items-center gap-2">
+                <User className="h-4 w-4 text-indigo-600" />
+                Therapist Availability
+              </Label>
               <div className="border rounded-lg p-4">
                 {isCheckingAvailability ? (
                   <div className="flex items-center gap-2 text-gray-600">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent" />
-                    Checking availability...
+                    Checking therapist schedule...
+                  </div>
+                ) : therapistSchedule.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          Therapist is available on{" "}
+                          {getDayName(watchedValues.appointmentDate)}
+                        </p>
+                        <p className="text-xs text-green-700 mt-0.5">
+                          Working hours: {therapistSchedule.map(slot =>
+                            `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`
+                          ).join(", ")}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-indigo-600" />
-                      <span className="font-medium">
-                        {getDayName(watchedValues.appointmentDate)} -{" "}
-                        {new Date(
-                          watchedValues.appointmentDate
-                        ).toLocaleDateString("en-IN")}
-                      </span>
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-sm font-medium text-red-800">
+                        Therapist not available on this date
+                      </p>
+                      <p className="text-xs text-red-700 mt-0.5">
+                        Please select a different date or therapist
+                      </p>
                     </div>
-                    {availablePeriods.length > 0 ? (
-                      <div className="space-y-3 mt-2">
-                        <p className="text-sm text-gray-600">
-                          Available periods:
-                        </p>
-                        {availablePeriods.map((period, index) => (
-                          <div
-                            key={index}
-                            className={`flex items-center justify-between p-3 rounded-lg border ${
-                              period.available
-                                ? "bg-green-50 border-green-200 text-green-800"
-                                : "bg-red-50 border-red-200 text-red-800"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              {period.available ? (
-                                <CheckCircle className="h-4 w-4" />
-                              ) : (
-                                <XCircle className="h-4 w-4" />
-                              )}
-                              <span className="font-medium">
-                                {formatTime(period.startTime)} -{" "}
-                                {formatTime(period.endTime)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-red-600">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>No available time periods for this date</span>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
             </div>
           )}
+
+          {/* Cubicle Availability Status */}
+          {watchedValues.appointmentDate &&
+            watchedValues.startTime &&
+            watchedValues.endTime && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Home className="h-4 w-4 text-indigo-600" />
+                  Cubicle Availability
+                </Label>
+                <div className="border rounded-lg p-4">
+                  {isCheckingCubicles ? (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent" />
+                      Checking cubicle availability...
+                    </div>
+                  ) : cubicleAvailability ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Info className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-800">
+                            {cubicleAvailability.totalCubicles} total cubicles
+                          </span>
+                        </div>
+                        <div className="flex gap-3 text-xs">
+                          <span className="text-green-700 font-medium">
+                            ✓ {cubicleAvailability.availableCount} available
+                          </span>
+                          <span className="text-red-700 font-medium">
+                            ✗ {cubicleAvailability.occupiedCount} occupied
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Cubicle Selection - Rounded Buttons */}
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-3">
+                          Select a cubicle for this appointment:
+                        </p>
+
+                        {/* All Cubicles - Available and Occupied */}
+                        <div className="flex flex-wrap gap-3">
+                          {/* Available Cubicles */}
+                          {cubicleAvailability.availableCubicles.map(
+                            (cubicle: any) => (
+                              <button
+                                key={cubicle.id}
+                                type="button"
+                                onClick={() => setSelectedCubicleId(cubicle.id)}
+                                className={`px-6 py-3 rounded-full font-medium text-sm transition-all shadow-sm hover:shadow-md ${
+                                  selectedCubicleId === cubicle.id
+                                    ? "bg-indigo-600 text-white ring-4 ring-indigo-200 scale-105"
+                                    : "bg-green-500 text-white hover:bg-green-600"
+                                }`}
+                              >
+                                {cubicle.name}
+                              </button>
+                            )
+                          )}
+
+                          {/* Occupied Cubicles */}
+                          {cubicleAvailability.occupiedCubicles.map(
+                            (cubicle: any) => (
+                              <button
+                                key={cubicle.id}
+                                type="button"
+                                disabled
+                                className="px-6 py-3 rounded-full font-medium text-sm bg-red-500 text-white opacity-60 cursor-not-allowed"
+                              >
+                                {cubicle.name}
+                              </button>
+                            )
+                          )}
+                        </div>
+
+                        {/* Selected Cubicle Details */}
+                        {selectedCubicleId && (
+                          <div className="mt-4 p-4 bg-indigo-50 border-2 border-indigo-300 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Home className="h-5 w-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-indigo-900 mb-1">
+                                  Selected Cubicle Details
+                                </h4>
+                                {(() => {
+                                  const selected = cubicleAvailability.availableCubicles.find(
+                                    (c: any) => c.id === selectedCubicleId
+                                  );
+                                  return selected ? (
+                                    <div className="space-y-1 text-sm">
+                                      <p className="text-indigo-800 font-medium">
+                                        <span className="font-semibold">Name:</span> {selected.name}
+                                      </p>
+                                      {selected.roomNumber && (
+                                        <p className="text-indigo-700">
+                                          <span className="font-semibold">Room Number:</span> {selected.roomNumber}
+                                        </p>
+                                      )}
+                                      {selected.location && (
+                                        <p className="text-indigo-700">
+                                          <span className="font-semibold">Location:</span> {selected.location}
+                                        </p>
+                                      )}
+                                      <div className="mt-2 pt-2 border-t border-indigo-200">
+                                        <p className="text-xs text-indigo-600 flex items-center gap-1">
+                                          <CheckCircle className="h-3 w-3" />
+                                          This cubicle will be assigned to your appointment
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Legend */}
+                        <div className="mt-3 flex items-center gap-4 text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-600">Available</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 bg-red-500 rounded-full opacity-60"></div>
+                            <span className="text-gray-600">Occupied</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 bg-indigo-600 rounded-full"></div>
+                            <span className="text-gray-600">Selected</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cubicle Booking Timeline - Show when cubicle is selected */}
+                      {selectedCubicleId && cubicleAvailability.occupiedCubicles.find((c: any) => c.id === selectedCubicleId) === undefined && (
+                        <div className="mt-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CalendarDays className="h-5 w-5 text-indigo-600" />
+                            <h4 className="text-sm font-semibold text-gray-800">
+                              Today's Booking Schedule
+                            </h4>
+                          </div>
+                          <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-xl p-5 shadow-sm">
+                            {(() => {
+                              const selected = cubicleAvailability.availableCubicles.find(
+                                (c: any) => c.id === selectedCubicleId
+                              );
+
+                              if (selected?.bookings && selected.bookings.length > 0) {
+                                return (
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2 pb-3 border-b border-gray-200">
+                                      <div className="h-2 w-2 bg-indigo-600 rounded-full animate-pulse"></div>
+                                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                                        {selected.bookings.length} {selected.bookings.length === 1 ? 'Booking' : 'Bookings'} for {selected.name}
+                                      </p>
+                                    </div>
+                                    {selected.bookings.map((booking: any, idx: number) => (
+                                      <div
+                                        key={idx}
+                                        className="group relative flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200"
+                                      >
+                                        {/* Booking Number Badge */}
+                                        <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center shadow-sm">
+                                          <span className="text-xs font-bold text-white">
+                                            {idx + 1}
+                                          </span>
+                                        </div>
+
+                                        {/* Time Icon */}
+                                        <div className="flex-shrink-0 h-9 w-9 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+                                          <Clock className="h-4 w-4 text-blue-600" />
+                                        </div>
+
+                                        {/* Booking Details */}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-semibold text-gray-900 mb-0.5">
+                                            {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                                          </p>
+                                          {booking.patientName && (
+                                            <div className="flex items-center gap-1.5">
+                                              <User className="h-3 w-3 text-gray-400" />
+                                              <p className="text-xs text-gray-600 truncate">
+                                                {booking.patientName}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Status Badge */}
+                                        <div className="flex-shrink-0">
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium"
+                                          >
+                                            Booked
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-center py-8">
+                                    <div className="inline-flex h-16 w-16 bg-green-100 rounded-full items-center justify-center mb-3 shadow-sm">
+                                      <CheckCircle className="h-9 w-9 text-green-600" />
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-800 mb-1">
+                                      No bookings yet for this cubicle
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {selected?.name} is completely free today
+                                    </p>
+                                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-full">
+                                      <div className="h-1.5 w-1.5 bg-indigo-600 rounded-full"></div>
+                                      <p className="text-xs text-indigo-700 font-medium">
+                                        Your appointment will be the first one
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Warning if no cubicles available */}
+                      {!cubicleAvailability.hasAvailability && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                          <AlertCircle className="h-4 w-4" />
+                          <span className="text-sm font-medium">
+                            No cubicles available for this time slot. All rooms
+                            are occupied.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Info className="h-4 w-4" />
+                      <span className="text-sm">
+                        Select date and time to check cubicle availability
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
           {/* Notes */}
           <div className="space-y-2">
@@ -1140,7 +1403,7 @@ export function ScheduleNewDialog({
                 isLoading ||
                 !watchedValues.startTime ||
                 !watchedValues.endTime ||
-                availablePeriods.length === 0
+                therapistSchedule.length === 0
               }
               className="bg-indigo-600 hover:bg-indigo-700"
             >

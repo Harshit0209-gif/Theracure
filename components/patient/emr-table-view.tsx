@@ -38,6 +38,7 @@ import {
   Filter,
   Loader2,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useApiFetch } from "@/hooks/use-api-fetch";
@@ -47,6 +48,7 @@ import { inferMimeTypeFromName } from "@/lib/utils/mime";
 export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isReloading, setIsReloading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [documentTypeFilter, setDocumentTypeFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -226,6 +228,26 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
     }
   };
 
+  const handleReload = async () => {
+    try {
+      setIsReloading(true);
+      await fetchEMRRecords();
+      toast({
+        title: "Reloaded",
+        description: "Medical records refreshed successfully",
+      });
+    } catch (error) {
+      console.error("Reload error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reload medical records",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReloading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Search and Filter Controls */}
@@ -256,6 +278,18 @@ export function EMRTableView({ patientId, refreshTrigger }: EMRTableViewProps) {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="default"
+          onClick={handleReload}
+          disabled={isReloading || loading}
+          className="whitespace-nowrap"
+        >
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isReloading ? "animate-spin" : ""}`}
+          />
+          Reload
+        </Button>
       </div>
 
       {/* EMR Table */}

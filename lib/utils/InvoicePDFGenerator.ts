@@ -175,6 +175,17 @@ const getLatestTransactionDate = (transactions?: any[]) => {
   return latest.transactionDate;
 };
 
+// Helper function to safely display values (don't show null/undefined)
+const safeValue = (value: any, fallback: string = ""): string => {
+  if (value === null || value === undefined || value === "null" || value === "undefined") {
+    return fallback;
+  }
+  if (typeof value === "string" && value.trim() === "") {
+    return fallback;
+  }
+  return String(value);
+};
+
 // HTML Template Generator Function (now async)
 const generateInvoiceHTML = async (data: InvoicePayload) => {
   const { patientInfo, invoiceDetails, paymentDetails, selectedServices } =
@@ -239,305 +250,455 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
       <meta charset="UTF-8">
       <title>Invoice - ${invoiceDetails.id}</title>
       <style>
+        /* A4 Paper with exact dimensions - consistent with prescription */
         @page {
-          size: A4;
-          margin: 0.2in;
+          size: A4 portrait;
+          margin: 6mm 8mm 10mm 8mm;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
 
         * {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        html {
+          width: 210mm;
+          height: 297mm;
         }
 
         body {
-          font-family: 'Arial', 'Helvetica', sans-serif;
-          font-size: 12px;
-          line-height: 1.4;
-          color: #333;
+          font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial', 'Helvetica', sans-serif;
+          font-size: 10pt;
+          line-height: 1.35;
+          color: #1f2937;
           background: white;
           width: 100%;
+          height: 100%;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         
+        /* Container - Fixed Layout */
         .container {
           width: 100%;
           max-width: 100%;
-          padding: 15px;
+          padding: 12px 10px;
         }
-        
-        /* Header */
+
+        /* Header - Consistent with Prescription */
         .header {
           text-align: center;
-          margin-bottom: 20px;
-          border-bottom: 2px solid #e5e5e5;
-          padding-bottom: 15px;
+          margin-bottom: 15px;
+          border-bottom: 6px solid #8fcbe5;
+          padding-bottom: 12px;
+          page-break-inside: avoid;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .logo-container {
-          width: 80px;
-          height: 50px;
-          margin: 0 auto 10px;
+          width: 100%;
+          height: 100px;
+          margin: 0 0 12px 0;
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        
+
         .logo-image {
-          width: 80px;
-          height: 50px;
+          width: 450px;
+          max-width: 450px;
+          height: auto;
+          max-height: 100px;
           object-fit: contain;
           display: block;
         }
-        
+
         .logo-fallback {
-          width: 80px;
+          width: 100px;
           height: 50px;
-          background: #f97316;
+          background: #0054a6;
           border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
           font-weight: bold;
-          font-size: 16px;
+          font-size: 18px;
+          letter-spacing: 2px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .company-name {
-          font-size: 24px;
-          font-weight: bold;
-          color: #1f2937;
-          margin-bottom: 5px;
+          font-size: 22pt;
+          font-weight: 900;
+          color: #ed1c24;
+          margin-bottom: 6px;
+          letter-spacing: -0.5px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .company-address {
-          font-size: 11px;
-          color: #6b7280;
-          margin-bottom: 8px;
+          font-size: 8.5pt;
+          color: #231f20;
+          margin-bottom: 4px;
+          line-height: 1.4;
         }
-        
+
         .company-contact {
-          font-size: 11px;
-          color: #6b7280;
+          font-size: 8.5pt;
+          color: #0054a6;
+          font-weight: 600;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         
-        /* Invoice Info */
+        /* Invoice Info - Fixed Layout */
         .invoice-info {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 20px;
-          padding: 10px 0;
+          align-items: center;
+          margin-bottom: 12px;
+          padding: 10px 12px;
+          background: #f8f9fa;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          page-break-inside: avoid;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .invoice-number {
-          font-size: 14px;
-          font-weight: bold;
+          font-size: 11pt;
+          font-weight: 700;
+          color: #1a237e;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .invoice-date {
-          font-size: 12px;
-          color: #6b7280;
+          font-size: 9pt;
+          color: #555;
+          line-height: 1.5;
         }
-        
-        /* patientInfo and Payment Details */
+
+        /* Patient Info and Payment Details - Consistent Grid */
         .details-section {
           display: flex;
-          gap: 20px;
-          margin-bottom: 25px;
+          gap: 15px;
+          margin-bottom: 15px;
+          page-break-inside: avoid;
         }
-        
+
         .detail-card {
           flex: 1;
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 15px;
+          max-width: 50%;
+          background: #f8f9fa;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          padding: 12px;
+          page-break-inside: avoid;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .detail-title {
-          font-size: 13px;
-          font-weight: bold;
-          color: #374151;
-          margin-bottom: 10px;
-          border-bottom: 1px solid #d1d5db;
-          padding-bottom: 5px;
+          font-size: 9.5pt;
+          font-weight: 700;
+          color: #0054a6;
+          margin-bottom: 8px;
+          border-bottom: 1px solid #d0d0d0;
+          padding-bottom: 4px;
+          text-transform: uppercase;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .detail-item {
           display: flex;
           justify-content: space-between;
           margin-bottom: 5px;
-          font-size: 11px;
+          font-size: 8.5pt;
+          line-height: 1.4;
         }
-        
+
         .detail-label {
-          color: #6b7280;
+          color: #555;
+          font-weight: 600;
         }
-        
+
         .detail-value {
           font-weight: 500;
-          color: #1f2937;
+          color: #000;
+          text-align: right;
         }
         
-        /* Services Table */
+        /* Services Table - Standardized */
         .services-section {
-          margin-bottom: 25px;
+          margin-bottom: 15px;
+          page-break-inside: avoid;
         }
-        
+
         .section-title {
-          font-size: 14px;
-          font-weight: bold;
-          color: #374151;
-          margin-bottom: 10px;
+          font-size: 10pt;
+          font-weight: 700;
+          color: #0054a6;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          border-bottom: 1px solid #d0d0d0;
+          padding-bottom: 3px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .services-table {
           width: 100%;
           border-collapse: collapse;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
           overflow: hidden;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .table-header {
           background: #f3f4f6;
-          font-weight: bold;
-          font-size: 11px;
+          font-weight: 700;
+          font-size: 8.5pt;
           color: #374151;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .table-header th {
-          padding: 12px 8px;
+          padding: 8px 10px;
           text-align: left;
-          border-bottom: 1px solid #d1d5db;
+          border-bottom: 2px solid #d0d0d0;
+          vertical-align: middle;
         }
 
         .table-header th:nth-child(2),
-        .table-header th:nth-child(3) {
-          text-align: center;
-        }
-
+        .table-header th:nth-child(3),
         .table-header th:nth-child(4) {
           text-align: center;
         }
-        
+
         .table-row {
           border-bottom: 1px solid #e5e7eb;
         }
-        
+
         .table-row:nth-child(even) {
           background: #f9fafb;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .table-row td {
-          padding: 10px 8px;
-          font-size: 11px;
-          vertical-align: top;
+          padding: 8px 10px;
+          font-size: 9pt;
+          vertical-align: middle;
+          line-height: 1.4;
         }
-        
+
         .service-name {
           font-weight: 600;
-          color: #1f2937;
-          margin-bottom: 2px;
+          color: #000;
+          margin-bottom: 3px;
+          font-size: 9pt;
         }
-        
+
         .service-description {
-          font-size: 10px;
-          color: #6b7280;
+          font-size: 8pt;
+          color: #555;
           line-height: 1.3;
         }
-        
+
         .text-center {
           text-align: center;
         }
-        
+
         .text-right {
           text-align: right;
         }
         
-        /* Totals Section */
+        /* Totals Section - Fixed Layout */
         .totals-section {
           margin-left: auto;
-          width: 300px;
-          margin-bottom: 25px;
+          width: 320px;
+          max-width: 320px;
+          margin-bottom: 15px;
+          page-break-inside: avoid;
         }
-        
+
         .totals-table {
           width: 100%;
           border-collapse: collapse;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          overflow: hidden;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .totals-table td {
           padding: 8px 12px;
-          font-size: 12px;
+          font-size: 9pt;
           border-bottom: 1px solid #e5e7eb;
+          line-height: 1.4;
         }
-        
+
         .totals-label {
-          color: #6b7280;
-        }
-        
-        .totals-value {
+          color: #555;
           font-weight: 600;
-          text-align: right;
-          color: #1f2937;
         }
-        
+
+        .totals-value {
+          font-weight: 700;
+          text-align: right;
+          color: #000;
+        }
+
         .total-final {
           background: #f3f4f6;
-          font-weight: bold;
-          font-size: 14px;
-          border-top: 2px solid #d1d5db;
+          font-weight: 700;
+          font-size: 10pt;
+          border-top: 2px solid #d0d0d0;
+          border-bottom: 2px solid #d0d0d0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .paid-amount {
           color: #059669;
+          font-weight: 700;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .due-amount {
           color: #dc2626;
+          font-weight: 700;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         
-        /* Notes Section */
+        /* Notes Section - Standardized */
         .notes-section {
-          margin-bottom: 20px;
+          margin-bottom: 15px;
+          page-break-inside: avoid;
         }
-        
+
         .notes-content {
           background: #fef3c7;
           border: 1px solid #f59e0b;
-          border-radius: 6px;
-          padding: 12px;
-          font-size: 11px;
+          border-radius: 4px;
+          padding: 10px 12px;
+          font-size: 8.5pt;
           color: #92400e;
+          line-height: 1.4;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
-        /* Footer */
+
+        /* Footer - Consistent with Prescription Theme */
         .footer {
           text-align: center;
-          background: #f3f4f6;
-          padding: 15px;
-          border-radius: 8px;
-          border-top: 2px solid #e5e7eb;
+          background: #f8f9fa;
+          padding: 12px 15px;
+          border-radius: 4px;
+          border-top: 3px solid #0054a6;
+          margin-top: 20px;
+          page-break-inside: avoid;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .footer-title {
-          font-size: 16px;
-          font-weight: bold;
-          color: #1f2937;
-          margin-bottom: 5px;
+          font-size: 12pt;
+          font-weight: 700;
+          color: #0054a6;
+          margin-bottom: 4px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
-        
+
         .footer-subtitle {
-          font-size: 12px;
-          color: #6b7280;
-          margin-bottom: 8px;
+          font-size: 9pt;
+          color: #555;
+          margin-bottom: 6px;
+          font-weight: 500;
         }
-        
+
         .footer-info {
-          font-size: 10px;
-          color: #9ca3af;
+          font-size: 7.5pt;
+          color: #666;
+          line-height: 1.4;
+        }
+
+        /* Print-Specific Media Query for Exact Consistency */
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          body {
+            width: 210mm;
+            height: 297mm;
+            margin: 0;
+            padding: 0;
+          }
+
+          .header,
+          .invoice-info,
+          .details-section,
+          .detail-card,
+          .services-section,
+          .totals-section,
+          .notes-section,
+          .footer {
+            page-break-inside: avoid;
+          }
+
+          /* Ensure borders and backgrounds print */
+          .header {
+            border-bottom: 6px solid #8fcbe5 !important;
+          }
+
+          .invoice-info,
+          .detail-card {
+            background: #f8f9fa !important;
+            border: 1px solid #ddd !important;
+          }
+
+          .table-row:nth-child(even) {
+            background: #f9fafb !important;
+          }
+
+          .total-final {
+            background: #f3f4f6 !important;
+          }
+
+          .footer {
+            border-top: 3px solid #0054a6 !important;
+            background: #f8f9fa !important;
+          }
+        }
+
+        /* Screen-only styles for preview */
+        @media screen {
+          body {
+            max-width: 210mm;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+          }
         }
       </style>
     </head>
@@ -549,7 +710,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           <div class="logo-container">
             ${
               logoBase64
-                ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo"  style="width:160px; height:auto;"/>`
+                ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo" />`
                 : `<div class="logo-fallback">TC</div>`
             }
           </div>
@@ -580,26 +741,26 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           <!-- Bill To -->
           <div class="detail-card">
             <div class="detail-title">BILL TO:</div>
-            <div class="detail-item">
+            ${safeValue(patientInfo.patientName) ? `<div class="detail-item">
               <span class="detail-label">Patient Name:</span>
-              <span class="detail-value">${patientInfo.patientName}</span>
-            </div>
-            <div class="detail-item">
+              <span class="detail-value">${safeValue(patientInfo.patientName)}</span>
+            </div>` : ""}
+            ${safeValue(patientInfo.id) ? `<div class="detail-item">
               <span class="detail-label">Patient ID:</span>
-              <span class="detail-value">${patientInfo.id}</span>
-            </div>
-            <div class="detail-item">
+              <span class="detail-value">${safeValue(patientInfo.id)}</span>
+            </div>` : ""}
+            ${safeValue(patientInfo.phone) ? `<div class="detail-item">
               <span class="detail-label">Phone:</span>
-              <span class="detail-value">${patientInfo.phone}</span>
-            </div>
-            <div class="detail-item">
+              <span class="detail-value">${safeValue(patientInfo.phone)}</span>
+            </div>` : ""}
+            ${safeValue(patientInfo.email) ? `<div class="detail-item">
               <span class="detail-label">Email:</span>
-              <span class="detail-value">${patientInfo.email}</span>
-            </div>
-            <div class="detail-item">
+              <span class="detail-value">${safeValue(patientInfo.email)}</span>
+            </div>` : ""}
+            ${safeValue(patientInfo.address) ? `<div class="detail-item">
               <span class="detail-label">Address:</span>
-              <span class="detail-value">${patientInfo.address}</span>
-            </div>
+              <span class="detail-value">${safeValue(patientInfo.address)}</span>
+            </div>` : ""}
           </div>
 
           <!-- Payment Details -->
@@ -615,14 +776,14 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                 </div>`
                 : ""
             }
-            <div class="detail-item">
+            ${safeValue(paymentMethods) && paymentMethods !== "N/A" ? `<div class="detail-item">
               <span class="detail-label">Payment Method:</span>
-              <span class="detail-value">${paymentMethods}</span>
-            </div>
-            <div class="detail-item">
+              <span class="detail-value">${safeValue(paymentMethods)}</span>
+            </div>` : ""}
+            ${safeValue(paymentDetails.status) ? `<div class="detail-item">
               <span class="detail-label">Payment Status:</span>
-              <span class="detail-value">${paymentDetails.status}</span>
-            </div>
+              <span class="detail-value">${safeValue(paymentDetails.status)}</span>
+            </div>` : ""}
             ${
               displayOffer && displayOffer > 0
                 ? `<div class="detail-item">

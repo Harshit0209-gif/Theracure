@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getDay } from "date-fns";
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, CubicleStatus } from "@prisma/client";
 import { sendSMSNotification } from "@/config/smsConfig";
 
 export async function GET(req: NextRequest) {
@@ -72,6 +72,14 @@ export async function GET(req: NextRequest) {
               price: true,
             },
           },
+          cubicle: {
+            select: {
+              id: true,
+              name: true,
+              roomNumber: true,
+              location: true,
+            },
+          },
         },
       }),
       prisma.appointment.count({ where }),
@@ -113,6 +121,7 @@ export async function POST(req: NextRequest) {
       createdById,
       serviceId,
       appointmentDate,
+      cubicleId,
     } = body;
 
     // Validate required fields
@@ -227,11 +236,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Check for existing appointments that overlap with the requested time
-    const existingAppointments = await prisma.appointment.findMany({
+    // 3. Check for available cubicles (Resource-based scheduling)
+    // Get all active cubicles
+    const allCubicles = await prisma.cubicle.findMany({
       where: {
-        therapistId,
-        status: { in: [AppointmentStatus.CONFIRMED] },
+        status: CubicleStatus.ACTIVE,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    if (allCubicles.length === 0) {
+      console.log("No active cubicles available");
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "No active cubicles available. Please contact administrator to set up cubicles.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Find appointments that overlap with the requested time range
+    const overlappingAppointments = await prisma.appointment.findMany({
+      where: {
+        status: AppointmentStatus.CONFIRMED,
         OR: [
           {
             AND: [
@@ -245,26 +276,81 @@ export async function POST(req: NextRequest) {
               { appointmentEndTime: { gte: endTime } },
             ],
           },
+          {
+            AND: [
+              { appointmentStartTime: { gte: startTime } },
+              { appointmentEndTime: { lte: endTime } },
+            ],
+          },
         ],
+      },
+      select: {
+        cubicleId: true,
       },
     });
 
-    console.log("Existing appointments check:", {
-      found: existingAppointments.length,
-      appointments: existingAppointments,
-    });
+    // Get occupied cubicle IDs
+    const occupiedCubicleIds = overlappingAppointments
+      .map((apt) => apt.cubicleId)
+      .filter((id): id is string => id !== null);
 
-    if (existingAppointments.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Therapist already has an appointment during this time",
-        },
-        { status: 400 },
+    // Determine which cubicle to use
+    let selectedCubicle;
+
+    if (cubicleId) {
+      // User selected a specific cubicle - validate it
+      selectedCubicle = allCubicles.find((c) => c.id === cubicleId);
+
+      if (!selectedCubicle) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Selected cubicle not found or inactive",
+          },
+          { status: 400 },
+        );
+      }
+
+      // Check if the selected cubicle is available
+      if (occupiedCubicleIds.includes(cubicleId)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Selected cubicle is not available during this time slot. Please choose another cubicle.",
+          },
+          { status: 400 },
+        );
+      }
+    } else {
+      // Auto-assign: Find first available cubicle
+      selectedCubicle = allCubicles.find(
+        (cubicle) => !occupiedCubicleIds.includes(cubicle.id),
       );
+
+      if (!selectedCubicle) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "No cubicles available during this time. All rooms are occupied. Please choose a different time slot.",
+            details: {
+              totalCubicles: allCubicles.length,
+              occupiedCubicles: occupiedCubicleIds.length,
+            },
+          },
+          { status: 400 },
+        );
+      }
     }
 
-    // 4. Create the appointment
+    console.log("Cubicle assignment:", {
+      totalCubicles: allCubicles.length,
+      occupiedCubicles: occupiedCubicleIds.length,
+      selectedCubicle: selectedCubicle?.name || "None",
+      userSelected: !!cubicleId,
+    });
+
+    // 4. Create the appointment with assigned cubicle
     const appointment = await prisma.appointment.create({
       data: {
         appointmentStartTime: startTime,
@@ -289,6 +375,12 @@ export async function POST(req: NextRequest) {
               connect: { id: serviceId },
             }
           : undefined,
+        cubicle: {
+          connect: { id: selectedCubicle.id },
+        },
+      },
+      include: {
+        cubicle: true,
       },
     });
 

@@ -24,8 +24,8 @@ const generateAssessmentPDF = async (assessment: any) => {
         ...PUPPETEER_CONFIG.args,
         `--user-data-dir=${tmpDir}`,
         `--crash-dumps-dir=${tmpDir}`,
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
       ],
     };
     browser = await puppeteer.launch(launchConfig);
@@ -33,12 +33,9 @@ const generateAssessmentPDF = async (assessment: any) => {
     const page = await browser.newPage();
     page.setDefaultTimeout(30000);
 
-    const images = await getImagesAsBase64([
-      "apple-touch-icon.png",
-      "humen-body.jpg",
-    ]);
+    const images = await getImagesAsBase64(["image.png", "humen-body.jpg"]);
 
-    const logoBase64 = images["apple-touch-icon.png"];
+    const logoBase64 = images["image.png"];
     const bodyBase64 = images["humen-body.jpg"];
 
     // --- Helper Functions (Same as before) ---
@@ -51,6 +48,22 @@ const generateAssessmentPDF = async (assessment: any) => {
         return Object.values(value).some((v) => hasValue(v));
       }
       return Boolean(value);
+    };
+
+    // Helper to safely display values (don't show null/undefined)
+    const safeValue = (value: any, fallback: string = ""): string => {
+      if (
+        value === null ||
+        value === undefined ||
+        value === "null" ||
+        value === "undefined"
+      ) {
+        return fallback;
+      }
+      if (typeof value === "string" && value.trim() === "") {
+        return fallback;
+      }
+      return String(value);
     };
 
     const formatKey = (key: string) => {
@@ -306,116 +319,183 @@ const generateAssessmentPDF = async (assessment: any) => {
     <title>OPD Assessment Sheet</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
-      /* Assuming A4 Paper */
-      @page { size: A4; margin: 6mm 8mm 10mm 8mm; }
-      * { box-sizing: border-box; }
+
+      /* A4 Paper with exact dimensions */
+      @page {
+        size: A4 portrait;
+        margin: 6mm 8mm 10mm 8mm;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      html {
+        width: 210mm;
+        height: 297mm;
+      }
+
       body {
-        font-family: 'Roboto', sans-serif; /* Fallback, closer match might be Arial Narrow */
+        font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         font-size: 9.5pt;
         color: #000;
-        margin: 0; padding: 0;
+        margin: 0;
+        padding: 0;
         line-height: 1.25;
+        width: 100%;
+        height: 100%;
+        background: white;
       }
       
-      /* --- HEADER STYLES --- */
+      /* --- HEADER STYLES - ALIGNED WITH REFERENCE PDF --- */
       .header-wrapper {
         display: flex;
+        flex-direction: row; /* Changed from column */
         justify-content: space-between;
-        align-items: flex-start;
-        padding-bottom: 8px;
-        /* Thick light blue bottom border */
-        border-bottom: 6px solid #8fcbe5; 
-        margin-bottom: 12px;
+        align-items: center; /* Align items to the center for vertical balance */
+        padding: 10px 0 8px 0;
+        border-bottom: 5px solid #00a8e1;
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        gap: 20px;
       }
-      
-      /* Header Left (Address & Logo) */
+
+      /* Header Left (Logo & Address) */
       .header-left {
-        width: 50%;
+        width: 45%;
+        max-width: 45%;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
       }
       
-      /* Logo Area */
-      .logo-wrapper {
-        margin-bottom: 8px;
-        /* Ensure logo area is big enough */
-        min-height: 40px; 
-      }
       .logo-img {
-        width: 250px;
+        width: 280px; /* Adjusted from 500px */
         max-width: 100%;
         height: auto;
         object-fit: contain;
         display: block;
+        margin-bottom: 10px; /* Space between logo and address */
       }
       
-      /* Address Text Styling */
+      /* Address Text Styling - Consistent Spacing */
       .clinic-address {
         font-size: 8.5pt;
-        color: #231f20; /* Dark Grey/Black */
-        line-height: 1.35;
+        color: #1f1f1f;
+        line-height: 1.6;
         font-family: 'Roboto', sans-serif;
+        width: 100%;
       }
-      .addr-row { display: block; margin-bottom: 1px; }
-      
-      /* Colors for Labels */
-      .lbl-blue { color: #0054a6; font-weight: 700; }
-      .lbl-red  { color: #ed1c24; font-weight: 700; }
-      .txt-red  { color: #ed1c24; font-weight: 500; }
-      .txt-blue { color: #0054a6; }
-      
-      /* Header Right (Doctor Info) */
+      .addr-row {
+        display: block;
+        margin-bottom: 4px;
+        line-height: 1.6;
+      }
+
+      /* Colors for Labels - Print Safe */
+      .lbl-blue {
+        color: #0054a6;
+        font-weight: 700;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .lbl-red {
+        color: #ed1c24;
+        font-weight: 700;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .txt-red {
+        color: #ed1c24;
+        font-weight: 500;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .txt-blue {
+        color: #0054a6;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* Header Right (Doctor Info) - Fixed Width */
       .header-right {
-        width: 50%; /* Adjusted for balance */
+        width: 55%;
+        max-width: 55%;
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
-        text-align: left;
-        padding-left: 10px;
+        align-items: flex-start; /* CHANGED */
+        text-align: left; /* CHANGED */
       }
       
-      /* Doctor Name - Large Red */
+      /* Doctor Name - Large Red - Fixed Dimensions */
       .dr-name {
-        font-size: 20pt;
+        font-size: 24pt;
         font-weight: 900;
-        color: #ed1c24; /* Red */
+        color: #d31e24;
         line-height: 1.1;
-        margin-bottom: 2px;
+        margin-bottom: 5px;
         letter-spacing: -0.5px;
+        white-space: normal;
+        text-align: left; /* CHANGED */
+        width: 100%;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
-      
-      /* Qualifications - Blue */
+
+      /* Qualifications - Blue - Consistent Spacing */
       .dr-degrees {
-        font-size: 8.5pt;
+        font-size: 9.5pt;
         font-weight: 700;
-        color: #0054a6; /* Dark Blue */
-        margin-bottom: 2px;
-        line-height: 1.2;
+        color: #005eb8;
+        margin-bottom: 5px;
+        line-height: 1.4;
+        text-align: left; /* CHANGED */
+        width: 100%;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
-      
-      /* Reg No - Standard */
+
+      /* Reg No - Standard - Consistent Spacing */
       .dr-reg {
         font-size: 8pt;
         color: #333;
         font-weight: 500;
         margin-bottom: 4px;
+        line-height: 1.4;
+        text-align: left; /* CHANGED */
+        width: 100%;
       }
-      
-      /* Sr. Consultant - Pink/Magenta */
+
+      /* Sr. Consultant - Pink/Magenta - Fixed Spacing (from original, can be repurposed) */
       .dr-title {
-        font-size: 9.5pt;
-        font-weight: 600;
-        color: #ec008c; /* Magenta/Pink */
-        margin-bottom: 1px;
+        font-size: 10.5pt;
+        font-weight: 700;
+        color: #d6006f;
+        margin-bottom: 4px;
+        line-height: 1.3;
+        text-align: left; /* CHANGED */
+        width: 100%;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
-      
-      /* Previous Exp - Purple */
+
+      /* Previous Exp - Purple - Fixed Spacing */
       .dr-exp {
         font-size: 8.5pt;
-        color: #662d91; /* Purple */
+        color: #662d91;
         font-weight: 500;
-        line-height: 1.25;
+        line-height: 1.5;
+        white-space: pre-line;
+        text-align: left; /* CHANGED */
+        width: 100%;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
         /* --- NEW VAS TABLE STYLES --- */
       .vas-section-wrapper {
@@ -500,54 +580,392 @@ const generateAssessmentPDF = async (assessment: any) => {
         width: 60%; max-width: 500px; opacity: 0.08; z-index: -1000; filter: grayscale(100%);
       }
 
-      /* --- BODY & CONTENT STYLES (Existing) --- */
-      .sheet-title { text-align: center; margin: 5px 0 10px 0; }
-      .title-badge { background-color: #1a237e; color: white; padding: 3px 20px; border-radius: 12px; font-weight: bold; font-size: 10pt; text-transform: uppercase; }
+      /* --- BODY & CONTENT STYLES - STANDARDIZED --- */
+      .sheet-title {
+        text-align: center;
+        margin: 10px 0 12px 0;
+        page-break-inside: avoid;
+      }
+      .title-badge {
+        background-color: #1e3a8a;
+        color: white;
+        padding: 6px 28px;
+        border-radius: 14px;
+        font-weight: 800;
+        font-size: 10.5pt;
+        text-transform: uppercase;
+        display: inline-block;
+        letter-spacing: 0.5px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
 
-      .patient-grid { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 9pt; background: #f8f9fa; padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
-      .pg-col { width: 49%; display: flex; flex-direction: column; gap: 4px; }
-      .info-row { display: flex; align-items: baseline; }
-      .p-label { color: #0054a6; font-weight: 700; min-width: 75px; font-size: 8.5pt; }
-      .p-val { flex: 1; border-bottom: 1px dotted #ccc; color: #000; padding-left: 5px; font-weight: 500; }
+      /* Patient Details Grid - Fixed Layout */
+      .patient-grid {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        font-size: 9pt;
+        background: #f9fafb;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 5px;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .pg-col {
+        width: 49%;
+        max-width: 49%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .info-row {
+        display: flex;
+        align-items: baseline;
+        min-height: 20px;
+      }
+      .p-label {
+        color: #0066cc;
+        font-weight: 700;
+        min-width: 85px;
+        max-width: 85px;
+        font-size: 9pt;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .p-val {
+        flex: 1;
+        border-bottom: 1px dotted #9ca3af;
+        color: #1a1a1a;
+        padding-left: 8px;
+        padding-bottom: 2px;
+        font-weight: 500;
+        font-size: 9pt;
+        min-height: 18px;
+      }
 
-      .main-container { display: flex; flex-direction: column; gap: 8px; }
-      .history-section-wrapper { display: flex; gap: 15px; }
-      .history-text-col { width: 70%; display: flex; flex-direction: column; gap: 8px; }
-      .history-img-col { width: 30%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; }
+      /* Main Container - Fixed Layout */
+      .main-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+      }
+      .history-section-wrapper {
+        display: flex;
+        gap: 15px;
+        width: 100%;
+      }
+      .history-text-col {
+        width: 70%;
+        max-width: 70%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .history-img-col {
+        width: 30%;
+        max-width: 30%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 10px;
+      }
 
-      .section-block { margin-bottom: 8px; width: 100%; }
-      .sec-title { color: #0054a6; font-weight: 700; font-size: 9.5pt; margin-bottom: 2px; text-transform: uppercase; border-bottom: 1px solid #e0e0e0; display: inline-block; padding-bottom: 1px; }
-      .sec-content { font-size: 9pt; color: #333; padding-left: 2px; margin-top: 2px; }
-      .val-list { display: flex; flex-direction: column; gap: 1px; }
-      .horizontal-list { flex-direction: row; flex-wrap: wrap; gap: 12px; }
-      .sub-item { display: flex; align-items: baseline; }
-      .sub-key { font-weight: 600; color: #555; margin-right: 4px; font-size: 8.5pt; }
-      .sub-val { font-size: 9pt; }
-      .val-text { white-space: pre-wrap; line-height: 1.3; text-align: justify; }
+      /* Section Blocks - Standardized */
+      .section-block {
+        margin-bottom: 12px;
+        width: 100%;
+        page-break-inside: avoid;
+      }
+      .sec-title {
+        color: #0066cc;
+        font-weight: 700;
+        font-size: 10pt;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        border-bottom: 2px solid #cbd5e1;
+        display: inline-block;
+        padding-bottom: 3px;
+        letter-spacing: 0.3px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .sec-content {
+        font-size: 9pt;
+        color: #374151;
+        padding-left: 4px;
+        margin-top: 6px;
+        line-height: 1.5;
+      }
+      .val-list {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .horizontal-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      .sub-item {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 2px;
+      }
+      .sub-key {
+        font-weight: 600;
+        color: #555;
+        margin-right: 5px;
+        font-size: 8.5pt;
+      }
+      .sub-val {
+        font-size: 9pt;
+        color: #000;
+      }
+      .val-text {
+        white-space: pre-wrap;
+        line-height: 1.4;
+        text-align: justify;
+        word-wrap: break-word;
+      }
 
-      .exam-sub-group { margin-bottom: 4px; }
-      .exam-sub-title { font-size: 8.5pt; font-weight: 600; color: #444; text-decoration: underline; margin-bottom: 2px; }
-      .body-img { width: 100%; max-width: 130px; opacity: 0.95; margin-bottom: 8px; }
-      .diag-labels { display: flex; justify-content: space-between; width: 100%; max-width: 130px; font-size: 7pt; font-weight: bold; margin-bottom: 2px; }
+      /* Examination Subsections - Fixed Spacing */
+      .exam-sub-group {
+        margin-bottom: 6px;
+        page-break-inside: avoid;
+      }
+      .exam-sub-title {
+        font-size: 8.5pt;
+        font-weight: 600;
+        color: #444;
+        text-decoration: underline;
+        margin-bottom: 3px;
+      }
 
-      .bmi-container { width: 100%; margin-top: 5px; padding: 4px; border: 1px solid #eee; border-radius: 4px; background: #fff; }
-      .bmi-title { font-size: 8pt; font-weight: bold; color: #333; text-align: center; margin-bottom: 2px; }
-      .bmi-bar { display: flex; height: 10px; width: 100%; border-radius: 5px; overflow: hidden; position: relative; margin-bottom: 2px; }
-      .bmi-segment { height: 100%; }
-      .seg-under { background: #f97316; } .seg-normal { background: #16a34a; } .seg-over { background: #eab308; } .seg-obese { background: #dc2626; }
-      .bmi-pointer { position: absolute; top: -5px; transform: translateX(-50%); color: #000; font-size: 7px; font-weight: bold; }
-      .bmi-labels { display: flex; justify-content: space-between; font-size: 5px; color: #666; text-transform: uppercase; font-weight: 600; }
+      /* Body Image - Fixed Dimensions */
+      .body-img {
+        width: 100%;
+        max-width: 130px;
+        height: auto;
+        opacity: 0.95;
+        margin-bottom: 8px;
+        display: block;
+      }
+      .diag-labels {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 130px;
+        font-size: 7pt;
+        font-weight: bold;
+        margin-bottom: 3px;
+      }
 
-      .vas-box { width: 100%; text-align: center; margin-top: 8px; padding: 4px; background: #ffebee; border-radius: 4px; font-size: 9pt; color: #c62828; border: 1px solid #ffcdd2; }
-      .vas-table-container { width: 100%; margin-top: 8px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: #fff; }
-      .vas-table-title { font-size: 8pt; font-weight: bold; color: #fff; background: #c62828; padding: 3px 6px; text-align: center; }
-      .vas-table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
-      .vas-table thead { background: #f5f5f5; }
-      .vas-table th { padding: 3px 4px; text-align: left; font-weight: 600; color: #444; border-bottom: 2px solid #ddd; font-size: 7pt; }
-      .vas-table td { padding: 3px 4px; border-bottom: 1px solid #eee; color: #333; }
-      .vas-table tbody tr:last-child td { border-bottom: none; }
-      .vas-table .score-cell { font-weight: bold; color: #c62828; text-align: center; }
-      .signature-img { height: 40px; width: auto; max-width: 120px; display: block; margin-left: auto; margin-right: 0; }
+      /* BMI Chart - Fixed Dimensions */
+      .bmi-container {
+        width: 100%;
+        max-width: 150px;
+        margin-top: 8px;
+        padding: 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #fff;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bmi-title {
+        font-size: 8pt;
+        font-weight: bold;
+        color: #333;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+      .bmi-bar {
+        display: flex;
+        height: 10px;
+        width: 100%;
+        border-radius: 5px;
+        overflow: hidden;
+        position: relative;
+        margin-bottom: 4px;
+      }
+      .bmi-segment {
+        height: 100%;
+      }
+      .seg-under {
+        background: #f97316;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .seg-normal {
+        background: #16a34a;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .seg-over {
+        background: #eab308;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .seg-obese {
+        background: #dc2626;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bmi-pointer {
+        position: absolute;
+        top: -6px;
+        transform: translateX(-50%);
+        color: #000;
+        font-size: 8px;
+        font-weight: bold;
+      }
+      .bmi-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 6px;
+        color: #666;
+        text-transform: uppercase;
+        font-weight: 600;
+      }
+
+      /* Notes and Additional Sections - Standardized */
+      .vas-box {
+        width: 100%;
+        text-align: center;
+        margin-top: 10px;
+        padding: 6px;
+        background: #ffebee;
+        border-radius: 4px;
+        font-size: 9pt;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .vas-table-container {
+        width: 100%;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+        background: #fff;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .vas-table-title {
+        font-size: 8pt;
+        font-weight: bold;
+        color: #fff;
+        background: #c62828;
+        padding: 4px 8px;
+        text-align: center;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .vas-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 7.5pt;
+      }
+      .vas-table thead {
+        background: #f5f5f5;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .vas-table th {
+        padding: 4px 6px;
+        text-align: left;
+        font-weight: 600;
+        color: #444;
+        border-bottom: 2px solid #ddd;
+        font-size: 7.5pt;
+      }
+      .vas-table td {
+        padding: 4px 6px;
+        border-bottom: 1px solid #eee;
+        color: #333;
+        font-size: 8pt;
+      }
+      .vas-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .vas-table .score-cell {
+        font-weight: bold;
+        color: #c62828;
+        text-align: center;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* Signature Area - Fixed Dimensions */
+      .signature-img {
+        height: 45px;
+        width: auto;
+        max-width: 130px;
+        display: block;
+        margin-left: auto;
+        margin-right: 0;
+      }
+
+      /* Print-Specific Media Query for Exact Consistency */
+      @media print {
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        body {
+          width: 210mm;
+          height: 297mm;
+          margin: 0;
+          padding: 0;
+        }
+
+        .header-wrapper,
+        .patient-grid,
+        .section-block,
+        .exam-sub-group,
+        .bmi-container,
+        .vas-section-wrapper,
+        .vas-table-container {
+          page-break-inside: avoid;
+        }
+
+        /* Ensure borders and backgrounds print */
+        .header-wrapper {
+          border-bottom: 5px solid #00a8e1 !important;
+        }
+
+        .title-badge {
+          background-color: #1e3a8a !important;
+          color: white !important;
+        }
+
+        .patient-grid {
+          background: #f9fafb !important;
+          border: 1px solid #d1d5db !important;
+        }
+      }
+
+      /* Screen-only styles for preview */
+      @media screen {
+        body {
+          max-width: 210mm;
+          margin: 0 auto;
+          box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+      }
 
     </style>
   </head>
@@ -556,31 +974,28 @@ const generateAssessmentPDF = async (assessment: any) => {
     <div class="page">
       
       <div class="header-wrapper">
-        
         <div class="header-left">
-          <div class="logo-wrapper">
-             ${
-               logoBase64
-                 ? `<img class="logo-img" src="${logoBase64}" />`
-                 : '<div style="font-weight:900; font-size:18pt; color:#222;">THERA-CURE</div>'
-             }
-          </div>
+          ${
+            logoBase64
+              ? `<img class="logo-img" src="${logoBase64}" />`
+              : '<div style="font-weight:900; font-size:24pt; color:#222; margin-bottom: 15px;">THERA-CURE</div>'
+          }
           <div class="clinic-address">
-             <div class="addr-row">
+              <div class="addr-row">
                 <span class="lbl-blue">Address:</span> 361/A, Basudevpur Road, Ground Floor,
-             </div>
-             <div class="addr-row">
+              </div>
+              <div class="addr-row">
                 Nilanjana Apartment, Shyamnagar, 24 Pgs. (N), Pin - 743127
-             </div>
-             <div class="addr-row txt-red">
-                Time: Monday to Saturday (9:00 AM to 1:00 PM & 5:00 PM to 8:00 PM)
-             </div>
-             <div class="addr-row">
-                <span class="lbl-blue">Tel:</span> (033) 3564 7255 | (+91) 8582973652 <span class="txt-blue">(ONLY FOR EMERGENCY)</span>
-             </div>
-             <div class="addr-row">
+              </div>
+              <div class="addr-row txt-red">
+                Time: Monday to Saturday (9:00 AM to 8:00 PM)
+              </div>
+              <div class="addr-row">
+                <span class="lbl-blue">Tel:</span> (033) 3564 7255 | (+91) 8582973652 <span class="txt-red">(ONLY FOR EMERGENCY)</span>
+              </div>
+              <div class="addr-row">
                 <span class="lbl-blue">Email:</span> contacts@mstheracure.com | <span class="lbl-blue">Website :</span> www.mstheracure.com
-             </div>
+              </div>
           </div>
         </div>
 
@@ -588,28 +1003,26 @@ const generateAssessmentPDF = async (assessment: any) => {
           <div class="dr-name">
             ${therapist?.user?.name || therapist?.name || "Dr. Mainak Sur (PT)"}
           </div>
-          
+
           <div class="dr-degrees">
             ${
               therapist?.qualification ||
-              "B.P.T [W.B.U.H.S], M.P.T (Neurology) [W.B.U.H.S]"
+              "B.P.T [W.B.U.H.S], M.P.T (Neurology) [W.B.U.H.S], C.O.M.T, M.I.A.P, C.M.F.R.P"
             }
           </div>
-
-          <div class="dr-title">
-             ${
-               therapist?.specialization?.split(",")[0] ||
-               "Sr. Consultant, Manual Physical Therapist"
-             }
-          </div>
+          
+          <div class="dr-reg">I.A.P Regd. No. : L-42691</div>
+          <div class="dr-reg">C.O.M.T Regd. No.: 8806/T/A/192</div>
+          <div class="dr-reg" style="margin-bottom: 8px;">C.M.F.R.P Regd. No.: PO/CMFRP/033</div>
 
           <div class="dr-exp">
-             ${
-               therapist?.experiences ||
-               `Ex-Head of the Dept. of Physiotherapy, Swami Vivekananda University, Barrackpore
-Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol
-Ex-Physiotherapist, Portea Medical`
-             }
+              ${
+                therapist?.experiences ||
+                `Physiotherapist of The Badminton Academy,
+Department of Sports And Youth Services, Govt. of W.B.
+Ex-Head of the Dept. of Physiotherapy, Swami Vivekananda University, Barrackpore
+Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol`
+              }
           </div>
         </div>
       </div>
@@ -617,33 +1030,46 @@ Ex-Physiotherapist, Portea Medical`
 
       <div class="patient-grid">
         <div class="pg-col">
-          <div class="info-row"><span class="p-label">Name:</span><span class="p-val">${
+          <div class="info-row"><span class="p-label">Name:</span><span class="p-val">${safeValue(
             patientInfo?.patientName ||
-            patientInfo?.name ||
-            assessmentData?.patientName ||
-            ""
-          }</span></div>
-          <div class="info-row"><span class="p-label">Age / Sex:</span><span class="p-val">${
-            patientInfo?.age || assessmentData?.age || ""
-          } / ${
-            patientInfo?.gender || assessmentData?.gender || ""
-          }</span></div>
-          <div class="info-row"><span class="p-label">Chief C/O:</span><span class="p-val">${
-            assessmentData?.chiefComplaints || ""
-          }</span></div>
+              patientInfo?.name ||
+              assessmentData?.patientName,
+          )}</span></div>
+          <div class="info-row"><span class="p-label">Age / Sex:</span><span class="p-val">${safeValue(
+            patientInfo?.age || assessmentData?.age,
+          )} ${safeValue(patientInfo?.age || assessmentData?.age) && safeValue(patientInfo?.gender || assessmentData?.gender) ? "/" : ""} ${safeValue(
+            patientInfo?.gender || assessmentData?.gender,
+          )}</span></div>
+          <div class="info-row"><span class="p-label">Chief C/O:</span><span class="p-val">${safeValue(
+            assessmentData?.chiefComplaints,
+          )}</span></div>
         </div>
         <div class="pg-col">
-          <div class="info-row"><span class="p-label">Patient ID:</span><span class="p-val">${
-            assessmentData?.patientId || patientInfo?.patientId || "THRC"
-          }</span></div>
+          <div class="info-row"><span class="p-label">Patient ID:</span><span class="p-val">${safeValue(
+            assessmentData?.patientId || patientInfo?.patientId,
+            "THRC",
+          )}</span></div>
           <div class="info-row"><span class="p-label">Date:</span><span class="p-val">${new Date(
             assessmentData?.assessmentDate || Date.now(),
           ).toLocaleDateString("en-IN")}</span></div>
           <div class="info-row"><span class="p-label">Ht / Wt:</span><span class="p-val">${
-            assessmentData?.vitals?.height || patientInfo?.height || "__"
-          } cm | ${
-            assessmentData?.vitals?.weight || patientInfo?.weight || "__"
-          } kg</span></div>
+            safeValue(assessmentData?.vitals?.height || patientInfo?.height)
+              ? safeValue(
+                  assessmentData?.vitals?.height || patientInfo?.height,
+                ) + " cm"
+              : ""
+          }${
+            safeValue(assessmentData?.vitals?.height || patientInfo?.height) &&
+            safeValue(assessmentData?.vitals?.weight || patientInfo?.weight)
+              ? " | "
+              : ""
+          }${
+            safeValue(assessmentData?.vitals?.weight || patientInfo?.weight)
+              ? safeValue(
+                  assessmentData?.vitals?.weight || patientInfo?.weight,
+                ) + " kg"
+              : ""
+          }</span></div>
         </div>
       </div>
 
@@ -723,20 +1149,20 @@ Ex-Physiotherapist, Portea Medical`
       displayHeaderFooter: true,
       headerTemplate: "<div></div>",
       footerTemplate: `
-        <div style="width: 100%; font-size: 10px; font-family: 'Roboto', sans-serif; padding-right: 8mm; padding-left: 8mm;">
-          <div style="display: flex; justify-content: flex-end; align-items: flex-end; margin-bottom: 10px;">
+        <div style="width: 100%; font-size: 10px; font-family: 'Roboto', sans-serif; padding-right: 8mm; padding-left: 8mm; margin-top: 5mm;">
+          <div style="display: flex; justify-content: flex-end; align-items: flex-end; margin-bottom: 8px; page-break-inside: avoid;">
              <div style="text-align: right;">
-                 <div style="font-family: 'Dancing Script', cursive; font-size: 20px; color: #000; margin-bottom: 2px;">
+                 <div style="font-family: 'Dancing Script', cursive; font-size: 18px; color: #000; margin-bottom: 3px; font-weight: 600;">
                     ${therapist?.user?.name || therapist?.name || "Signature"}
                  </div>
-                 <div style="border-top: 1px solid #000; width: 150px; display: inline-block;"></div>
-                 <div style="font-size: 8px; font-weight: bold; margin-top: 1px;">DIGITAL SIGNATURE</div>
+                 <div style="border-top: 2px solid #000; width: 140px; display: inline-block; margin-bottom: 2px;"></div>
+                 <div style="font-size: 7.5px; font-weight: bold; color: #333; letter-spacing: 0.5px;">DIGITAL SIGNATURE</div>
              </div>
           </div>
-          <div style="text-align: center; margin-bottom: 5px; font-weight: bold; font-size: 10pt; color: #333;">
-              --- End of Prescription ---
+          <div style="text-align: center; margin-bottom: 6px; font-weight: 600; font-size: 9pt; color: #555; letter-spacing: 0.3px;">
+              --- End of Assessment ---
           </div>
-          <div style="background-color: #0054a6; color: white; text-align: center; padding: 4px; font-weight: bold; font-size: 8px; -webkit-print-color-adjust: exact; border-radius: 2px;">
+          <div style="background-color: #0054a6; color: white; text-align: center; padding: 5px 8px; font-weight: bold; font-size: 7.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; border-radius: 2px; letter-spacing: 0.3px;">
             IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
           </div>
         </div>

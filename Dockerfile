@@ -123,3 +123,28 @@ ENV PORT=3001
 
 
 CMD ["/app/docker-entrypoint.sh"]
+
+
+# 278  nano /etc/systemd/system/theracure.service
+#   279  systemctl daemon-reload
+#   280  systemctl enable theracure
+#   281  systemctl start theracure
+#   282  journalctl -u theracure -f
+
+# [Unit]
+# Description=Theracure App
+# After=network.target
+
+# [Service]
+# Type=simple
+# User=deploy
+# WorkingDirectory=/var/www/theracure/Theracure-Dashboard
+# ExecStart=/usr/local/bin/pnpm start
+# Restart=always
+# Environment=NODE_ENV=production
+
+# [Install]
+# WantedBy=multi-user.target
+
+
+

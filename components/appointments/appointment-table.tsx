@@ -248,6 +248,9 @@ export function AppointmentTable({
                   Therapy Name
                 </TableHead>
                 <TableHead className="text-white font-semibold">
+                  Cubicle
+                </TableHead>
+                <TableHead className="text-white font-semibold">
                   Status
                 </TableHead>
                 <TableHead className="text-white font-semibold">
@@ -259,7 +262,7 @@ export function AppointmentTable({
               {filteredAppointments.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-center py-8 text-gray-500"
                   >
                     {therapyTypeFilter !== "all"
@@ -312,6 +315,27 @@ export function AppointmentTable({
                           ServiceCategoryLabel[appointment.service.category]) ||
                           "N/A"}
                       </p>
+                    </TableCell>
+                    <TableCell className="bg-white">
+                      {appointment.cubicle ? (
+                        <div>
+                          <p className="font-medium text-indigo-700">
+                            {appointment.cubicle.name}
+                          </p>
+                          {appointment.cubicle.roomNumber && (
+                            <p className="text-xs text-gray-500">
+                              {appointment.cubicle.roomNumber}
+                            </p>
+                          )}
+                          {appointment.cubicle.location && (
+                            <p className="text-xs text-gray-400">
+                              {appointment.cubicle.location}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400">Not assigned</p>
+                      )}
                     </TableCell>
                     <TableCell className="bg-white">
                       {getStatusBadge(appointment.status)}

@@ -52,9 +52,6 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        {
-          prescriptionText: { contains: search, mode: "insensitive" },
-        },
       ];
     }
 

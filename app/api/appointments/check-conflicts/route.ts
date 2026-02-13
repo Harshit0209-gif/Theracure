@@ -37,11 +37,18 @@ export async function POST(req: NextRequest) {
     const startTime = new Date(appointmentStartTime);
     const endTime = new Date(appointmentEndTime);
 
-    // Check for conflicts in database
-    const conflicts = await prisma.appointment.findMany({
+    // NEW LOGIC: Check cubicle availability instead of therapist time conflicts
+    // Get all active cubicles
+    const allCubicles = await prisma.cubicle.findMany({
       where: {
-        therapistId,
-        status: { in: [AppointmentStatus.CONFIRMED] },
+        status: "ACTIVE",
+      },
+    });
+
+    // Find appointments that overlap with the requested time range
+    const overlappingAppointments = await prisma.appointment.findMany({
+      where: {
+        status: AppointmentStatus.CONFIRMED,
         ...(excludeAppointmentId && { id: { not: excludeAppointmentId } }),
         OR: [
           {
@@ -71,18 +78,31 @@ export async function POST(req: NextRequest) {
             patientName: true,
           },
         },
-      },
-      orderBy: {
-        appointmentStartTime: "asc",
+        cubicle: true,
       },
     });
 
+    // Get occupied cubicle IDs
+    const occupiedCubicleIds = overlappingAppointments
+      .map((apt) => apt.cubicleId)
+      .filter((id): id is string => id !== null);
+
+    // Check if there are available cubicles
+    const availableCubicles = allCubicles.filter(
+      (cubicle) => !occupiedCubicleIds.includes(cubicle.id)
+    );
+
+    // Get therapist's appointments at this time (for information purposes)
+    const therapistAppointments = overlappingAppointments.filter(
+      (apt) => apt.therapistId === therapistId
+    );
+
     // Format conflicts for better readability
-    const formattedConflicts = conflicts.map((conflict) => ({
+    const formattedConflicts = overlappingAppointments.map((conflict) => ({
       id: conflict.id,
       patientId: conflict.patient?.id,
       patientName: conflict.patient?.patientName,
-      therapyType: conflict,
+      cubicle: conflict.cubicle?.name,
       startTime: conflict.appointmentStartTime.toISOString(),
       endTime: conflict.appointmentEndTime.toISOString(),
       duration: Math.round(
@@ -92,15 +112,21 @@ export async function POST(req: NextRequest) {
       ),
     }));
 
+    // Conflict exists only if NO cubicles are available
+    const hasConflicts = availableCubicles.length === 0;
+
     return NextResponse.json({
       success: true,
-      hasConflicts: conflicts.length > 0,
-      conflictCount: conflicts.length,
+      hasConflicts,
+      conflictCount: hasConflicts ? allCubicles.length : 0,
       conflicts: formattedConflicts,
-      message:
-        conflicts.length > 0
-          ? `Found ${conflicts.length} conflicting appointment(s)`
-          : "No conflicts found - time slot is available",
+      availableCubicles: availableCubicles.length,
+      totalCubicles: allCubicles.length,
+      therapistHasAppointment: therapistAppointments.length > 0,
+      therapistAppointmentCount: therapistAppointments.length,
+      message: hasConflicts
+        ? `All ${allCubicles.length} cubicles are occupied. Please choose a different time.`
+        : `${availableCubicles.length} cubicle(s) available for this time slot`,
     });
   } catch (error) {
     console.error("Error checking conflicts:", error);

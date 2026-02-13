@@ -32,6 +32,14 @@ export async function GET(
             name: true,
           },
         },
+        cubicle: {
+          select: {
+            id: true,
+            name: true,
+            roomNumber: true,
+            location: true,
+          },
+        },
       },
     });
 
@@ -63,15 +71,46 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
     console.log("PATCH body:", body);
-    const { status, serviceId, notes } = body;
+    const { status, serviceId, notes, cubicleId } = body;
+
+    // Build update data object
+    const updateData: any = {};
+
+    if (status !== undefined) updateData.status = status;
+    if (serviceId !== undefined) updateData.serviceId = serviceId;
+    if (notes !== undefined) updateData.notes = notes;
+
+    // Handle cubicleId - can be null to unassign, or a string to assign/update
+    if (cubicleId !== undefined) {
+      if (cubicleId === null || cubicleId === "") {
+        updateData.cubicleId = null;
+      } else {
+        // Verify cubicle exists and is active
+        const cubicle = await prisma.cubicle.findUnique({
+          where: { id: cubicleId },
+        });
+
+        if (!cubicle) {
+          return NextResponse.json(
+            { success: false, error: "Selected cubicle not found" },
+            { status: 404 }
+          );
+        }
+
+        if (cubicle.status !== "ACTIVE") {
+          return NextResponse.json(
+            { success: false, error: "Selected cubicle is not available" },
+            { status: 400 }
+          );
+        }
+
+        updateData.cubicleId = cubicleId;
+      }
+    }
 
     const appointment = await prisma.appointment.update({
       where: { id },
-      data: {
-        ...(status && { status }),
-        ...(serviceId && { serviceId }),
-        ...(notes && { notes }),
-      },
+      data: updateData,
       include: {
         patient: {
           select: {
@@ -85,6 +124,14 @@ export async function PATCH(
             name: true,
             email: true,
             phone: true,
+          },
+        },
+        cubicle: {
+          select: {
+            id: true,
+            name: true,
+            roomNumber: true,
+            location: true,
           },
         },
       },

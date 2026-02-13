@@ -16,6 +16,7 @@ import {
   TrendingUp,
   UserIcon,
   Bed,
+  Home,
 } from "lucide-react";
 import { AllRoles, RoleRoutes } from "@/lib/userRoles";
 import { UserRole } from "@/lib/generated/userRoles";
@@ -107,6 +108,12 @@ export function Sidebar({
       title: "Services",
       icon: <Bed className="h-6 w-6" />,
       href: "/services",
+      roles: [UserRole.ADMIN],
+    },
+    {
+      title: "Cubicles",
+      icon: <Home className="h-6 w-6" />,
+      href: "/cubicles",
       roles: [UserRole.ADMIN],
     },
 

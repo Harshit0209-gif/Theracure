@@ -20,6 +20,7 @@ import {
   MapPin,
   FileText,
   Save,
+  Home,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Appointment } from "@/types/appointments";
@@ -232,6 +233,36 @@ export function AppointmentDetailsDialog({
                   : "N/A"}
                 )
               </p>
+            </div>
+
+            {/* Cubicle Information */}
+            <div className="border rounded-md p-3 bg-indigo-50">
+              <h3 className="text-sm font-semibold text-indigo-700 mb-2 flex items-center gap-2">
+                <Home className="h-4 w-4 text-indigo-600" />
+                Assigned Cubicle / Room
+              </h3>
+              {appointment.cubicle ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-indigo-900">
+                    {appointment.cubicle.name}
+                  </p>
+                  {appointment.cubicle.roomNumber && (
+                    <p className="text-xs text-indigo-600 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Room: {appointment.cubicle.roomNumber}
+                    </p>
+                  )}
+                  {appointment.cubicle.location && (
+                    <p className="text-xs text-indigo-600">
+                      Location: {appointment.cubicle.location}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">
+                  No cubicle assigned
+                </p>
+              )}
             </div>
 
             {/* Notes */}
