@@ -38,7 +38,7 @@ export const appointmentFields = {
   recurringType: z
     .nativeEnum(RecurringType, {
       errorMap: () => ({
-        message: "Recurring type must be one of: weekly, biweekly, monthly",
+        message: "Recurring type must be one of: daily, weekly, biweekly, monthly, custom",
       }),
     })
     .optional(),
