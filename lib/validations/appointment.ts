@@ -64,6 +64,9 @@ export const appointmentFields = {
     )
     .optional()
     .nullable(),
+  customDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"))
+    .optional(),
   isRecurringParent: z.boolean().default(false),
   recurringParentId: z
     .string()
@@ -157,10 +160,25 @@ export const customValidations = {
     recurringCount?: number;
     recurringEndDate?: string | null;
     appointmentDate?: string;
+    customDates?: string[];
   }) => {
     if (!data.isRecurring) return true;
 
-    if (!data.recurringType || !data.recurringEndType) return false;
+    if (!data.recurringType) return false;
+
+    // CUSTOM type requires customDates array
+    if (data.recurringType === RecurringType.CUSTOM) {
+      if (!data.customDates || data.customDates.length === 0) {
+        return false;
+      }
+      // Validate all dates are in the future
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return data.customDates.every(date => new Date(date) >= now);
+    }
+
+    // For DAILY, WEEKLY, BIWEEKLY, MONTHLY - need end type
+    if (!data.recurringEndType) return false;
 
     if (
       data.recurringEndType === RecurringEndType.COUNT &&
@@ -269,6 +287,7 @@ export const appointmentFormSchema = z
     recurringEndType: appointmentFields.recurringEndType,
     recurringCount: appointmentFields.recurringCount,
     recurringEndDate: appointmentFields.recurringEndDate,
+    customDates: appointmentFields.customDates,
   })
   .refine((data) => customValidations.formTimeSequence(data), {
     message: "End time must be after start time",
@@ -532,18 +551,26 @@ export const generateRecurringDates = (
   startDate: string,
   recurringType: RecurringType,
   endType: RecurringEndType,
-  endValue: number | string
+  endValue: number | string,
+  customDates?: string[]
 ): string[] => {
+  // For CUSTOM type, return the custom dates directly
+  if (recurringType === RecurringType.CUSTOM && customDates) {
+    return customDates.sort();
+  }
+
   const dates: string[] = [];
   const start = new Date(startDate);
   let current = new Date(start);
 
   const increment =
-    recurringType === RecurringType.WEEKLY
+    recurringType === RecurringType.DAILY
+      ? 1
+      : recurringType === RecurringType.WEEKLY
       ? 7
       : recurringType === RecurringType.BIWEEKLY
       ? 14
-      : 28;
+      : 28; // MONTHLY
 
   let endDate: Date;
   if (endType === RecurringEndType.DATE) {

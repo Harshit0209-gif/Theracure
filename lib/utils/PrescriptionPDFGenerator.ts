@@ -323,7 +323,7 @@ const generateAssessmentPDF = async (assessment: any) => {
       /* A4 Paper with exact dimensions */
       @page {
         size: A4 portrait;
-        margin: 6mm 8mm 10mm 8mm;
+        margin: 3mm 8mm 10mm 8mm; /* Reduced top margin from 6mm to 3mm */
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
@@ -359,11 +359,11 @@ const generateAssessmentPDF = async (assessment: any) => {
         align-items: center; /* Align items to the center for vertical balance */
         padding: 10px 0 8px 0;
         border-bottom: 5px solid #00a8e1;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
         page-break-inside: avoid;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        gap: 20px;
+        gap: 10px;
       }
 
       /* Header Left (Logo & Address) */
@@ -381,21 +381,21 @@ const generateAssessmentPDF = async (assessment: any) => {
         height: auto;
         object-fit: contain;
         display: block;
-        margin-bottom: 10px; /* Space between logo and address */
+        margin-bottom: 5px; /* Space between logo and address */
       }
       
       /* Address Text Styling - Consistent Spacing */
       .clinic-address {
         font-size: 8.5pt;
         color: #1f1f1f;
-        line-height: 1.6;
+        line-height: 1.3;
         font-family: 'Roboto', sans-serif;
         width: 100%;
       }
       .addr-row {
         display: block;
-        margin-bottom: 4px;
-        line-height: 1.6;
+        margin-bottom: 1px;
+        line-height: 1.3;
       }
 
       /* Colors for Labels - Print Safe */
@@ -435,11 +435,11 @@ const generateAssessmentPDF = async (assessment: any) => {
       
       /* Doctor Name - Large Red - Fixed Dimensions */
       .dr-name {
-        font-size: 24pt;
+        font-size: 20pt;
         font-weight: 900;
         color: #d31e24;
         line-height: 1.1;
-        margin-bottom: 5px;
+        margin-bottom: 2px;
         letter-spacing: -0.5px;
         white-space: normal;
         text-align: left; /* CHANGED */
@@ -453,8 +453,8 @@ const generateAssessmentPDF = async (assessment: any) => {
         font-size: 9.5pt;
         font-weight: 700;
         color: #005eb8;
-        margin-bottom: 5px;
-        line-height: 1.4;
+        margin-bottom: 2px;
+        line-height: 1.2;
         text-align: left; /* CHANGED */
         width: 100%;
         -webkit-print-color-adjust: exact;
@@ -466,8 +466,8 @@ const generateAssessmentPDF = async (assessment: any) => {
         font-size: 8pt;
         color: #333;
         font-weight: 500;
-        margin-bottom: 4px;
-        line-height: 1.4;
+        margin-bottom: 1px;
+        line-height: 1.2;
         text-align: left; /* CHANGED */
         width: 100%;
       }
@@ -477,8 +477,8 @@ const generateAssessmentPDF = async (assessment: any) => {
         font-size: 10.5pt;
         font-weight: 700;
         color: #d6006f;
-        margin-bottom: 4px;
-        line-height: 1.3;
+        margin-bottom: 2px;
+        line-height: 1.2;
         text-align: left; /* CHANGED */
         width: 100%;
         -webkit-print-color-adjust: exact;
@@ -490,7 +490,7 @@ const generateAssessmentPDF = async (assessment: any) => {
         font-size: 8.5pt;
         color: #662d91;
         font-weight: 500;
-        line-height: 1.5;
+        line-height: 1.3;
         white-space: pre-line;
         text-align: left; /* CHANGED */
         width: 100%;
@@ -1013,7 +1013,7 @@ const generateAssessmentPDF = async (assessment: any) => {
           
           <div class="dr-reg">I.A.P Regd. No. : L-42691</div>
           <div class="dr-reg">C.O.M.T Regd. No.: 8806/T/A/192</div>
-          <div class="dr-reg" style="margin-bottom: 8px;">C.M.F.R.P Regd. No.: PO/CMFRP/033</div>
+          <div class="dr-reg" style="margin-bottom: 1px;">C.M.F.R.P Regd. No.: PO/CMFRP/033</div>
 
           <div class="dr-exp">
               ${

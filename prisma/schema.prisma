@@ -348,9 +348,11 @@ enum ConsultationStatus {
 }
 
 enum RecurringType {
+  DAILY
   WEEKLY
   BIWEEKLY
   MONTHLY
+  CUSTOM
 }
 
 enum RecurringEndType {

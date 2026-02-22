@@ -3,9 +3,11 @@
 
 
 export enum RecurringType {
+  DAILY = "DAILY",
   WEEKLY = "WEEKLY",
   BIWEEKLY = "BIWEEKLY",
   MONTHLY = "MONTHLY",
+  CUSTOM = "CUSTOM",
 }
 
 
