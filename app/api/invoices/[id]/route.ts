@@ -66,7 +66,6 @@ export async function GET(
       {
         success: false,
         error: "Failed to fetch invoice",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -106,8 +105,6 @@ export async function PATCH(
       date: date ? new Date(date) : existingInvoice.date,
       paymentMethod: paymentMethod || existingInvoice.paymentMethod,
     };
-
-    console.log("Final update data:", updateData);
 
     const updatedInvoice = await prisma.invoice.update({
       where: { id },
@@ -150,7 +147,6 @@ export async function PATCH(
       {
         success: false,
         error: "Failed to update invoice",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -201,7 +197,6 @@ export async function DELETE(
       {
         success: false,
         error: "Failed to delete invoice",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

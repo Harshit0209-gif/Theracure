@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { RichTextEditor } from "@/components/rich-text-editor"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 
 const blogSampleData = Array.from({ length: 15 }, (_, i) => ({
@@ -56,11 +55,11 @@ export default function AdminDashboard() {
 
                   <div className="space-y-2">
                     <Label htmlFor="blog-content">Write or paste your blog content here</Label>
-                    <RichTextEditor
+                    <textarea
                       placeholder="Start writing your blog content..."
-                      content={blogContent}
-                      onChange={setBlogContent}
-                      minHeight="250px"
+                      value={blogContent}
+                      onChange={(e) => setBlogContent(e.target.value)}
+                      className="w-full min-h-[250px] p-3 bg-white border rounded-md text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 

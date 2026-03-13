@@ -173,7 +173,6 @@ export async function PATCH(
       {
         success: false,
         error: "Failed to settle invoice",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

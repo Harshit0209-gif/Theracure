@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, withRetry } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
     const endOfDay = new Date(startOfDay);
     endOfDay.setDate(startOfDay.getDate() + 1);
 
-    const appointments = await prisma.appointment.findMany({
+    const appointments = await withRetry(() => prisma.appointment.findMany({
       where: {
         assignedDate: {
           gte: startOfDay,
@@ -24,7 +24,7 @@ export async function GET() {
         therapist: { select: { name: true } },
       },
       orderBy: { appointmentStartTime: "asc" },
-    });
+    }));
 
     return NextResponse.json({
       success: true,
@@ -37,10 +37,8 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      { success: false, error: "Failed to fetch today's appointments" },
       { status: 500 }
     );
   }

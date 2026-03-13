@@ -7,10 +7,6 @@ const nextConfig = {
     cpus: 1,
   },
 
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   typescript: {
     ignoreBuildErrors: true,
   },

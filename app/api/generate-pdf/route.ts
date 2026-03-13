@@ -10,7 +10,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     const { type, therapistId } = body;
-    console.log("Generating PDF of body:", body);
 
     if (!supportedTypes.includes(type)) {
       return new NextResponse(

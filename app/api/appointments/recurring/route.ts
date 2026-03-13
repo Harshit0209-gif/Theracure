@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { AppointmentStatus, CubicleStatus, PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { AppointmentStatus, CubicleStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
     const { appointments, recurringInfo } = await request.json();
-    console.log("api call with appointments: ", appointments);
-
     if (
       !appointments ||
       !Array.isArray(appointments) ||
@@ -160,7 +157,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to create recurring appointments",
-        details: (error as Error).message,
       },
       { status: 500 },
     );

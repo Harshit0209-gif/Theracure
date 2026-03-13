@@ -98,7 +98,6 @@ export async function GET(
       {
         success: false,
         error: "Failed to generate PDF",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

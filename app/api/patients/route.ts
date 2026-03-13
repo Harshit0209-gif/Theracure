@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma, withRetry } from "@/lib/prisma";
 import {
   createPatientSchema,
   patientUpdateSchema,
 } from "@/lib/validations/patient";
+import { getSession } from "@/lib/auth/session-provider";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const therapistId = url.searchParams.get("therapistId");
@@ -18,9 +19,7 @@ export async function GET(req: Request) {
 
     if (therapistId) {
       where.therapistAppointments = {
-        some: {
-          therapistId: therapistId,
-        },
+        some: { therapistId },
       };
     }
 
@@ -36,7 +35,7 @@ export async function GET(req: Request) {
 
       if (therapistId) {
         where.AND = [
-          { therapistAppointments: { some: { therapistId: therapistId } } },
+          { therapistAppointments: { some: { therapistId } } },
           searchConditions,
         ];
       } else {
@@ -44,28 +43,27 @@ export async function GET(req: Request) {
       }
     }
 
-    const [patients, totalCount] = await Promise.all([
-      prisma.patient.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { id: "desc" },
-        include: {
-          therapistAppointments: {
-            include: {
-              therapist: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
+    const [patients, totalCount] = await withRetry(() =>
+      Promise.all([
+        prisma.patient.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { id: "desc" },
+          include: {
+            therapistAppointments: {
+              include: {
+                therapist: {
+                  select: { id: true, name: true, email: true },
                 },
               },
             },
           },
-        },
-      }),
-      prisma.patient.count({ where }),
-    ]);
+        }),
+        prisma.patient.count({ where }),
+      ])
+    );
+
     const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
@@ -80,8 +78,7 @@ export async function GET(req: Request) {
         hasPrevPage: currentPage > 1,
       },
     });
-  } catch (error) {
-    console.error("Error fetching patients:", error);
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch patients" },
       { status: 500 }
@@ -89,11 +86,10 @@ export async function GET(req: Request) {
   }
 }
 
-// POST create new patient
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const session = await getSession(req);
     const body = await req.json();
-    console.log("create patient body:", body);
 
     const result = createPatientSchema.safeParse(body);
     if (!result.success) {
@@ -103,21 +99,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user exists
-    const user = await prisma.patient.findFirst({
+    const existing = await prisma.patient.findFirst({
       where: { email: body.email, phone: body.phone },
     });
 
-    if (user) {
+    if (existing) {
       return NextResponse.json(
         { error: "Patient data already exists" },
-        { status: 404 }
+        { status: 409 }
       );
     }
 
     const { data } = result;
 
-    // Create patient
     const patient = await prisma.patient.create({
       data: {
         patientName: data.patientName,
@@ -129,13 +123,12 @@ export async function POST(req: Request) {
         height: data.height,
         weight: data.weight,
         medicalHistory: data.medicalHistory,
-        createdBy: body.createdBy,
+        createdBy: session?.user?.id || body.createdBy,
       },
     });
 
     return NextResponse.json(patient, { status: 201 });
-  } catch (error) {
-    console.error("Error creating patient:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to create patient" },
       { status: 500 }

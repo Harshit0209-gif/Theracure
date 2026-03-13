@@ -29,7 +29,6 @@ export async function GET(
   try {
     // Enhanced authentication with better error handling
     const session = await getSession(req);
-    console.log("Session data:", session);
 
     if (!session) {
       return NextResponse.json(
@@ -61,12 +60,6 @@ export async function GET(
     const authSession = requireAuth(session);
 
     const patientId = await params.then((p) => p.id);
-    console.log(
-      "Fetching EMR for patient:",
-      patientId,
-      "by user:",
-      authSession.user.id
-    );
     const { searchParams } = new URL(req.url);
     const queryParams = Object.fromEntries(searchParams.entries());
 

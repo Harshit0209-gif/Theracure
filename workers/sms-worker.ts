@@ -97,16 +97,16 @@ async function processQueue(): Promise<void> {
 }
 
 // Global error handlers to prevent process crashes
-process.on('uncaughtException', (error: Error) => {
-  console.error('🚨 Uncaught Exception in SMS Worker:', error);
+process.on("uncaughtException", (error: Error) => {
+  console.error("🚨 Uncaught Exception in SMS Worker:", error);
   // Log but don't exit - let the worker continue
 });
 
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
-  console.error('🚨 Unhandled Rejection in SMS Worker:', reason);
+process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
+  console.error("🚨 Unhandled Rejection in SMS Worker:", reason);
   // Log but don't exit - let the worker continue
 });
 
 setInterval(processQueue, 5000);
 
-console.log('🚀 SMS Worker started successfully');
+console.log("🚀 SMS Worker started successfully");

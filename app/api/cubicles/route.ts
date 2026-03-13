@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { CubicleStatus } from "@prisma/client";
+import { getSession } from "@/lib/auth/session-provider";
 
-// GET /api/cubicles - List all cubicles with pagination and filters
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -13,22 +13,12 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     const where: any = {};
-
-    if (status) {
-      where.status = status;
-    }
-
+    if (status) where.status = status;
     if (search) {
       where.OR = [
-        {
-          name: { contains: search, mode: "insensitive" as const },
-        },
-        {
-          roomNumber: { contains: search, mode: "insensitive" as const },
-        },
-        {
-          location: { contains: search, mode: "insensitive" as const },
-        },
+        { name: { contains: search, mode: "insensitive" as const } },
+        { roomNumber: { contains: search, mode: "insensitive" as const } },
+        { location: { contains: search, mode: "insensitive" as const } },
       ];
     }
 
@@ -38,13 +28,7 @@ export async function GET(req: NextRequest) {
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
-        include: {
-          _count: {
-            select: {
-              appointments: true,
-            },
-          },
-        },
+        include: { _count: { select: { appointments: true } } },
       }),
       prisma.cubicle.count({ where }),
     ]);
@@ -63,8 +47,7 @@ export async function GET(req: NextRequest) {
         hasPrev: page > 1,
       },
     });
-  } catch (error) {
-    console.error("Error fetching cubicles:", error);
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch cubicles" },
       { status: 500 }
@@ -72,39 +55,26 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/cubicles - Create a new cubicle
 export async function POST(req: NextRequest) {
   try {
+    const session = await getSession(req);
     const body = await req.json();
-    const { name, description, roomNumber, location, createdBy, status } = body;
+    const { name, description, roomNumber, location, status } = body;
 
-    // Validate required fields
-    if (!name || !createdBy) {
+    if (!name) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Name and createdBy are required fields",
-        },
+        { success: false, error: "Name is required" },
         { status: 400 }
       );
     }
 
-    // Check if cubicle with same name already exists
     const existingCubicle = await prisma.cubicle.findFirst({
-      where: {
-        name: {
-          equals: name,
-          mode: "insensitive",
-        },
-      },
+      where: { name: { equals: name, mode: "insensitive" } },
     });
 
     if (existingCubicle) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "A cubicle with this name already exists",
-        },
+        { success: false, error: "A cubicle with this name already exists" },
         { status: 400 }
       );
     }
@@ -115,7 +85,7 @@ export async function POST(req: NextRequest) {
         description,
         roomNumber,
         location,
-        createdBy,
+        createdBy: session?.user?.id || body.createdBy,
         status: status || CubicleStatus.ACTIVE,
       },
     });
@@ -125,13 +95,9 @@ export async function POST(req: NextRequest) {
       cubicle,
       message: "Cubicle created successfully",
     });
-  } catch (error) {
-    console.error("Error creating cubicle:", error);
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to create cubicle",
-      },
+      { success: false, error: "Failed to create cubicle" },
       { status: 500 }
     );
   }

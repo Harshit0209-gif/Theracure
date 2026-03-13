@@ -1,16 +1,30 @@
-import { z } from "zod";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
 import { passwordSchema } from "@/lib/validations/user";
+import { getSession } from "@/lib/auth/session-provider";
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { newPassword } = await req.json();
+    const session = await getSession(req);
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+
+    // Only ADMIN or the user themselves can reset the password
+    const isAdmin = session.user.role === "ADMIN";
+    const isSelf = session.user.id === id;
+
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    const { newPassword } = await req.json();
 
     const parseResult = passwordSchema.safeParse(newPassword);
     if (!parseResult.success) {
@@ -31,8 +45,7 @@ export async function POST(
       { message: "Password reset successful" },
       { status: 200 }
     );
-  } catch (error) {
-    console.error("Reset password error:", error);
+  } catch {
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

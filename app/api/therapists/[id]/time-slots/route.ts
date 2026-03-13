@@ -51,7 +51,6 @@ export async function POST(
     }
 
     const body = await req.json()
-    console.log(body)
     const { weekDay, startTime, endTime, isRecurring } = body
 
     // Validate inputs

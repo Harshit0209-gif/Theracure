@@ -26,7 +26,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { RichTextEditor } from "@/components/rich-text-editor";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 
 export default function NotificationsDashboard() {
@@ -79,11 +78,11 @@ export default function NotificationsDashboard() {
 							<Label htmlFor="notification-content">
 								Write or paste your notification content here
 							</Label>
-							<RichTextEditor
+							<textarea
 								placeholder="Enter notification content..."
-								content={notificationContent}
-								onChange={setNotificationContent}
-								minHeight="150px"
+								value={notificationContent}
+								onChange={(e) => setNotificationContent(e.target.value)}
+								className="w-full min-h-[150px] p-3 bg-white border rounded-md text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
 							/>
 						</div>
 

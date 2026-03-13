@@ -10,8 +10,6 @@ export async function GET(
     const { id } = await params;
     const therapistId = id;
 
-    console.log("Fetching assigned patients for therapist:", therapistId);
-
     const assignments = await prisma.appointment.findMany({
       where: {
         therapistId,

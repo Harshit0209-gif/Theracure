@@ -10,7 +10,6 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    console.log("cancel api body: ", id, body);
     const { reason } = body;
 
     const appointment = await prisma.appointment.update({

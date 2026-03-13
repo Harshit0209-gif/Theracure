@@ -6,7 +6,6 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log("Stats API Route called");
   try {
     const { id } = await params;
 

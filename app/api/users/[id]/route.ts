@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, UserStatus } from "@prisma/client";
+import { UserStatus } from "@prisma/client";
 import { updateStatusSchema, updateUserSchema } from "@/lib/validations/user";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
@@ -14,19 +13,13 @@ export async function GET(
 
     if (!id || typeof id !== "string") {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid user ID provided",
-        },
+        { success: false, error: "Invalid user ID provided" },
         { status: 400 }
       );
     }
 
-    // Fetch user from database
     const user = await prisma.user.findUnique({
-      where: {
-        id: id,
-      },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -39,72 +32,38 @@ export async function GET(
       },
     });
 
-    // Check if user exists
     if (!user) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "User not found",
-        },
+        { success: false, error: "User not found" },
         { status: 404 }
       );
     }
 
-    // Return user data
-    return NextResponse.json(
-      {
-        success: true,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          phone: user.phone,
-          status: user.status,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt.toISOString(),
-        },
+    return NextResponse.json({
+      success: true,
+      user: {
+        ...user,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
       },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error fetching user:", error);
-
-    // Handle Prisma errors
-    if (error instanceof Error && error.message.includes("Invalid")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid user ID format",
-        },
-        { status: 400 }
-      );
-    }
-
+    });
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error",
-      },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function PUT(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await req.json();
     const { id } = await params;
 
-    console.log("Request body for updating user:", body);
-
     const result = updateUserSchema.safeParse(body);
-    console.log("Validation result:", result);
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid input", details: result.error.format() },
@@ -112,38 +71,26 @@ export async function PUT(
       );
     }
 
-    const { ...updateData } = result.data;
-
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
+    const existingUser = await prisma.user.findUnique({ where: { id } });
 
     if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Hash password if provided
+    const { ...updateData } = result.data;
+
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
 
-    // Update user
     const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        updatedAt: true,
-      },
+      select: { id: true, name: true, email: true, role: true, updatedAt: true },
     });
 
-    return NextResponse.json({ success: true, updatedUser }, { status: 200 });
-  } catch (error) {
-    console.error("Error updating user:", error);
+    return NextResponse.json({ success: true, updatedUser });
+  } catch {
     return NextResponse.json(
       { error: "Failed to update user" },
       { status: 500 }
@@ -152,17 +99,14 @@ export async function PUT(
 }
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await req.json();
     const { id } = await params;
 
-    console.log("Request body for updating user status:", body);
-
     const result = updateStatusSchema.safeParse(body);
-    console.log("Validation result:", result);
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid input", details: result.error.format() },
@@ -172,31 +116,20 @@ export async function PATCH(
 
     const { status } = result.data;
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
+    const existingUser = await prisma.user.findUnique({ where: { id } });
 
     if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Update user status
     const updatedUser = await prisma.user.update({
       where: { id },
       data: { status: status as UserStatus },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        status: true,
-        updatedAt: true,
-      },
+      select: { id: true, name: true, email: true, status: true, updatedAt: true },
     });
 
-    return NextResponse.json({ success: true, updatedUser }, { status: 200 });
-  } catch (error) {
-    console.error("Error updating user status:", error);
+    return NextResponse.json({ success: true, updatedUser });
+  } catch {
     return NextResponse.json(
       { error: "Failed to update user status" },
       { status: 500 }
@@ -211,68 +144,37 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    console.log("User delete request", id);
-
-    // Validate ID format
     if (!id || typeof id !== "string") {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid user ID provided",
-        },
+        { success: false, error: "Invalid user ID provided" },
         { status: 400 }
       );
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
+    const existingUser = await prisma.user.findUnique({ where: { id } });
 
     if (!existingUser) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "User not found",
-        },
+        { success: false, error: "User not found" },
         { status: 404 }
       );
     }
 
-    // Instead of hard delete, soft delete by updating status
     const deletedUser = await prisma.user.update({
       where: { id },
-      data: {
-        status: UserStatus.SUSPENDED,
-        updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        status: true,
-      },
+      data: { status: UserStatus.SUSPENDED, updatedAt: new Date() },
+      select: { id: true, name: true, email: true, status: true },
     });
 
+    return NextResponse.json({
+      success: true,
+      message: "User deactivated successfully",
+      user: deletedUser,
+    });
+  } catch {
     return NextResponse.json(
-      {
-        success: true,
-        message: "User deactivated successfully",
-        user: deletedUser,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error deleting user:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error",
-      },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

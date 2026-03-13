@@ -76,8 +76,6 @@ export async function GET(
       date
     );
 
-    console.log("Available Periods:", availablePeriods);
-
     return NextResponse.json({
       success: true,
       availablePeriods,

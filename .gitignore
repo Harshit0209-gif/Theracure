@@ -37,3 +37,4 @@ settings.json
 /workers/*.js
 !/workers/*.ts
 .vscode/settings.json
+.playwright-mcp

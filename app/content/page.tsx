@@ -19,7 +19,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { RichTextEditor } from "@/components/rich-text-editor"
 import {
   Area,
   AreaChart,
@@ -631,11 +630,11 @@ export default function ContentDashboard() {
 
                   <div className="space-y-2">
                     <Label htmlFor="blog-content">Write or paste your blog content here</Label>
-                    <RichTextEditor
+                    <textarea
                       placeholder="Start writing your blog content..."
-                      content={blogContent}
-                      onChange={setBlogContent}
-                      minHeight="250px"
+                      value={blogContent}
+                      onChange={(e) => setBlogContent(e.target.value)}
+                      className="w-full min-h-[250px] p-3 bg-white border rounded-md text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
@@ -816,11 +815,11 @@ export default function ContentDashboard() {
 
                   <div className="space-y-2">
                     <Label htmlFor="notification-content">Write or paste your notification content here</Label>
-                    <RichTextEditor
+                    <textarea
                       placeholder="Enter notification content..."
-                      content={notificationContent}
-                      onChange={setNotificationContent}
-                      minHeight="150px"
+                      value={notificationContent}
+                      onChange={(e) => setNotificationContent(e.target.value)}
+                      className="w-full min-h-[150px] p-3 bg-white border rounded-md text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 

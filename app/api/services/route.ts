@@ -11,41 +11,25 @@ export async function GET(req: NextRequest) {
 
     const where: any = {};
 
-    if (!includeInactive) {
-      where.isActive = true;
-    }
-
-    if (category) {
-      where.category = category;
-    }
-
+    if (!includeInactive) where.isActive = true;
+    if (category) where.category = category;
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
-        { category: { contains: search, mode: "insensitive" } },
       ];
     }
 
     const totalCount = await prisma.service.count({ where });
-
     const services = await prisma.service.findMany({
       where,
       orderBy: [{ category: "asc" }, { name: "asc" }],
     });
 
-    return NextResponse.json({
-      success: true,
-      data: services,
-      totalCount,
-    });
-  } catch (error) {
-    console.error("Error fetching services:", error);
+    return NextResponse.json({ success: true, data: services, totalCount });
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch services",
-      },
+      { success: false, error: "Failed to fetch services" },
       { status: 500 }
     );
   }
@@ -55,17 +39,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    console.log("services post body", body);
-
     const validationResult = serviceSchema.safeParse(body);
-
     if (!validationResult.success) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Validation failed",
-          details: validationResult.error.errors,
-        },
+        { success: false, error: "Validation failed", details: validationResult.error.errors },
         { status: 400 }
       );
     }
@@ -79,15 +56,11 @@ export async function POST(req: NextRequest) {
 
     if (existingService) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Service with this name already exists in the category",
-        },
+        { success: false, error: "Service with this name already exists in the category" },
         { status: 409 }
       );
     }
 
-    // Create new service
     const service = await prisma.service.create({
       data: {
         name: validationResult.data.name,
@@ -97,23 +70,14 @@ export async function POST(req: NextRequest) {
         isActive: validationResult.data.isActive ?? true,
       },
     });
-    console.log("Service created:", service);
 
     return NextResponse.json(
-      {
-        success: true,
-        data: service,
-        message: "Service created successfully",
-      },
+      { success: true, data: service, message: "Service created successfully" },
       { status: 201 }
     );
-  } catch (error) {
-    console.error("Error creating service:", error);
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to create service",
-      },
+      { success: false, error: "Failed to create service" },
       { status: 500 }
     );
   }

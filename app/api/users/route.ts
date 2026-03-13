@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createUserSchema, deleteUserSchema } from "@/lib/validations/user";
 import { UserRole } from "@prisma/client";
 
-// GET all users
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const search = url.searchParams.get("search") || "";
@@ -56,15 +55,14 @@ export async function GET(req: Request) {
       users,
       pagination: {
         currentPage: page,
-        totalPages: totalPages,
-        totalCount: totalCount,
+        totalPages,
+        totalCount,
         limit,
         hasNext: page < totalPages,
         hasPrev: page > 1,
       },
     });
-  } catch (error) {
-    console.error("Error fetching users:", error);
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch users" },
       { status: 500 }
@@ -72,12 +70,10 @@ export async function GET(req: Request) {
   }
 }
 
-// POST create new user
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Validate input
     const result = createUserSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -88,10 +84,7 @@ export async function POST(req: Request) {
 
     const { name, email, phone, password, role } = result.data;
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
 
     if (existingUser) {
       return NextResponse.json(
@@ -100,18 +93,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
     const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        phone,
-        passwordHash: hashedPassword,
-        role,
-      },
+      data: { name, email, phone, passwordHash: hashedPassword, role },
       select: {
         id: true,
         name: true,
@@ -122,8 +107,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(user, { status: 201 });
-  } catch (error) {
-    console.error("Error creating user:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to create user" },
       { status: 500 }
@@ -131,12 +115,10 @@ export async function POST(req: Request) {
   }
 }
 
-// DELETE user
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Validate input
     const result = deleteUserSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -147,26 +129,19 @@ export async function DELETE(req: Request) {
 
     const { id } = result.data;
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
+    const existingUser = await prisma.user.findUnique({ where: { id } });
 
     if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Delete user
-    await prisma.user.delete({
-      where: { id },
-    });
+    await prisma.user.delete({ where: { id } });
 
     return NextResponse.json(
       { message: "User deleted successfully" },
       { status: 200 }
     );
-  } catch (error) {
-    console.error("Error deleting user:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to delete user" },
       { status: 500 }

@@ -1,0 +1,30 @@
+[Unit]
+Description=Theracure SMS Worker
+After=network.target
+
+[Service]
+Type=simple
+
+User=fuckhacker
+Group=fuckhacker
+
+WorkingDirectory=/var/www/theracure/Theracure-Dashboard
+ExecStart=/usr/bin/node workers/sms-worker.js
+
+Environment=NODE_ENV=production
+
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

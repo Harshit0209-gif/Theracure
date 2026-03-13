@@ -86,8 +86,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : "An unknown error occurred",
+        error: "Failed to fetch therapist stats",
       },
       { status: 500 }
     );

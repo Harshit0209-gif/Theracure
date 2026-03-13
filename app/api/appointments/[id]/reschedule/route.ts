@@ -11,7 +11,6 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    console.log("reschedule api calling body:", body);
     const { appointmentStartTime, appointmentEndTime, reason } = body;
 
     // Validate input
@@ -61,8 +60,6 @@ export async function PATCH(
         { status: 404 }
       );
     }
-    console.log("therapist fetch from db", weekDay, therapistAssignment);
-
     // 2. Check if therapist has availability for this weekday
     const therapistAvailability = await prisma.therapistTimeSlot.findFirst({
       where: {
@@ -73,8 +70,6 @@ export async function PATCH(
         endTime: { gte: endTime.toTimeString().slice(0, 5) },
       },
     });
-
-    console.log("therapist avialable: ", weekDay, therapistAvailability);
 
     if (!therapistAvailability) {
       return NextResponse.json(

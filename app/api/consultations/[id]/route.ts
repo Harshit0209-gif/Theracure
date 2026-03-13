@@ -30,7 +30,6 @@ export async function GET(
       {
         success: false,
         error: "Failed to fetch consultation",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -44,8 +43,6 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-
-    console.log("Patch request...>", body);
 
     // Check if consultation exists
     const existingConsultation = await prisma.consultation.findUnique({
@@ -122,7 +119,6 @@ export async function PATCH(
       {
         success: false,
         error: "Failed to update consultation",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -163,7 +159,6 @@ export async function DELETE(
       {
         success: false,
         error: "Failed to delete consultation",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

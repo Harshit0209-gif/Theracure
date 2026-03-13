@@ -60,7 +60,6 @@ export async function GET(
       {
         success: false,
         error: "Failed to fetch prescription",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -215,7 +214,6 @@ export async function PATCH(
       {
         success: false,
         error: "Failed to update prescription",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -256,7 +254,6 @@ export async function DELETE(
       {
         success: false,
         error: "Failed to delete prescription",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
