@@ -36,9 +36,7 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
-        console.log("Session refreshed successfully");
-      } else if (response.status === 401) {
+      if (!response.ok && response.status === 401) {
         // Session expired or invalid
         console.log("Session expired, logging out");
         toast({
@@ -48,8 +46,6 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
         });
         logout();
         router.push("/login");
-      } else if (response.status === 400 && data.code === "SESSION_VALID") {
-        console.log("Session is still valid");
       }
     } catch (error) {
       console.error("Session refresh failed:", error);
@@ -59,13 +55,6 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
 
   // Handle inactivity timeout
   const handleInactivityTimeout = useCallback(() => {
-    console.log(
-      "🚨 INACTIVITY TIMEOUT: User inactive for too long, logging out"
-    );
-    console.log(
-      "⏰ Inactivity timeout triggered at:",
-      new Date().toLocaleString()
-    );
     toast({
       title: "Session Timeout",
       description: "You have been logged out due to inactivity.",
@@ -147,10 +136,6 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
     const handleActivity = () => {
       updateActivity();
       resetInactivityTimer();
-      console.log(
-        "🖱️ Activity detected, resetting inactivity timer at:",
-        new Date().toLocaleString()
-      );
     };
 
     // Add event listeners

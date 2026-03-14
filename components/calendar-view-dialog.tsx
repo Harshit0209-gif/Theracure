@@ -21,7 +21,6 @@ export function CalendarViewDialog({
   onOpenChange,
   appointments = [],
 }: CalendarViewDialogProps) {
-  console.log("apppoinments args: ", appointments);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const today = new Date();
@@ -154,7 +153,6 @@ export function CalendarViewDialog({
   };
 
   const days = getDaysInMonth(currentDate);
-  console.log("Grouped by date:", appointmentsByDate);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

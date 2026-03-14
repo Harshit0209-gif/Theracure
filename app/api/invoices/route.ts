@@ -6,6 +6,7 @@ import { storageService } from "@/lib/services/storage-factory";
 import generateInvoicePDF from "@/lib/utils/InvoicePDFGenerator";
 import { sendSMSNotification } from "@/config/smsConfig";
 import { getSession } from "@/lib/auth/session-provider";
+import { withRetry } from "@/lib/prisma";
 
 const ALLOWED_SORT_FIELDS = ["date", "totalAmount", "amountPaid", "createdAt", "status"] as const;
 type SortField = typeof ALLOWED_SORT_FIELDS[number];
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [invoices, totalCount] = await Promise.all([
+    const [invoices, totalCount] = await withRetry(() => Promise.all([
       prisma.invoice.findMany({
         where,
         include: {
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
         take: limit,
       }),
       prisma.invoice.count({ where }),
-    ]);
+    ]));
 
     const totalPages = Math.ceil(totalCount / limit);
 
@@ -78,9 +79,11 @@ export async function GET(request: NextRequest) {
         hasPrev: page > 1,
       },
     });
-  } catch {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Invoice GET error:", msg);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch invoices" },
+      { success: false, error: "Failed to fetch invoices", detail: process.env.NODE_ENV !== "production" ? msg : undefined },
       { status: 500 }
     );
   }

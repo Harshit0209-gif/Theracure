@@ -34,7 +34,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (user?.role) {
       const allowedRoutes = RoleAllowedRoutes[user.role];
       const hasAccess = allowedRoutes.some((route) =>
-        pathname.startsWith(route)
+        pathname.startsWith(route),
       );
 
       if (!hasAccess && pathname !== "/login") {
@@ -51,9 +51,18 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (pathname === "/login" || user) {
+  if (pathname === "/login") {
     return <>{children}</>;
   }
 
-  return null;
+  if (!user) {
+    return null;
+  }
+  const allowedRoutes = RoleAllowedRoutes[user.role];
+  const hasAccess = allowedRoutes.some((route) => pathname.startsWith(route));
+  if (!hasAccess) {
+    return null;
+  }
+
+  return <>{children}</>;
 }
