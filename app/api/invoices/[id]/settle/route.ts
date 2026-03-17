@@ -12,7 +12,7 @@ const settlePaymentSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const invoiceId = params.id;
@@ -39,7 +39,7 @@ export async function PATCH(
           success: false,
           error: "Invoice not found",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -50,7 +50,7 @@ export async function PATCH(
           success: false,
           error: "Invoice is already fully paid",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -62,12 +62,12 @@ export async function PATCH(
           const transactionAmount = parseFloat(transaction.amount.toFixed(2));
           return sum + transactionAmount;
         }, 0)
-        .toFixed(2)
+        .toFixed(2),
     );
 
     // Calculate remaining balance with 2 decimal precision
     const remainingBalance = parseFloat(
-      (invoice.totalAmount - totalPaid).toFixed(2)
+      (invoice.totalAmount - totalPaid).toFixed(2),
     );
 
     // Validate payment amount
@@ -77,7 +77,7 @@ export async function PATCH(
           success: false,
           error: `Payment amount (₹${validatedData.amount}) exceeds remaining balance (₹${remainingBalance.toFixed(2)})`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -90,14 +90,17 @@ export async function PATCH(
         invoiceId: invoiceId,
         amount: roundedAmount,
         paymentMethod: validatedData.paymentMethod,
-        transactionDate: validatedData.transactionDate || new Date().toISOString(),
+        transactionDate:
+          validatedData.transactionDate || new Date().toISOString(),
         status: TransactionStatus.SUCCESS,
       },
     });
 
     // Calculate new total paid amount with 2 decimal precision
     const newTotalPaid = parseFloat((totalPaid + roundedAmount).toFixed(2));
-    const newBalance = parseFloat((invoice.totalAmount - newTotalPaid).toFixed(2));
+    const newBalance = parseFloat(
+      (invoice.totalAmount - newTotalPaid).toFixed(2),
+    );
 
     // Update invoice status and amountPaid
     const updatedInvoice = await prisma.invoice.update({
@@ -153,7 +156,7 @@ export async function PATCH(
             ? "Invoice fully settled"
             : `Payment recorded. Remaining balance: ₹${newBalance.toFixed(2)}`,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error settling invoice:", error);
@@ -163,9 +166,9 @@ export async function PATCH(
         {
           success: false,
           error: "Validation failed",
-          details: error.errors,
+          details: error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -174,7 +177,7 @@ export async function PATCH(
         success: false,
         error: "Failed to settle invoice",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

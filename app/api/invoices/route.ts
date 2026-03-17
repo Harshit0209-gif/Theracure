@@ -8,8 +8,14 @@ import { sendSMSNotification } from "@/config/smsConfig";
 import { getSession } from "@/lib/auth/session-provider";
 import { withRetry } from "@/lib/prisma";
 
-const ALLOWED_SORT_FIELDS = ["date", "totalAmount", "amountPaid", "createdAt", "status"] as const;
-type SortField = typeof ALLOWED_SORT_FIELDS[number];
+const ALLOWED_SORT_FIELDS = [
+  "date",
+  "totalAmount",
+  "amountPaid",
+  "createdAt",
+  "status",
+] as const;
+type SortField = (typeof ALLOWED_SORT_FIELDS)[number];
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +29,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const rawSortBy = searchParams.get("sortBy") || "date";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
-    const sortBy: SortField = ALLOWED_SORT_FIELDS.includes(rawSortBy as SortField)
+    const sortBy: SortField = ALLOWED_SORT_FIELDS.includes(
+      rawSortBy as SortField,
+    )
       ? (rawSortBy as SortField)
       : "date";
 
@@ -38,32 +46,34 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [invoices, totalCount] = await withRetry(() => Promise.all([
-      prisma.invoice.findMany({
-        where,
-        include: {
-          patient: {
-            select: { id: true, patientName: true, email: true, phone: true },
-          },
-          invoiceItems: {
-            select: {
-              invoiceId: true,
-              serviceId: true,
-              serviceName: true,
-              priceAtPurchase: true,
-              quantity: true,
-              description: true,
-              category: true,
+    const [invoices, totalCount] = await withRetry(() =>
+      Promise.all([
+        prisma.invoice.findMany({
+          where,
+          include: {
+            patient: {
+              select: { id: true, patientName: true, email: true, phone: true },
             },
+            invoiceItems: {
+              select: {
+                invoiceId: true,
+                serviceId: true,
+                serviceName: true,
+                priceAtPurchase: true,
+                quantity: true,
+                description: true,
+                category: true,
+              },
+            },
+            transactions: { orderBy: { transactionDate: "desc" } },
           },
-          transactions: { orderBy: { transactionDate: "desc" } },
-        },
-        orderBy: { [sortBy]: sortOrder },
-        skip,
-        take: limit,
-      }),
-      prisma.invoice.count({ where }),
-    ]));
+          orderBy: { [sortBy]: sortOrder },
+          skip,
+          take: limit,
+        }),
+        prisma.invoice.count({ where }),
+      ]),
+    );
 
     const totalPages = Math.ceil(totalCount / limit);
 
@@ -83,8 +93,12 @@ export async function GET(request: NextRequest) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Invoice GET error:", msg);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch invoices", detail: process.env.NODE_ENV !== "production" ? msg : undefined },
-      { status: 500 }
+      {
+        success: false,
+        error: "Failed to fetch invoices",
+        detail: process.env.NODE_ENV !== "production" ? msg : undefined,
+      },
+      { status: 500 },
     );
   }
 }
@@ -109,14 +123,16 @@ export async function POST(request: NextRequest) {
     if (!patient) {
       return NextResponse.json(
         { success: false, error: "Patient not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const status =
       paymentDetails?.balance > 0 ? InvoiceStatus.DUE : InvoiceStatus.PAID;
 
-    const totalAmount = parseFloat((paymentDetails?.totalAmount || 0).toFixed(2));
+    const totalAmount = parseFloat(
+      (paymentDetails?.totalAmount || 0).toFixed(2),
+    );
     const subTotal = parseFloat((paymentDetails?.subTotal || 0).toFixed(2));
     const amountPaid = parseFloat((paymentDetails?.amountPaid || 0).toFixed(2));
 
@@ -170,8 +186,14 @@ export async function POST(request: NextRequest) {
     try {
       const pdfBuffer = await generateInvoicePDF(body);
       const fileName = `invoices/${invoiceDetails.id}.pdf`;
-      const bufferData = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
-      const uploadResult = await storageService.uploadFile(fileName, bufferData, "application/pdf");
+      const bufferData = Buffer.isBuffer(pdfBuffer)
+        ? pdfBuffer
+        : Buffer.from(pdfBuffer);
+      const uploadResult = await storageService.uploadFile(
+        fileName,
+        bufferData,
+        "application/pdf",
+      );
 
       if (uploadResult.success) {
         pdfPath = fileName;
@@ -188,7 +210,7 @@ export async function POST(request: NextRequest) {
       try {
         const presignedUrl = await storageService.generatePresignedUrl(
           pdfPath,
-          parseInt(process.env.URL_EXPIRY_SECONDS || "604800", 10)
+          parseInt(process.env.URL_EXPIRY_SECONDS || "604800", 10),
         );
         await sendSMSNotification("INVOICE_NOTIFICATION", {
           phone: invoice.patient.phone,
@@ -208,18 +230,18 @@ export async function POST(request: NextRequest) {
         data: { invoice, selectedServices, pdfPath },
         message: "Invoice created successfully",
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: "Validation failed", details: error.errors },
-        { status: 400 }
+        { success: false, error: "Validation failed", details: error.issues },
+        { status: 400 },
       );
     }
     return NextResponse.json(
       { success: false, error: "Failed to create invoice" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

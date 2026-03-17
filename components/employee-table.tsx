@@ -166,7 +166,7 @@ export function EmployeeTable({
     const result = passwordSchema.safeParse(newPassword);
 
     if (!result.success) {
-      setError(result.error.errors[0].message);
+      setError(result.error.issues[0].message);
       return;
     }
 
@@ -185,7 +185,7 @@ export function EmployeeTable({
           body: JSON.stringify({
             newPassword,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -365,7 +365,7 @@ export function EmployeeTable({
                 Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
                 {Math.min(
                   pagination.currentPage * pagination.limit,
-                  pagination.totalCount
+                  pagination.totalCount,
                 )}{" "}
                 of {pagination.totalCount} employees
               </span>
@@ -384,7 +384,7 @@ export function EmployeeTable({
                 <div className="flex items-center space-x-1">
                   {Array.from(
                     { length: pagination.totalPages },
-                    (_, i) => i + 1
+                    (_, i) => i + 1,
                   ).map((pg) => (
                     <Button
                       key={pg}

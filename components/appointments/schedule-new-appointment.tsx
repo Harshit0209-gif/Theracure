@@ -632,7 +632,7 @@ export function ScheduleNewDialog({
 
     if (!validationResult.success) {
       // Show validation errors to user
-      const errors = validationResult.error.errors;
+      const errors = validationResult.error.issues;
       console.log("Form validation errors:", errors);
 
       // Find the first error and show it to the user
@@ -798,7 +798,8 @@ export function ScheduleNewDialog({
                     Schedule New Appointment
                   </DialogTitle>
                   <DialogDescription className="text-gray-600 text-sm">
-                    Plan sessions, assign specialists, and manage room allocations
+                    Plan sessions, assign specialists, and manage room
+                    allocations
                   </DialogDescription>
                 </div>
               </div>
@@ -820,31 +821,40 @@ export function ScheduleNewDialog({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 min-h-[600px]">
             {/* Left Column: Form Configuration */}
             <div className="lg:col-span-7 p-6 lg:p-8 space-y-10 bg-white border-r border-slate-100">
-              
               {/* Section 1: Patient & Service */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
                     <User className="h-4 w-4 text-indigo-600" />
                   </div>
-                  <h3 className="font-bold text-sm text-indigo-600 uppercase tracking-wider">Patient & Service</h3>
+                  <h3 className="font-bold text-sm text-indigo-600 uppercase tracking-wider">
+                    Patient & Service
+                  </h3>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="patientId" className="text-sm font-bold text-slate-700 flex items-center justify-between">
+                    <Label
+                      htmlFor="patientId"
+                      className="text-sm font-bold text-slate-700 flex items-center justify-between"
+                    >
                       Patient Details
-                      <span className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">* Required</span>
+                      <span className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">
+                        * Required
+                      </span>
                     </Label>
                     <div className="relative group shadow-sm transition-shadow hover:shadow-md rounded-md border border-slate-200">
                       <ReactSelect
                         options={patientOptions}
                         onChange={(selectedOption: any) =>
-                          form.setValue("patientId", selectedOption?.value || "")
+                          form.setValue(
+                            "patientId",
+                            selectedOption?.value || "",
+                          )
                         }
                         onInputChange={(inputValue, actionMeta) => {
                           // Always trigger search, even with empty input
-                          if (actionMeta.action === 'input-change') {
+                          if (actionMeta.action === "input-change") {
                             handlePatientSearch(inputValue || "");
                           }
                         }}
@@ -858,74 +868,86 @@ export function ScheduleNewDialog({
                         styles={{
                           control: (base) => ({
                             ...base,
-                            border: 'none',
-                            boxShadow: 'none',
-                            backgroundColor: 'transparent',
-                            minHeight: '40px',
+                            border: "none",
+                            boxShadow: "none",
+                            backgroundColor: "transparent",
+                            minHeight: "40px",
                           }),
                           placeholder: (base) => ({
                             ...base,
-                            color: '#94a3b8',
-                            fontSize: '14px',
-                            fontWeight: '500',
+                            color: "#94a3b8",
+                            fontSize: "14px",
+                            fontWeight: "500",
                           }),
                           input: (base) => ({
                             ...base,
-                            color: '#1e293b',
-                            fontSize: '14px',
-                            fontWeight: '600',
+                            color: "#1e293b",
+                            fontSize: "14px",
+                            fontWeight: "600",
                           }),
                           singleValue: (base) => ({
                             ...base,
-                            color: '#1e293b',
-                            fontSize: '14px',
-                            fontWeight: '600',
+                            color: "#1e293b",
+                            fontSize: "14px",
+                            fontWeight: "600",
                           }),
                           menu: (base) => ({
                             ...base,
                             zIndex: 100,
-                            borderRadius: '12px',
-                            overflow: 'hidden',
-                            border: '1px solid #e2e8f0',
-                            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            border: "1px solid #e2e8f0",
+                            boxShadow:
+                              "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
                           }),
                           option: (base, state) => ({
                             ...base,
-                            backgroundColor: state.isFocused ? '#f5f3ff' : 'white',
-                            color: state.isSelected ? '#4f46e5' : '#475569',
-                            fontWeight: state.isSelected ? '700' : '500',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            '&:active': {
-                              backgroundColor: '#e0e7ff',
+                            backgroundColor: state.isFocused
+                              ? "#f5f3ff"
+                              : "white",
+                            color: state.isSelected ? "#4f46e5" : "#475569",
+                            fontWeight: state.isSelected ? "700" : "500",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            "&:active": {
+                              backgroundColor: "#e0e7ff",
                             },
                           }),
                           loadingIndicator: (base) => ({
                             ...base,
-                            color: '#4f46e5',
+                            color: "#4f46e5",
                           }),
                           loadingMessage: (base) => ({
                             ...base,
-                            color: '#64748b',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            padding: '8px 12px',
+                            color: "#64748b",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            padding: "8px 12px",
                           }),
                         }}
                       />
                     </div>
                     {form.formState.errors.patientId && (
                       <p className="text-[11px] text-red-500 font-bold mt-1.5 flex items-center gap-1 uppercase tracking-tight">
-                        <AlertCircle className="h-3 w-3" /> {form.formState.errors.patientId.message}
+                        <AlertCircle className="h-3 w-3" />{" "}
+                        {form.formState.errors.patientId.message}
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="serviceCategory" className="text-sm font-bold text-slate-700">Service Category</Label>
+                    <Label
+                      htmlFor="serviceCategory"
+                      className="text-sm font-bold text-slate-700"
+                    >
+                      Service Category
+                    </Label>
                     <Select
                       onValueChange={(value) =>
-                        form.setValue("serviceCategory", value as ServiceCategory)
+                        form.setValue(
+                          "serviceCategory",
+                          value as ServiceCategory,
+                        )
                       }
                     >
                       <SelectTrigger className="bg-slate-50 border-slate-200 h-10 hover:border-indigo-300 transition-colors">
@@ -947,20 +969,41 @@ export function ScheduleNewDialog({
 
                 {watchedValues.serviceCategory && (
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <Label htmlFor="serviceId" className="text-sm font-bold text-slate-700">Treatment Plan / Service</Label>
-                    <Select onValueChange={(value) => form.setValue("serviceId", value)}>
+                    <Label
+                      htmlFor="serviceId"
+                      className="text-sm font-bold text-slate-700"
+                    >
+                      Treatment Plan / Service
+                    </Label>
+                    <Select
+                      onValueChange={(value) =>
+                        form.setValue("serviceId", value)
+                      }
+                    >
                       <SelectTrigger className="bg-slate-50 border-slate-200 h-11 hover:border-indigo-300 transition-colors shadow-sm">
                         <div className="flex items-center gap-2">
                           <Activity className="h-4 w-4 text-indigo-500" />
-                          <SelectValue placeholder={`Select ${ServiceCategoryLabel[watchedValues.serviceCategory]} treatment plan`} />
+                          <SelectValue
+                            placeholder={`Select ${ServiceCategoryLabel[watchedValues.serviceCategory]} treatment plan`}
+                          />
                         </div>
                       </SelectTrigger>
                       <SelectContent>
                         {filteredServices.map((service) => (
-                          <SelectItem key={service.id} value={service.id.toString()}>
+                          <SelectItem
+                            key={service.id}
+                            value={service.id.toString()}
+                          >
                             <div className="flex justify-between items-center w-full gap-8">
-                              <span className="font-medium">{service.name}</span>
-                              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-none px-2 font-bold">₹{service.price}</Badge>
+                              <span className="font-medium">
+                                {service.name}
+                              </span>
+                              <Badge
+                                variant="secondary"
+                                className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-none px-2 font-bold"
+                              >
+                                ₹{service.price}
+                              </Badge>
                             </div>
                           </SelectItem>
                         ))}
@@ -976,13 +1019,17 @@ export function ScheduleNewDialog({
                   <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
                     <Clock className="h-4 w-4 text-indigo-600" />
                   </div>
-                  <h3 className="font-bold text-sm text-indigo-600 uppercase tracking-wider">Schedule & Specialist</h3>
+                  <h3 className="font-bold text-sm text-indigo-600 uppercase tracking-wider">
+                    Schedule & Specialist
+                  </h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                      {watchedValues.isRecurring ? "Start Date" : "Booking Date"}
+                      {watchedValues.isRecurring
+                        ? "Start Date"
+                        : "Booking Date"}
                     </Label>
                     <Button
                       type="button"
@@ -990,10 +1037,20 @@ export function ScheduleNewDialog({
                       onClick={() => setIsStartDateCalendarOpen(true)}
                       className="w-full flex justify-between items-center bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 h-11 px-4 transition-all shadow-sm"
                     >
-                      <span className={watchedValues.appointmentDate ? "text-slate-900 font-bold" : "text-slate-400 font-medium"}>
+                      <span
+                        className={
+                          watchedValues.appointmentDate
+                            ? "text-slate-900 font-bold"
+                            : "text-slate-400 font-medium"
+                        }
+                      >
                         {watchedValues.appointmentDate
-                          ? new Date(watchedValues.appointmentDate).toLocaleDateString("en-IN", {
-                              day: "2-digit", month: "short", year: "numeric",
+                          ? new Date(
+                              watchedValues.appointmentDate,
+                            ).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
                             })
                           : "Select date..."}
                       </span>
@@ -1002,8 +1059,17 @@ export function ScheduleNewDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="therapistId" className="text-sm font-bold text-slate-700">Assign Therapist</Label>
-                    <Select onValueChange={(value) => form.setValue("therapistId", value)}>
+                    <Label
+                      htmlFor="therapistId"
+                      className="text-sm font-bold text-slate-700"
+                    >
+                      Assign Therapist
+                    </Label>
+                    <Select
+                      onValueChange={(value) =>
+                        form.setValue("therapistId", value)
+                      }
+                    >
                       <SelectTrigger className="bg-slate-50 border-slate-200 h-11 hover:border-indigo-300 transition-colors shadow-sm">
                         <div className="flex items-center gap-2">
                           <BriefcaseMedical className="h-4 w-4 text-slate-400" />
@@ -1028,7 +1094,10 @@ export function ScheduleNewDialog({
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="startTime" className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Label
+                      htmlFor="startTime"
+                      className="text-sm font-bold text-slate-700 flex items-center gap-2"
+                    >
                       <Clock className="h-4 w-4 text-indigo-500" />
                       Start Time
                     </Label>
@@ -1039,7 +1108,10 @@ export function ScheduleNewDialog({
                       onChange={(e) => {
                         form.setValue("startTime", e.target.value);
                         // Clear end time if it's before the new start time
-                        if (watchedValues.endTime && e.target.value >= watchedValues.endTime) {
+                        if (
+                          watchedValues.endTime &&
+                          e.target.value >= watchedValues.endTime
+                        ) {
                           form.setValue("endTime", "");
                         }
                       }}
@@ -1047,7 +1119,10 @@ export function ScheduleNewDialog({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endTime" className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Label
+                      htmlFor="endTime"
+                      className="text-sm font-bold text-slate-700 flex items-center gap-2"
+                    >
                       <Clock className="h-4 w-4 text-indigo-500" />
                       End Time
                     </Label>
@@ -1066,15 +1141,23 @@ export function ScheduleNewDialog({
 
               {/* Section 3: Recurrence Plan */}
               <div className="pt-2">
-                <div className={`p-5 rounded-2xl border transition-all duration-300 ${watchedValues.isRecurring ? "bg-indigo-50/30 border-indigo-200 shadow-inner" : "bg-slate-50/50 border-slate-200"}`}>
+                <div
+                  className={`p-5 rounded-2xl border transition-all duration-300 ${watchedValues.isRecurring ? "bg-indigo-50/30 border-indigo-200 shadow-inner" : "bg-slate-50/50 border-slate-200"}`}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${watchedValues.isRecurring ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"}`}>
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${watchedValues.isRecurring ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"}`}
+                      >
                         <Repeat className="h-4 w-4" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-sm text-slate-800 uppercase tracking-tight">Recurrence Plan</h3>
-                        <p className="text-[10px] text-slate-500 font-medium">Automatic series generation</p>
+                        <h3 className="font-bold text-sm text-slate-800 uppercase tracking-tight">
+                          Recurrence Plan
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          Automatic series generation
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border shadow-sm ring-1 ring-slate-100">
@@ -1086,7 +1169,10 @@ export function ScheduleNewDialog({
                         }
                         className="data-[state=checked]:bg-indigo-600 border-slate-300"
                       />
-                      <Label htmlFor="isRecurring" className="text-[11px] font-black text-indigo-600 uppercase tracking-widest cursor-pointer select-none">
+                      <Label
+                        htmlFor="isRecurring"
+                        className="text-[11px] font-black text-indigo-600 uppercase tracking-widest cursor-pointer select-none"
+                      >
                         Enabled
                       </Label>
                     </div>
@@ -1096,40 +1182,68 @@ export function ScheduleNewDialog({
                     <div className="space-y-5 animate-in fade-in zoom-in-95 duration-300">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">Pattern</Label>
+                          <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">
+                            Pattern
+                          </Label>
                           <Select
                             value={watchedValues.recurringType}
                             onValueChange={(value) => {
-                              form.setValue("recurringType", value as RecurringType);
-                              if (value !== RecurringType.CUSTOM) setCustomDates([]);
+                              form.setValue(
+                                "recurringType",
+                                value as RecurringType,
+                              );
+                              if (value !== RecurringType.CUSTOM)
+                                setCustomDates([]);
                             }}
                           >
                             <SelectTrigger className="bg-white border-indigo-100 h-10 shadow-sm font-semibold">
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value={RecurringType.DAILY}>Daily Sequence</SelectItem>
-                              <SelectItem value={RecurringType.WEEKLY}>Weekly Repeat</SelectItem>
-                              <SelectItem value={RecurringType.BIWEEKLY}>Fortnightly</SelectItem>
-                              <SelectItem value={RecurringType.MONTHLY}>Monthly Cycle</SelectItem>
-                              <SelectItem value={RecurringType.CUSTOM}>Manual Selection</SelectItem>
+                              <SelectItem value={RecurringType.DAILY}>
+                                Daily Sequence
+                              </SelectItem>
+                              <SelectItem value={RecurringType.WEEKLY}>
+                                Weekly Repeat
+                              </SelectItem>
+                              <SelectItem value={RecurringType.BIWEEKLY}>
+                                Fortnightly
+                              </SelectItem>
+                              <SelectItem value={RecurringType.MONTHLY}>
+                                Monthly Cycle
+                              </SelectItem>
+                              <SelectItem value={RecurringType.CUSTOM}>
+                                Manual Selection
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        {watchedValues.recurringType !== RecurringType.CUSTOM && (
+                        {watchedValues.recurringType !==
+                          RecurringType.CUSTOM && (
                           <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">Termination</Label>
+                            <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">
+                              Termination
+                            </Label>
                             <Select
                               value={watchedValues.recurringEndType}
-                              onValueChange={(value) => form.setValue("recurringEndType", value as RecurringEndType)}
+                              onValueChange={(value) =>
+                                form.setValue(
+                                  "recurringEndType",
+                                  value as RecurringEndType,
+                                )
+                              }
                             >
                               <SelectTrigger className="bg-white border-indigo-100 h-10 shadow-sm font-semibold">
                                 <SelectValue placeholder="End method" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value={RecurringEndType.COUNT}>Session Count</SelectItem>
-                                <SelectItem value={RecurringEndType.DATE}>Fixed End Date</SelectItem>
+                                <SelectItem value={RecurringEndType.COUNT}>
+                                  Session Count
+                                </SelectItem>
+                                <SelectItem value={RecurringEndType.DATE}>
+                                  Fixed End Date
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1139,7 +1253,9 @@ export function ScheduleNewDialog({
                       {watchedValues.recurringType === RecurringType.CUSTOM && (
                         <div className="p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-indigo-100 shadow-sm space-y-3">
                           <div className="flex items-center justify-between">
-                            <Label className="text-sm font-extrabold text-indigo-900">Manual Date List</Label>
+                            <Label className="text-sm font-extrabold text-indigo-900">
+                              Manual Date List
+                            </Label>
                             <Button
                               type="button"
                               size="sm"
@@ -1153,15 +1269,24 @@ export function ScheduleNewDialog({
                           {customDates.length > 0 ? (
                             <div className="flex flex-wrap gap-2 pt-1 max-h-[80px] overflow-y-auto pr-2">
                               {customDates.sort().map((date, idx) => (
-                                <Badge key={idx} variant="secondary" className="bg-indigo-50/80 text-indigo-700 border-indigo-100 py-1 font-bold text-[10px]">
-                                  {new Date(date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short' })}
+                                <Badge
+                                  key={idx}
+                                  variant="secondary"
+                                  className="bg-indigo-50/80 text-indigo-700 border-indigo-100 py-1 font-bold text-[10px]"
+                                >
+                                  {new Date(date).toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                  })}
                                 </Badge>
                               ))}
                             </div>
                           ) : (
                             <div className="flex flex-col items-center py-2 gap-1 text-slate-400">
                               <Calendar className="h-5 w-5 opacity-30" />
-                              <p className="text-[10px] font-bold uppercase tracking-widest italic">Pick dates manually</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest italic">
+                                Pick dates manually
+                              </p>
                             </div>
                           )}
                         </div>
@@ -1169,33 +1294,54 @@ export function ScheduleNewDialog({
 
                       {watchedValues.recurringType !== RecurringType.CUSTOM && (
                         <div className="animate-in fade-in slide-in-from-left-2 duration-300">
-                          {watchedValues.recurringEndType === RecurringEndType.COUNT ? (
+                          {watchedValues.recurringEndType ===
+                          RecurringEndType.COUNT ? (
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">Total Occurrences</Label>
+                              <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">
+                                Total Occurrences
+                              </Label>
                               <div className="relative">
                                 <Input
                                   type="number"
                                   min="1"
                                   max="52"
-                                  {...form.register("recurringCount", { valueAsNumber: true })}
+                                  {...form.register("recurringCount", {
+                                    valueAsNumber: true,
+                                  })}
                                   placeholder="Enter number of sessions (max 52)"
                                   className="bg-white border-indigo-100 h-10 font-bold"
                                 />
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-300 uppercase">Sessions</div>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-300 uppercase">
+                                  Sessions
+                                </div>
                               </div>
                             </div>
                           ) : (
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">Final Session Date</Label>
+                              <Label className="text-[10px] font-black text-indigo-400 uppercase ml-1">
+                                Final Session Date
+                              </Label>
                               <Button
                                 type="button"
                                 variant="outline"
                                 onClick={() => setIsEndDateCalendarOpen(true)}
                                 className="w-full flex justify-between items-center bg-white border-indigo-100 h-10 px-4 font-bold shadow-sm"
                               >
-                                <span className={watchedValues.recurringEndDate ? "text-slate-900" : "text-slate-400"}>
+                                <span
+                                  className={
+                                    watchedValues.recurringEndDate
+                                      ? "text-slate-900"
+                                      : "text-slate-400"
+                                  }
+                                >
                                   {watchedValues.recurringEndDate
-                                    ? new Date(watchedValues.recurringEndDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                                    ? new Date(
+                                        watchedValues.recurringEndDate,
+                                      ).toLocaleDateString("en-IN", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                      })
                                     : "Pick end date..."}
                                 </span>
                                 <Calendar className="h-4 w-4 text-indigo-400" />
@@ -1211,7 +1357,10 @@ export function ScheduleNewDialog({
 
               {/* Section 4: Notes */}
               <div className="space-y-2 pt-2">
-                <Label htmlFor="notes" className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Label
+                  htmlFor="notes"
+                  className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"
+                >
                   <FileText className="h-3.5 w-3.5 text-slate-400" />
                   Internal Clinical Notes
                 </Label>
@@ -1229,25 +1378,39 @@ export function ScheduleNewDialog({
               <div className="sticky top-[100px] space-y-8">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="h-1 w-8 bg-indigo-600 rounded-full"></div>
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Context & Selection</h4>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    Context & Selection
+                  </h4>
                 </div>
 
                 {/* Selected Service Card */}
                 {selectedService ? (
                   <Card className="border-none shadow-md overflow-hidden bg-white ring-1 ring-indigo-50 animate-in fade-in zoom-in-95 duration-300">
                     <div className="bg-indigo-600 px-4 py-2 flex items-center justify-between">
-                      <p className="text-[10px] font-black text-white/80 uppercase tracking-widest">Active Plan</p>
-                      <Badge className="bg-white/20 text-white border-none text-[9px] font-black">ID: #{selectedService.id.toString().slice(-4)}</Badge>
+                      <p className="text-[10px] font-black text-white/80 uppercase tracking-widest">
+                        Active Plan
+                      </p>
+                      <Badge className="bg-white/20 text-white border-none text-[9px] font-black">
+                        ID: #{selectedService.id.toString().slice(-4)}
+                      </Badge>
                     </div>
                     <CardContent className="p-5 space-y-4">
                       <div className="space-y-1">
-                        <h5 className="text-xl font-black text-slate-900 leading-tight">{selectedService.name}</h5>
-                        <p className="text-xs font-bold text-indigo-600/70 uppercase tracking-tighter">{ServiceCategoryLabel[selectedService.category]}</p>
+                        <h5 className="text-xl font-black text-slate-900 leading-tight">
+                          {selectedService.name}
+                        </h5>
+                        <p className="text-xs font-bold text-indigo-600/70 uppercase tracking-tighter">
+                          {ServiceCategoryLabel[selectedService.category]}
+                        </p>
                       </div>
-                      
+
                       <div className="flex items-baseline gap-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <span className="text-xs font-bold text-slate-500 uppercase">Rate:</span>
-                        <span className="text-2xl font-black text-slate-900 ml-auto">₹{selectedService.price}</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase">
+                          Rate:
+                        </span>
+                        <span className="text-2xl font-black text-slate-900 ml-auto">
+                          ₹{selectedService.price}
+                        </span>
                       </div>
 
                       {selectedService.description && (
@@ -1262,7 +1425,11 @@ export function ScheduleNewDialog({
                 ) : (
                   <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center space-y-3 opacity-60 bg-white/50">
                     <ClipboardList className="h-10 w-10 text-slate-300" />
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-relaxed">Choose a treatment<br/>to see details</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+                      Choose a treatment
+                      <br />
+                      to see details
+                    </p>
                   </div>
                 )}
 
@@ -1274,15 +1441,27 @@ export function ScheduleNewDialog({
                         <Clock className="h-6 w-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Session Window</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+                          Session Window
+                        </p>
                         <p className="text-lg font-black text-slate-900 leading-none tracking-tight">
-                          {formatTime(watchedValues.startTime)} <span className="text-slate-300 text-sm mx-1">→</span> {formatTime(watchedValues.endTime)}
+                          {formatTime(watchedValues.startTime)}{" "}
+                          <span className="text-slate-300 text-sm mx-1">→</span>{" "}
+                          {formatTime(watchedValues.endTime)}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between bg-emerald-50/50 px-4 py-2 rounded-lg border border-emerald-100/50">
-                      <span className="text-xs font-bold text-emerald-700">Total Duration</span>
-                      <Badge className="bg-emerald-600 font-black px-2 py-0.5 h-auto text-[10px]">{calculateDuration(watchedValues.startTime, watchedValues.endTime)} MIN</Badge>
+                      <span className="text-xs font-bold text-emerald-700">
+                        Total Duration
+                      </span>
+                      <Badge className="bg-emerald-600 font-black px-2 py-0.5 h-auto text-[10px]">
+                        {calculateDuration(
+                          watchedValues.startTime,
+                          watchedValues.endTime,
+                        )}{" "}
+                        MIN
+                      </Badge>
                     </div>
                   </div>
                 )}
@@ -1293,7 +1472,9 @@ export function ScheduleNewDialog({
                     {isCheckingAvailability ? (
                       <div className="flex items-center gap-3 py-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-indigo-600 border-t-transparent" />
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Checking Specialist...</span>
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                          Checking Specialist...
+                        </span>
                       </div>
                     ) : therapistSchedule.length > 0 ? (
                       <div className="space-y-4">
@@ -1302,15 +1483,27 @@ export function ScheduleNewDialog({
                             <CheckCircle className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="text-xs font-black text-green-800 uppercase tracking-tighter">Specialist Ready</p>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase">{getDayName(watchedValues.appointmentDate)}</p>
+                            <p className="text-xs font-black text-green-800 uppercase tracking-tighter">
+                              Specialist Ready
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">
+                              {getDayName(watchedValues.appointmentDate)}
+                            </p>
                           </div>
                         </div>
                         <div className="grid grid-cols-1 gap-2">
                           {therapistSchedule.map((slot, i) => (
-                            <div key={i} className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center justify-between">
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Duty Shift</span>
-                              <span className="text-[11px] font-bold text-slate-700 tracking-tight">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</span>
+                            <div
+                              key={i}
+                              className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center justify-between"
+                            >
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                                Duty Shift
+                              </span>
+                              <span className="text-[11px] font-bold text-slate-700 tracking-tight">
+                                {formatTime(slot.startTime)} -{" "}
+                                {formatTime(slot.endTime)}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -1321,8 +1514,12 @@ export function ScheduleNewDialog({
                           <XCircle className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="text-xs font-black text-red-800 uppercase leading-none">Not Available</p>
-                          <p className="text-[10px] text-red-600/70 font-bold uppercase mt-1">Select another slot</p>
+                          <p className="text-xs font-black text-red-800 uppercase leading-none">
+                            Not Available
+                          </p>
+                          <p className="text-[10px] text-red-600/70 font-bold uppercase mt-1">
+                            Select another slot
+                          </p>
                         </div>
                       </div>
                     )}
@@ -1330,109 +1527,155 @@ export function ScheduleNewDialog({
                 )}
 
                 {/* Cubicle Selection Dashboard */}
-                {watchedValues.appointmentDate && watchedValues.startTime && watchedValues.endTime && (
-                  <div className="space-y-4 animate-in fade-in duration-500">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-black text-slate-500 uppercase tracking-[0.15em]">Room Allocation</Label>
-                      {cubicleAvailability && (
-                        <Badge variant="outline" className="text-[9px] font-black border-indigo-200 text-indigo-600 bg-indigo-50 px-2 py-0.5 uppercase">
-                          {cubicleAvailability.availableCount} OPEN
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
-                      {isCheckingCubicles ? (
-                        <div className="flex flex-col items-center py-6 gap-3 text-slate-400">
-                          <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-100 border-t-indigo-600" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Scanning Rooms...</span>
-                        </div>
-                      ) : cubicleAvailability ? (
-                        <div className="space-y-5">
-                          <div className="grid grid-cols-3 gap-3">
-                            {cubicleAvailability.availableCubicles.map((cubicle: any) => (
-                              <button
-                                key={cubicle.id}
-                                type="button"
-                                onClick={() => setSelectedCubicleId(cubicle.id)}
-                                className={`group relative p-3 rounded-2xl text-[10px] font-black transition-all border-2 flex flex-col items-center justify-center gap-2 h-[70px] ${
-                                  selectedCubicleId === cubicle.id
-                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200 scale-105"
-                                    : "bg-white text-slate-700 border-slate-100 hover:border-indigo-200 hover:bg-slate-50"
-                                }`}
-                              >
-                                <Home className={`h-5 w-5 transition-transform group-hover:scale-110 ${selectedCubicleId === cubicle.id ? "text-white" : "text-indigo-500 opacity-60"}`} />
-                                <span className="truncate w-full text-center uppercase tracking-tighter">{cubicle.name}</span>
-                                {selectedCubicleId === cubicle.id && (
-                                  <div className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-white rounded-full flex items-center justify-center border-2 border-indigo-600 shadow-sm animate-in zoom-in duration-300">
-                                    <CheckCircle className="h-3 w-3 text-indigo-600" />
-                                  </div>
-                                )}
-                              </button>
-                            ))}
-                            {cubicleAvailability.occupiedCubicles.map((cubicle: any) => (
-                              <button
-                                key={cubicle.id}
-                                disabled
-                                className="p-3 rounded-2xl text-[10px] font-black bg-slate-50 text-slate-300 border-2 border-slate-100 opacity-40 cursor-not-allowed flex flex-col items-center justify-center gap-2 h-[70px]"
-                              >
-                                <XCircle className="h-5 w-5 text-slate-200" />
-                                <span className="truncate w-full text-center uppercase tracking-tighter font-bold">{cubicle.name}</span>
-                              </button>
-                            ))}
-                          </div>
+                {watchedValues.appointmentDate &&
+                  watchedValues.startTime &&
+                  watchedValues.endTime && (
+                    <div className="space-y-4 animate-in fade-in duration-500">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-black text-slate-500 uppercase tracking-[0.15em]">
+                          Room Allocation
+                        </Label>
+                        {cubicleAvailability && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-black border-indigo-200 text-indigo-600 bg-indigo-50 px-2 py-0.5 uppercase"
+                          >
+                            {cubicleAvailability.availableCount} OPEN
+                          </Badge>
+                        )}
+                      </div>
 
-                          {selectedCubicleId && (
-                            <div className="p-4 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 animate-in slide-in-from-bottom-2 duration-300">
-                              {(() => {
-                                const cubicle = cubicleAvailability.availableCubicles.find((c: any) => c.id === selectedCubicleId);
-                                return cubicle ? (
-                                  <div className="flex items-center gap-4">
-                                    <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0 border border-white/10">
-                                      <Home className="h-6 w-6 text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-0.5">Assigned Space</p>
-                                      <div className="flex items-center justify-between">
-                                        <h6 className="text-sm font-black leading-none">{cubicle.name}</h6>
-                                        <p className="text-[10px] font-bold bg-white/20 px-2 rounded tracking-tighter uppercase">{cubicle.location || "Central Wing"}</p>
+                      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
+                        {isCheckingCubicles ? (
+                          <div className="flex flex-col items-center py-6 gap-3 text-slate-400">
+                            <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-100 border-t-indigo-600" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                              Scanning Rooms...
+                            </span>
+                          </div>
+                        ) : cubicleAvailability ? (
+                          <div className="space-y-5">
+                            <div className="grid grid-cols-3 gap-3">
+                              {cubicleAvailability.availableCubicles.map(
+                                (cubicle: any) => (
+                                  <button
+                                    key={cubicle.id}
+                                    type="button"
+                                    onClick={() =>
+                                      setSelectedCubicleId(cubicle.id)
+                                    }
+                                    className={`group relative p-3 rounded-2xl text-[10px] font-black transition-all border-2 flex flex-col items-center justify-center gap-2 h-[70px] ${
+                                      selectedCubicleId === cubicle.id
+                                        ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200 scale-105"
+                                        : "bg-white text-slate-700 border-slate-100 hover:border-indigo-200 hover:bg-slate-50"
+                                    }`}
+                                  >
+                                    <Home
+                                      className={`h-5 w-5 transition-transform group-hover:scale-110 ${selectedCubicleId === cubicle.id ? "text-white" : "text-indigo-500 opacity-60"}`}
+                                    />
+                                    <span className="truncate w-full text-center uppercase tracking-tighter">
+                                      {cubicle.name}
+                                    </span>
+                                    {selectedCubicleId === cubicle.id && (
+                                      <div className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-white rounded-full flex items-center justify-center border-2 border-indigo-600 shadow-sm animate-in zoom-in duration-300">
+                                        <CheckCircle className="h-3 w-3 text-indigo-600" />
+                                      </div>
+                                    )}
+                                  </button>
+                                ),
+                              )}
+                              {cubicleAvailability.occupiedCubicles.map(
+                                (cubicle: any) => (
+                                  <button
+                                    key={cubicle.id}
+                                    disabled
+                                    className="p-3 rounded-2xl text-[10px] font-black bg-slate-50 text-slate-300 border-2 border-slate-100 opacity-40 cursor-not-allowed flex flex-col items-center justify-center gap-2 h-[70px]"
+                                  >
+                                    <XCircle className="h-5 w-5 text-slate-200" />
+                                    <span className="truncate w-full text-center uppercase tracking-tighter font-bold">
+                                      {cubicle.name}
+                                    </span>
+                                  </button>
+                                ),
+                              )}
+                            </div>
+
+                            {selectedCubicleId && (
+                              <div className="p-4 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 animate-in slide-in-from-bottom-2 duration-300">
+                                {(() => {
+                                  const cubicle =
+                                    cubicleAvailability.availableCubicles.find(
+                                      (c: any) => c.id === selectedCubicleId,
+                                    );
+                                  return cubicle ? (
+                                    <div className="flex items-center gap-4">
+                                      <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0 border border-white/10">
+                                        <Home className="h-6 w-6 text-white" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-0.5">
+                                          Assigned Space
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <h6 className="text-sm font-black leading-none">
+                                            {cubicle.name}
+                                          </h6>
+                                          <p className="text-[10px] font-bold bg-white/20 px-2 rounded tracking-tighter uppercase">
+                                            {cubicle.location || "Central Wing"}
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ) : null;
-                              })()}
-                            </div>
-                          )}
-                        </div>
-                      ) : null}
+                                  ) : null;
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Recurring Schedule Preview Section */}
                 {watchedValues.isRecurring && recurringPreview.length > 0 && (
                   <div className="space-y-3 animate-in slide-in-from-right-4 duration-500">
                     <div className="flex items-center justify-between px-1">
-                      <Label className="text-xs font-black text-slate-500 uppercase tracking-widest">Series Preview</Label>
-                      <Badge className="bg-violet-600 font-black px-2 text-[10px] uppercase">{recurringPreview.length} Sessions</Badge>
+                      <Label className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                        Series Preview
+                      </Label>
+                      <Badge className="bg-violet-600 font-black px-2 text-[10px] uppercase">
+                        {recurringPreview.length} Sessions
+                      </Badge>
                     </div>
                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm shadow-indigo-50">
                       <div className="max-h-[180px] overflow-y-auto">
                         {recurringPreview.slice(0, 5).map((item, i) => (
-                          <div key={i} className="group flex items-center gap-4 p-3 border-b border-slate-50 last:border-0 hover:bg-indigo-50/30 transition-colors">
+                          <div
+                            key={i}
+                            className="group flex items-center gap-4 p-3 border-b border-slate-50 last:border-0 hover:bg-indigo-50/30 transition-colors"
+                          >
                             <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
                               #{i + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-black text-slate-800 truncate leading-none uppercase tracking-tight">{item.dayName}</p>
-                              <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tighter opacity-70">{item.formattedDate}</p>
+                              <p className="text-xs font-black text-slate-800 truncate leading-none uppercase tracking-tight">
+                                {item.dayName}
+                              </p>
+                              <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tighter opacity-70">
+                                {item.formattedDate}
+                              </p>
                             </div>
                             <ChevronRight className="h-3 w-3 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
                           </div>
                         ))}
                         {recurringPreview.length > 5 && (
                           <div className="p-3 text-center bg-slate-50/50">
-                            <button type="button" className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-[0.2em] transition-all">+ {recurringPreview.length - 5} More Appointments</button>
+                            <button
+                              type="button"
+                              className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-[0.2em] transition-all"
+                            >
+                              + {recurringPreview.length - 5} More Appointments
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1451,11 +1694,15 @@ export function ScheduleNewDialog({
               <Info className="h-4 w-4 text-slate-400" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 leading-none">Compliance Check</p>
-              <p className="text-[11px] text-slate-600 font-bold leading-none">Ensure timing matches specialist shift</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 leading-none">
+                Compliance Check
+              </p>
+              <p className="text-[11px] text-slate-600 font-bold leading-none">
+                Ensure timing matches specialist shift
+              </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <Button
               type="button"
@@ -1482,7 +1729,11 @@ export function ScheduleNewDialog({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span>{watchedValues.isRecurring ? "Initialize Series" : "Finalize Booking"}</span>
+                  <span>
+                    {watchedValues.isRecurring
+                      ? "Initialize Series"
+                      : "Finalize Booking"}
+                  </span>
                   <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               )}

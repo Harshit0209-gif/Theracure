@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth/session-provider";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getSession(req);
@@ -29,8 +29,8 @@ export async function POST(
     const parseResult = passwordSchema.safeParse(newPassword);
     if (!parseResult.success) {
       return NextResponse.json(
-        { message: parseResult.error.errors[0].message },
-        { status: 400 }
+        { message: parseResult.error.issues[0].message },
+        { status: 400 },
       );
     }
 
@@ -43,12 +43,12 @@ export async function POST(
 
     return NextResponse.json(
       { message: "Password reset successful" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch {
     return NextResponse.json(
       { message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

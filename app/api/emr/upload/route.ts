@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     if (!dataString) {
       return NextResponse.json(
         { success: false, error: "Request data is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -39,14 +39,14 @@ export async function POST(req: NextRequest) {
           {
             success: false,
             error: "Invalid request data",
-            details: error.errors,
+            details: error.issues,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
       return NextResponse.json(
         { success: false, error: "Invalid JSON data" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           error: "File validation failed",
           details: fileValidationErrors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         originalName: file.name,
         mimeType: file.type,
         size: file.size,
-      }))
+      })),
     );
 
     // Upload files using EMR service
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     // Check results
     const successfulUploads = uploadedRecords.filter(
-      (record) => record.success
+      (record) => record.success,
     );
     const failedUploads = uploadedRecords.filter((record) => !record.success);
 
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
           error: "All file uploads failed",
           failures: failedUploads,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

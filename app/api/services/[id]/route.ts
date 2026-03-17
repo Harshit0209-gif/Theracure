@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+const serviceCategoryEnum = z.enum([
+  "MANUAL_THERAPY",
+  "CONSULTATION",
+  "ELECTROTHERAPY",
+  "EXERCISE_THERAPY",
+  "COMBO_TREATMENT",
+]);
+
 const updateServiceSchema = z.object({
   name: z.string().min(1).optional(),
   price: z.number().positive().optional(),
-  category: z.string().min(1).optional(),
+  category: serviceCategoryEnum.optional(),
   description: z.string().optional(),
   isActive: z.boolean().optional(),
 });
@@ -37,7 +45,7 @@ export async function PATCH(
         {
           success: false,
           error: "Validation failed",
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       );
@@ -130,7 +138,7 @@ export async function PUT(
     const putSchema = z.object({
       name: z.string().min(1, "Service name is required"),
       price: z.number().positive("Price must be positive"),
-      category: z.string().min(1, "Category is required"),
+      category: serviceCategoryEnum,
       description: z.string().optional(),
       isActive: z.boolean().optional(),
     });
@@ -142,7 +150,7 @@ export async function PUT(
         {
           success: false,
           error: "Validation failed",
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       );
@@ -215,7 +223,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -268,7 +276,7 @@ export async function DELETE(
 }
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -289,7 +297,7 @@ export async function GET(
       include: {
         _count: {
           select: {
-            invoiceItems: true,
+            therapistAppointments: true,
           },
         },
       },

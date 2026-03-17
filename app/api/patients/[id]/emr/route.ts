@@ -24,7 +24,7 @@ const EMRQuerySchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Enhanced authentication with better error handling
@@ -38,7 +38,7 @@ export async function GET(
           code: "SESSION_EXPIRED",
           message: "Your session has expired. Please log in again.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -53,7 +53,7 @@ export async function GET(
             "Your session will expire soon. Please refresh your session.",
           expiresIn: Math.floor((session.tokenExpiry - Date.now()) / 1000),
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -74,7 +74,7 @@ export async function GET(
     if (!patient) {
       return NextResponse.json(
         { success: false, error: "Patient not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -166,7 +166,7 @@ export async function GET(
             code: "AUTH_REQUIRED",
             message: "Authentication required",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -179,7 +179,7 @@ export async function GET(
             message:
               "Your session will expire soon. Please refresh your session.",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
     }
@@ -189,15 +189,15 @@ export async function GET(
         {
           success: false,
           error: "Invalid query parameters",
-          details: error.errors,
+          details: error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

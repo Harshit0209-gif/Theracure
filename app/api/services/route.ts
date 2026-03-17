@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch services" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -42,8 +42,12 @@ export async function POST(req: NextRequest) {
     const validationResult = serviceSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
-        { success: false, error: "Validation failed", details: validationResult.error.errors },
-        { status: 400 }
+        {
+          success: false,
+          error: "Validation failed",
+          details: validationResult.error.issues,
+        },
+        { status: 400 },
       );
     }
 
@@ -56,8 +60,11 @@ export async function POST(req: NextRequest) {
 
     if (existingService) {
       return NextResponse.json(
-        { success: false, error: "Service with this name already exists in the category" },
-        { status: 409 }
+        {
+          success: false,
+          error: "Service with this name already exists in the category",
+        },
+        { status: 409 },
       );
     }
 
@@ -73,12 +80,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { success: true, data: service, message: "Service created successfully" },
-      { status: 201 }
+      { status: 201 },
     );
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to create service" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

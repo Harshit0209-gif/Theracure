@@ -2,14 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { CubicleStatus } from "@prisma/client";
 
-// GET /api/cubicles/[id] - Get cubicle by ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     const cubicle = await prisma.cubicle.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         appointments: {
           where: {
@@ -47,7 +47,7 @@ export async function GET(
     if (!cubicle) {
       return NextResponse.json(
         { success: false, error: "Cubicle not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -59,29 +59,29 @@ export async function GET(
     console.error("Error fetching cubicle:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch cubicle" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-// PATCH /api/cubicles/[id] - Update cubicle
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     const body = await req.json();
     const { name, description, roomNumber, location, status } = body;
 
     // Check if cubicle exists
     const existingCubicle = await prisma.cubicle.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingCubicle) {
       return NextResponse.json(
         { success: false, error: "Cubicle not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -94,7 +94,7 @@ export async function PATCH(
             mode: "insensitive",
           },
           id: {
-            not: params.id,
+            not: id,
           },
         },
       });
@@ -105,13 +105,13 @@ export async function PATCH(
             success: false,
             error: "A cubicle with this name already exists",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
 
     const updatedCubicle = await prisma.cubicle.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
@@ -130,7 +130,7 @@ export async function PATCH(
     console.error("Error updating cubicle:", error);
     return NextResponse.json(
       { success: false, error: "Failed to update cubicle" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -138,25 +138,25 @@ export async function PATCH(
 // DELETE /api/cubicles/[id] - Delete/deactivate cubicle
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     // Check if cubicle exists
     const existingCubicle = await prisma.cubicle.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingCubicle) {
       return NextResponse.json(
         { success: false, error: "Cubicle not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Check if cubicle has any future appointments
     const futureAppointments = await prisma.appointment.count({
       where: {
-        cubicleId: params.id,
+        cubicleId: id,
         appointmentStartTime: {
           gte: new Date(),
         },
@@ -170,13 +170,12 @@ export async function DELETE(
           success: false,
           error: `Cannot delete cubicle with ${futureAppointments} upcoming appointments. Please deactivate it instead.`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Soft delete by setting status to INACTIVE
     const deactivatedCubicle = await prisma.cubicle.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         status: CubicleStatus.INACTIVE,
       },
@@ -191,7 +190,7 @@ export async function DELETE(
     console.error("Error deleting cubicle:", error);
     return NextResponse.json(
       { success: false, error: "Failed to delete cubicle" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

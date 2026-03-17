@@ -37,11 +37,11 @@ export async function POST(req: NextRequest) {
             therapist,
           });
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=${body.type}.pdf"`,
+        "Content-Disposition": `inline; filename="${body.type}.pdf"`,
       },
     });
   } catch (err: any) {
