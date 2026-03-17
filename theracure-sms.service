@@ -9,8 +9,9 @@ User=fuckhacker
 Group=fuckhacker
 
 WorkingDirectory=/var/www/theracure/Theracure-Dashboard
-ExecStart=/var/www/theracure/Theracure-Dashboard/node_modules/.bin/ts-node --esm -r tsconfig-paths/register --project tsconfig.json --transpile-only workers/sms-worker.ts
+ExecStart=/var/www/theracure/Theracure-Dashboard/node_modules/.bin/tsx workers/sms-worker.ts
 
+EnvironmentFile=/var/www/theracure/Theracure-Dashboard/.env
 Environment=NODE_ENV=production
 
 Restart=always
