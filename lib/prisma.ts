@@ -11,8 +11,8 @@ function createPrismaClient() {
     max: 10,
     connectionTimeoutMillis: 30000,
     query_timeout: 30000,
-    idleTimeoutMillis: 60000,   // drop idle connections after 60s to avoid stale reuse
-    allowExitOnIdle: true,
+    idleTimeoutMillis: 60000,
+    allowExitOnIdle: false,
   });
   return new PrismaClient({
     adapter,
@@ -44,7 +44,7 @@ function isRetryable(error: unknown): boolean {
 export async function withRetry<T>(
   fn: () => Promise<T>,
   retries = 3,
-  delayMs = 500
+  delayMs = 500,
 ): Promise<T> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= retries; attempt++) {
