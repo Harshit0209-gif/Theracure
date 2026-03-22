@@ -8,9 +8,10 @@ import { SessionManagerConfig } from "@/types/session";
 
 export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
   const {
-    refreshThreshold = 1, // 10 minutes before expiry
-    inactivityTimeout = 30, // 30 minutes of inactivity
-    checkInterval = 1, // Check every 1 minute
+    refreshThreshold = 20, // 20 minutes before expiry
+    inactivityTimeout = Number(process.env.NEXT_PUBLIC_INACTIVITY_TIMEOUT) ||
+      60,
+    checkInterval = 5, // Check every 5 minutes
   } = config;
 
   const { user, logout } = useAuth();
@@ -74,18 +75,21 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
 
     // Clear existing warning timeout
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
-    warningTimeoutRef.current = setTimeout(() => {
-      toast({
-        title: "Session Expiring Soon",
-        description: "You will be logged out in 5 minutes due to inactivity.",
-        variant: "default",
-      });
-    }, (inactivityTimeout - 5) * 60 * 1000);
+    warningTimeoutRef.current = setTimeout(
+      () => {
+        toast({
+          title: "Session Expiring Soon",
+          description: "You will be logged out in 5 minutes due to inactivity.",
+          variant: "default",
+        });
+      },
+      (inactivityTimeout - 5) * 60 * 1000,
+    );
 
     // Set new timeout
     inactivityTimeoutRef.current = setTimeout(
       handleInactivityTimeout,
-      inactivityTimeout * 60 * 1000
+      inactivityTimeout * 60 * 1000,
     );
   }, [handleInactivityTimeout, inactivityTimeout]);
 
@@ -101,7 +105,7 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
     // Start periodic session checks
     sessionCheckIntervalRef.current = setInterval(
       checkAndRefreshSession,
-      checkInterval * 60 * 1000
+      checkInterval * 60 * 1000,
     );
 
     // Start inactivity timer
