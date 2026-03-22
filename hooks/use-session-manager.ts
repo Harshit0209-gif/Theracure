@@ -9,7 +9,7 @@ import { SessionManagerConfig } from "@/types/session";
 export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
   const {
     refreshThreshold = 1, // 10 minutes before expiry
-    inactivityTimeout = 5, // 30 minutes of inactivity
+    inactivityTimeout = 30, // 30 minutes of inactivity
     checkInterval = 1, // Check every 1 minute
   } = config;
 
@@ -18,6 +18,7 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
   const lastActivityRef = useRef<number>(Date.now());
   const sessionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update last activity timestamp
   const updateActivity = useCallback(() => {
@@ -71,6 +72,16 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
       clearTimeout(inactivityTimeoutRef.current);
     }
 
+    // Clear existing warning timeout
+    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+    warningTimeoutRef.current = setTimeout(() => {
+      toast({
+        title: "Session Expiring Soon",
+        description: "You will be logged out in 5 minutes due to inactivity.",
+        variant: "default",
+      });
+    }, (inactivityTimeout - 5) * 60 * 1000);
+
     // Set new timeout
     inactivityTimeoutRef.current = setTimeout(
       handleInactivityTimeout,
@@ -110,6 +121,11 @@ export function useSessionManager(config: Partial<SessionManagerConfig> = {}) {
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current);
       inactivityTimeoutRef.current = null;
+    }
+
+    if (warningTimeoutRef.current) {
+      clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = null;
     }
   }, []);
 

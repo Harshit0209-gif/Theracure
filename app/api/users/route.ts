@@ -15,6 +15,10 @@ export async function GET(req: NextRequest) {
     const roleParam = url.searchParams.get("role") || "";
     const normalizedRole = roleParam.toUpperCase();
 
+    const statusParam = url.searchParams.get("status") || "";
+    const normalizedStatus = statusParam.toUpperCase();
+    const validStatuses = ["ACTIVE", "INACTIVE"];
+
     const where = {
       ...(search && {
         OR: [
@@ -25,6 +29,9 @@ export async function GET(req: NextRequest) {
       }),
       ...(possibleRoles.includes(normalizedRole as UserRole) && {
         role: normalizedRole as UserRole,
+      }),
+      ...(validStatuses.includes(normalizedStatus) && {
+        status: normalizedStatus as "ACTIVE" | "INACTIVE",
       }),
     };
 

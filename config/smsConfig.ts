@@ -12,6 +12,7 @@ interface SMSData {
   endTime?: Date;
   amount?: number;
   link?: string;
+  cubicleInfo?: string;
 }
 
 // Helper function to convert UTC date to local timezone string
@@ -34,7 +35,7 @@ export const SMS_CONFIG = {
       var4: `${formatLocalTime(data.date!, "do MMM yyyy")} at ${formatLocalTime(
         data.startTime!,
         "hh:mm a"
-      )} to ${formatLocalTime(data.endTime!, "hh:mm a")}`,
+      )} to ${formatLocalTime(data.endTime!, "hh:mm a")}${data.cubicleInfo ? `, Room: ${data.cubicleInfo}` : ""}`,
     },
   }),
 

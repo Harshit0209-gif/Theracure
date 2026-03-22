@@ -51,6 +51,14 @@ export const validateInvoice = ({
     });
     return false;
   }
+  if (paymentDetails.amountPaid > paymentDetails.totalAmount) {
+    toast({
+      title: "Amount Exceeds Total",
+      description: `Amount paid (₹${paymentDetails.amountPaid.toFixed(2)}) cannot exceed the total invoice amount (₹${paymentDetails.totalAmount.toFixed(2)}).`,
+      variant: "destructive",
+    });
+    return false;
+  }
   if (paymentDetails.offer < 0 || paymentDetails.offer > 100) {
     toast({
       title: "Invalid Offer Percentage",

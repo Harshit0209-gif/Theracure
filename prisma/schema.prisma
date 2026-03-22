@@ -227,6 +227,7 @@ model TherapySession {
   @@index([sessionDate])
   @@index([patientId])
   @@index([therapistId])
+  @@index([patientId, sessionDate])
   @@map("therapy_sessions")
 }
 
@@ -290,6 +291,19 @@ model SmsQueue {
   @@index([id])
   @@index([phone])
   @@map("sms_queue")
+}
+
+model Holiday {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  name        String
+  description String?
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@map("holidays")
 }
 
 enum UserRole {

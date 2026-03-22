@@ -25,6 +25,7 @@ interface InvoiceListProps {
   setPage: (page: number) => void;
   handleViewDetails: (invoice: Invoice) => void;
   handleDirectPrint: (invoice: Invoice) => void;
+  onPaymentSuccess?: () => void;
 }
 
 export const InvoiceList: React.FC<InvoiceListProps> = ({
@@ -34,6 +35,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   setPage,
   handleViewDetails,
   handleDirectPrint,
+  onPaymentSuccess,
 }) => {
   return (
     <div className="bg-white rounded-lg overflow-hidden mb-6 shadow-sm">
@@ -97,10 +99,10 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                 </TableCell>
                 <TableCell className="text-center">
                   <Badge
-                    variant={
+                    className={
                       invoice.status === InvoiceStatus.PAID
-                        ? "default"
-                        : "destructive"
+                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                        : "bg-red-100 text-red-600 border border-red-200 hover:bg-red-100"
                     }
                   >
                     {invoiceStatusLabelMap[invoice.status]}
@@ -111,6 +113,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                     invoice={invoice}
                     onViewDetails={handleViewDetails}
                     onPrint={handleDirectPrint}
+                    onPaymentSuccess={onPaymentSuccess}
                   />
                 </TableCell>
               </TableRow>

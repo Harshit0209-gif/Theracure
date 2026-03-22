@@ -12,6 +12,18 @@ function replaceBigIntWithNumber(obj: any): any {
   return obj;
 }
 
+// Run a query with a timeout — returns fallback value if it times out
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  const timer = new Promise<T>((_, reject) =>
+    setTimeout(() => reject(new Error("timeout")), ms)
+  );
+  try {
+    return await Promise.race([promise, timer]);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const now = new Date();
@@ -33,32 +45,56 @@ export async function GET(req: NextRequest) {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(now.getMonth() - 6);
 
+    // ── Fast queries (simple counts, no relation joins) ──────────────────
     const [
       totalPatients,
       patientsThisMonth,
       patientsLastMonth,
-      activePatientsCount,
-      pendingFollowUps,
-      genderDistribution,
-      allPatientsWithAge,
       recentRegistrations,
-      patientsWithInvoices,
+      genderDistribution,
+      ageGroups,
       monthlyTrend,
     ] = await Promise.all([
       prisma.patient.count(),
       prisma.patient.count({ where: { createdAt: { gte: startOfCurrentMonth } } }),
       prisma.patient.count({ where: { createdAt: { gte: startOfLastMonth, lte: endOfLastMonth } } }),
-      prisma.patient.count({ where: { therapySessions: { some: { sessionDate: { gte: thirtyDaysAgo } } } } }),
-      prisma.patient.count({ where: { therapySessions: { some: { sessionDate: { gte: nextWeekStart, lte: nextWeekEnd } } } } }),
-      prisma.patient.groupBy({ by: ["gender"], _count: { gender: true } }),
-      prisma.patient.findMany({ select: { age: true } }),
       prisma.patient.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-      prisma.patient.count({ where: { invoices: { some: {} } } }),
-      prisma.$queryRaw`
+      prisma.patient.groupBy({ by: ["gender"], _count: { gender: true } }),
+      // Use groupBy for age distribution instead of fetching all rows
+      prisma.$queryRaw<{ bucket: string; count: bigint }[]>`
+        SELECT
+          CASE
+            WHEN age < 18  THEN 'Under 18'
+            WHEN age <= 30 THEN '18-30'
+            WHEN age <= 50 THEN '31-50'
+            WHEN age <= 70 THEN '51-70'
+            ELSE 'Over 70'
+          END AS bucket,
+          COUNT(*) AS count
+        FROM patients
+        GROUP BY bucket
+      `,
+      prisma.$queryRaw<{ month: string; count: bigint }[]>`
         SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count
         FROM patients WHERE created_at >= ${sixMonthsAgo}
         GROUP BY TO_CHAR(created_at, 'YYYY-MM') ORDER BY month ASC
       `,
+    ]);
+
+    // ── Slow queries (relation joins) — run with individual timeouts ─────
+    const [activePatientsCount, pendingFollowUps, patientsWithInvoices] = await Promise.all([
+      withTimeout(
+        prisma.patient.count({ where: { therapySessions: { some: { sessionDate: { gte: thirtyDaysAgo } } } } }),
+        8000, 0
+      ),
+      withTimeout(
+        prisma.patient.count({ where: { therapySessions: { some: { sessionDate: { gte: nextWeekStart, lte: nextWeekEnd } } } } }),
+        8000, 0
+      ),
+      withTimeout(
+        prisma.patient.count({ where: { invoices: { some: {} } } }),
+        8000, 0
+      ),
     ]);
 
     const growthPercentage =
@@ -66,13 +102,10 @@ export async function GET(req: NextRequest) {
         ? ((patientsThisMonth - patientsLastMonth) / patientsLastMonth) * 100
         : patientsThisMonth > 0 ? 100 : 0;
 
-    const ageGroups = { "Under 18": 0, "18-30": 0, "31-50": 0, "51-70": 0, "Over 70": 0 };
-    allPatientsWithAge.forEach((p) => {
-      if (p.age < 18) ageGroups["Under 18"]++;
-      else if (p.age <= 30) ageGroups["18-30"]++;
-      else if (p.age <= 50) ageGroups["31-50"]++;
-      else if (p.age <= 70) ageGroups["51-70"]++;
-      else ageGroups["Over 70"]++;
+    // Build age group map from raw query result
+    const ageGroupMap: Record<string, number> = { "Under 18": 0, "18-30": 0, "31-50": 0, "51-70": 0, "Over 70": 0 };
+    (ageGroups as { bucket: string; count: bigint }[]).forEach((row) => {
+      if (row.bucket in ageGroupMap) ageGroupMap[row.bucket] = Number(row.count);
     });
 
     const stats = {
@@ -95,9 +128,9 @@ export async function GET(req: NextRequest) {
         genderDistribution: genderDistribution.map((item) => ({
           gender: item.gender,
           count: item._count.gender,
-          percentage: Math.round((item._count.gender / totalPatients) * 100),
+          percentage: totalPatients > 0 ? Math.round((item._count.gender / totalPatients) * 100) : 0,
         })),
-        ageGroups,
+        ageGroups: ageGroupMap,
         revenuePatients: {
           count: patientsWithInvoices,
           percentage: totalPatients > 0 ? Math.round((patientsWithInvoices / totalPatients) * 100) : 0,

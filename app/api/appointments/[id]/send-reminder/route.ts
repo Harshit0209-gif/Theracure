@@ -29,6 +29,12 @@ export async function POST(
             name: true,
           },
         },
+        cubicle: {
+          select: {
+            name: true,
+            location: true,
+          },
+        },
       },
     });
 
@@ -60,6 +66,9 @@ export async function POST(
           date: appointment.assignedDate,
           startTime: appointment.appointmentStartTime,
           endTime: appointment.appointmentEndTime,
+          cubicleInfo: appointment.cubicle
+            ? `${appointment.cubicle.name}${appointment.cubicle.location ? ` (${appointment.cubicle.location})` : ""}`
+            : undefined,
         });
         break;
 

@@ -13,6 +13,7 @@ ExecStart=/usr/bin/node server.js
 
 Environment=NODE_ENV=production
 Environment=PORT=3001
+Environment=PUPPETEER_EXECUTABLE_PATH=/home/fuckhacker/.cache/puppeteer/chrome/linux-146.0.7680.153/chrome-linux64/chrome
 
 Restart=always
 RestartSec=5
@@ -29,3 +30,12 @@ MemoryMax=1G
 
 [Install]
 WantedBy=multi-user.target
+
+
+# cp -r .next/static .next/standalone/.next/static
+# cp -r public .next/standalone/public
+
+# mkdir -p /home/fuckhacker/.config/puppeteer
+# chown -R fuckhacker:fuckhacker /home/fuckhacker/.config
+# chmod -R 755 /home/fuckhacker/.config   
+# sudo -u fuckhacker pnpm puppeteer browsers install chrome --path /home/fuckhacker/.config/puppeteer

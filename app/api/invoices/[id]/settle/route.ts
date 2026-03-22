@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { InvoiceStatus, TransactionStatus } from "@prisma/client";
+import generateInvoicePDF from "@/lib/utils/InvoicePDFGenerator";
+import { storageService } from "@/lib/services/storage-factory";
+import { sendSMSNotification } from "@/config/smsConfig";
+import {
+  InvoicePayload,
+  PaymentStatus,
+  InvoiceStatus as AppInvoiceStatus,
+  TransactionStatus as AppTransactionStatus,
+} from "@/types/invoice";
 
 const settlePaymentSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -12,10 +21,10 @@ const settlePaymentSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const invoiceId = params.id;
+    const { id: invoiceId } = await params;
     const body = await request.json();
 
     // Validate the request body
@@ -141,6 +150,106 @@ export async function PATCH(
         },
       },
     });
+
+    // When fully paid: upload PDF to R2 and SMS the download link
+    if (newBalance <= 0 && updatedInvoice.patient?.phone) {
+      try {
+        const invoicePayload: InvoicePayload = {
+          patientInfo: {
+            id: updatedInvoice.patient.id,
+            patientName: updatedInvoice.patient.patientName,
+            email: updatedInvoice.patient.email || "",
+            phone: updatedInvoice.patient.phone || "",
+            address: updatedInvoice.patient.address || "",
+            age: 0,
+            gender: "",
+            createdBy: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          invoiceDetails: {
+            id: updatedInvoice.id,
+            patientId: invoiceId,
+            patient: {
+              id: updatedInvoice.patient.id,
+              patientName: updatedInvoice.patient.patientName,
+              age: 0,
+              gender: "",
+              createdBy: "",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            date: updatedInvoice.date instanceof Date ? updatedInvoice.date.toISOString() : updatedInvoice.date,
+            status: updatedInvoice.status as unknown as AppInvoiceStatus,
+            subTotal: updatedInvoice.subTotal,
+            totalAmount: updatedInvoice.totalAmount,
+            amountPaid: newTotalPaid,
+            offer: updatedInvoice.offer || 0,
+            createdAt: updatedInvoice.createdAt instanceof Date ? updatedInvoice.createdAt.toISOString() : String(updatedInvoice.createdAt),
+            updatedAt: updatedInvoice.updatedAt instanceof Date ? updatedInvoice.updatedAt.toISOString() : String(updatedInvoice.updatedAt),
+            createdBy: "",
+            invoiceItems: updatedInvoice.invoiceItems.map((item) => ({
+              invoiceId: item.invoiceId,
+              serviceId: item.serviceId,
+              serviceName: item.serviceName,
+              priceAtPurchase: item.priceAtPurchase,
+              quantity: item.quantity,
+              description: item.description || "",
+              category: item.category || "",
+            })),
+            transactions: updatedInvoice.transactions.map((t) => ({
+              id: t.id,
+              invoiceId: t.invoiceId,
+              amount: t.amount,
+              paymentMethod: t.paymentMethod,
+              transactionDate: t.transactionDate instanceof Date ? t.transactionDate.toISOString() : String(t.transactionDate),
+              status: t.status as unknown as AppTransactionStatus,
+              createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
+              updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt),
+            })),
+          },
+          paymentDetails: {
+            subTotal: updatedInvoice.subTotal,
+            totalAmount: updatedInvoice.totalAmount,
+            amountPaid: newTotalPaid,
+            balance: 0,
+            offer: updatedInvoice.offer || 0,
+            discount: (updatedInvoice.subTotal * (updatedInvoice.offer || 0)) / 100,
+            status: PaymentStatus.PAID,
+          },
+          selectedServices: [],
+          type: "invoice",
+        };
+
+        const pdfBuffer = await generateInvoicePDF(invoicePayload);
+        const filePath = `invoices/${invoiceId}.pdf`;
+
+        // Upload to R2
+        await storageService.uploadFile(filePath, Buffer.from(pdfBuffer), "application/pdf");
+
+        // Generate presigned URL valid for 7 days
+        const SEVEN_DAYS = 7 * 24 * 60 * 60; // 604800 seconds
+        const downloadUrl = await storageService.generatePresignedUrl(filePath, SEVEN_DAYS);
+
+        // Save URL to invoice
+        await prisma.invoice.update({
+          where: { id: invoiceId },
+          data: { pdfUrl: downloadUrl },
+        });
+
+        // SMS the download link to patient
+        await sendSMSNotification("INVOICE_NOTIFICATION", {
+          phone: updatedInvoice.patient.phone,
+          patientName: updatedInvoice.patient.patientName,
+          therapistName: "",
+          amount: updatedInvoice.totalAmount,
+          link: downloadUrl,
+        });
+      } catch (smsOrUploadError) {
+        // Non-fatal — log and continue
+        console.error("Failed to upload PDF or send invoice SMS:", smsOrUploadError);
+      }
+    }
 
     return NextResponse.json(
       {

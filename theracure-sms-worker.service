@@ -1,0 +1,29 @@
+[Unit]
+Description=Theracure SMS Worker
+After=network.target theracure-dashboard.service
+
+[Service]
+Type=simple
+
+User=fuckhacker
+Group=fuckhacker
+
+WorkingDirectory=/var/www/theracure/Theracure-Dashboard/.next/standalone
+# NOTE: The compiled worker path depends on build output.
+# After running `pnpm build:worker`, the compiled JS is placed under
+# .next/standalone/workers/sms-worker.js (via tsconfig.worker.json outDir).
+# Verify the actual output path after each build and update ExecStart accordingly.
+ExecStart=/usr/bin/node -e "require('/var/www/theracure/Theracure-Dashboard/.next/standalone/workers/sms-worker.js')"
+
+Environment=NODE_ENV=production
+
+Restart=always
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target

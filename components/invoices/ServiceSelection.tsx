@@ -8,7 +8,6 @@ import {
   Plus,
   Minus,
   Activity,
-  CheckCircle,
   LucideIcon,
 } from "lucide-react";
 import { Service, SelectedService, PurchasedService } from "@/types/service";
@@ -208,6 +207,7 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({
     }
   };
 
+
   if (isServicesLoading) {
     return (
       <Card>
@@ -264,28 +264,6 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({
                 />
               );
             }
-          )}
-
-          {/* Summary Section */}
-          {selectedServices.length > 0 && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-indigo-600" />
-                  <span className="font-semibold text-indigo-800">
-                    {selectedServices.length} service
-                    {selectedServices.length !== 1 ? "s" : ""} selected
-                  </span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-indigo-600">Total Quantity</p>
-                  <p className="font-bold text-indigo-800">
-                    {selectedServices.reduce((sum, s) => sum + s.quantity, 0)}{" "}
-                    sessions
-                  </p>
-                </div>
-              </div>
-            </div>
           )}
         </div>
       </CardContent>

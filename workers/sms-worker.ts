@@ -1,7 +1,26 @@
+import * as dotenv from "dotenv";
+dotenv.config();
+
 import { prisma } from "@/lib/prisma";
 import { sendSMSFlow } from "@/lib/mail/sendSMS";
 import { getTemplateId, TemplateKey } from "@/config/smsTemplatesMap";
 import { SmsStatus } from "@/lib/generated/smsEnums";
+
+// On startup: reset any PROCESSING records back to PENDING (from crashed previous run)
+async function resetProcessingOnStartup(): Promise<void> {
+  try {
+    const result = await prisma.smsQueue.updateMany({
+      where: { status: SmsStatus.PROCESSING },
+      data: { status: SmsStatus.PENDING },
+    });
+    if (result.count > 0) {
+      console.log(`🔄 Reset ${result.count} stuck PROCESSING record(s) to PENDING`);
+    }
+  } catch (err) {
+    console.error("Failed to reset PROCESSING records:", err);
+  }
+}
+resetProcessingOnStartup();
 
 function formatPhoneNumber(phone: string): string {
   let cleaned = phone.replace(/[\s\-\(\)]/g, "");

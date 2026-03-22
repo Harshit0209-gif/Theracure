@@ -3,6 +3,7 @@ import { AppointmentStatus, Prisma } from "@prisma/client";
 import { getDay } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
 import { sendSMSNotification } from "@/config/smsConfig";
+import { validateAppointmentDate } from "@/lib/utils/appointmentDateValidation";
 
 export async function PATCH(
   req: NextRequest,
@@ -42,6 +43,15 @@ export async function PATCH(
     if (endTime <= startTime) {
       return NextResponse.json(
         { success: false, message: "End time must be after start time" },
+        { status: 400 }
+      );
+    }
+
+    // Block Sundays and holidays
+    const dateError = await validateAppointmentDate(startTime);
+    if (dateError) {
+      return NextResponse.json(
+        { success: false, message: dateError },
         { status: 400 }
       );
     }

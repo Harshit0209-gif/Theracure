@@ -65,6 +65,12 @@ import { debounce } from "lodash";
 import ReactSelect from "react-select";
 import { getServices } from "@/lib/api/services";
 import { getDayName } from "@/lib/utils/utils";
+import {
+  DatePickerDialog,
+  getDaysInMonthData,
+  formatDateToString,
+  isPastDate,
+} from "@/components/ui/date-picker-dialog";
 
 interface ScheduleNewDialogProps {
   open: boolean;
@@ -276,10 +282,10 @@ export function ScheduleNewDialog({
 
   const fetchTherapists = async () => {
     try {
-      const response = await fetch("/api/users?role=therapist&limit=100");
+      const response = await fetch("/api/therapists?status=active");
       const data = await response.json();
       if (data.success) {
-        setTherapists(data.users);
+        setTherapists(data.therapists);
       }
     } catch (error) {
       console.error("Error fetching therapists:", error);
@@ -484,30 +490,10 @@ export function ScheduleNewDialog({
     return Math.round((end.getTime() - start.getTime()) / (1000 * 60));
   };
 
-  // Calendar helper functions
+  // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    return { daysInMonth, startingDayOfWeek, year, month };
-  };
-
-  const formatDateToString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const isDateSelected = (dateStr: string) => {
-    return customDates.includes(dateStr);
-  };
+  const isDateSelected = (dateStr: string) => customDates.includes(dateStr);
 
   const toggleDate = (dateStr: string) => {
     if (isDateSelected(dateStr)) {
@@ -515,12 +501,6 @@ export function ScheduleNewDialog({
     } else {
       setCustomDates([...customDates, dateStr]);
     }
-  };
-
-  const isPastDate = (dateStr: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return new Date(dateStr) < today;
   };
 
   const generateRecurringAppointments = (
@@ -1743,139 +1723,13 @@ export function ScheduleNewDialog({
       </DialogContent>
 
       {/* Calendar Dialog for Single Start Date Selection */}
-      <Dialog
+      <DatePickerDialog
         open={isStartDateCalendarOpen}
         onOpenChange={setIsStartDateCalendarOpen}
-      >
-        <DialogContent className="max-w-md p-4">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              Select{" "}
-              {watchedValues.isRecurring
-                ? "First Appointment"
-                : "Appointment"}{" "}
-              Date
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Month Navigation */}
-            <div className="flex items-center justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const newMonth = new Date(currentMonth);
-                  newMonth.setMonth(newMonth.getMonth() - 1);
-                  setCurrentMonth(newMonth);
-                }}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </Button>
-              <div className="text-center">
-                <h3 className="text-base font-semibold text-slate-800">
-                  {currentMonth.toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </h3>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const newMonth = new Date(currentMonth);
-                  newMonth.setMonth(newMonth.getMonth() + 1);
-                  setCurrentMonth(newMonth);
-                }}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </Button>
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center text-sm">
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                <div key={day} className="font-semibold text-gray-500">
-                  {day}
-                </div>
-              ))}
-              {(() => {
-                const { daysInMonth, startingDayOfWeek, year, month } =
-                  getDaysInMonth(currentMonth);
-                const days = [];
-                for (let i = 0; i < startingDayOfWeek; i++) {
-                  days.push(<div key={`empty-${i}`} />);
-                }
-                for (let day = 1; day <= daysInMonth; day++) {
-                  const date = new Date(year, month, day);
-                  const dateStr = formatDateToString(date);
-                  const isSelected = watchedValues.appointmentDate === dateStr;
-                  const isPast = isPastDate(dateStr);
-                  const isToday = dateStr === formatDateToString(new Date());
-
-                  days.push(
-                    <div key={day} className="p-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          form.setValue("appointmentDate", dateStr);
-                          setIsStartDateCalendarOpen(false);
-                        }}
-                        disabled={isPast}
-                        className={`w-full h-9 rounded-md transition-colors
-                          ${isPast ? "text-gray-400 cursor-not-allowed" : ""}
-                          ${isSelected ? "bg-indigo-600 text-white" : "hover:bg-indigo-100"}
-                          ${isToday && !isSelected ? "border-2 border-indigo-600" : ""}
-                        `}
-                      >
-                        {day}
-                      </button>
-                    </div>,
-                  );
-                }
-                return days;
-              })()}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsStartDateCalendarOpen(false)}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        value={watchedValues.appointmentDate}
+        onChange={(date) => form.setValue("appointmentDate", date)}
+        title={watchedValues.isRecurring ? "Select First Appointment Date" : "Select Appointment Date"}
+      />
 
       {/* Calendar Dialog for Custom Date Selection */}
       <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
@@ -1957,7 +1811,7 @@ export function ScheduleNewDialog({
               ))}
               {(() => {
                 const { daysInMonth, startingDayOfWeek, year, month } =
-                  getDaysInMonth(currentMonth);
+                  getDaysInMonthData(currentMonth);
                 const days = [];
                 for (let i = 0; i < startingDayOfWeek; i++) {
                   days.push(<div key={`empty-${i}`} />);
@@ -2130,7 +1984,7 @@ export function ScheduleNewDialog({
               ))}
               {(() => {
                 const { daysInMonth, startingDayOfWeek, year, month } =
-                  getDaysInMonth(currentMonth);
+                  getDaysInMonthData(currentMonth);
                 const days = [];
                 for (let i = 0; i < startingDayOfWeek; i++) {
                   days.push(<div key={`empty-${i}`} />);

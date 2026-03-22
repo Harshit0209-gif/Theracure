@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         subTotal,
         offer: paymentDetails?.offer || 0,
         amountPaid,
-        paymentMethod: paymentDetails?.paymentMethod || "CASH",
+        paymentMethod: invoiceDetails?.paymentMethod || paymentDetails?.paymentMethod || "CASH",
         createdBy: session?.user?.id || createdBy,
         notes: invoiceDetails.notes || "",
       },
@@ -202,8 +202,8 @@ export async function POST(request: NextRequest) {
           data: { pdfUrl: pdfPath },
         });
       }
-    } catch {
-      // PDF generation failure is non-fatal
+    } catch (pdfError) {
+      console.error("PDF generation failed (non-fatal):", pdfError instanceof Error ? pdfError.message : pdfError);
     }
 
     if (invoice.patient?.phone && pdfPath) {
@@ -224,10 +224,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Re-fetch with full includes so client state has invoiceItems + transactions
+    const fullInvoice = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      include: {
+        patient: {
+          select: { id: true, patientName: true, email: true, phone: true },
+        },
+        invoiceItems: {
+          select: {
+            invoiceId: true,
+            serviceId: true,
+            serviceName: true,
+            priceAtPurchase: true,
+            quantity: true,
+            description: true,
+            category: true,
+          },
+        },
+        transactions: { orderBy: { transactionDate: "desc" } },
+      },
+    });
+
     return NextResponse.json(
       {
         success: true,
-        data: { invoice, selectedServices, pdfPath },
+        data: { invoice: fullInvoice, selectedServices, pdfPath },
         message: "Invoice created successfully",
       },
       { status: 201 },

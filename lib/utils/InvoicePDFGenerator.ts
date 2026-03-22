@@ -24,8 +24,8 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
         ...PUPPETEER_CONFIG.args,
         `--user-data-dir=${tmpDir}`,
         `--crash-dumps-dir=${tmpDir}`,
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
       ],
     };
 
@@ -38,7 +38,7 @@ export const generateInvoicePDF = async (invoiceData: InvoicePayload) => {
     const htmlTemplate = await generateInvoiceHTML(invoiceData);
 
     await page.setContent(htmlTemplate, {
-      waitUntil: "networkidle0",
+      waitUntil: "domcontentloaded",
       timeout: 30000,
     });
 
@@ -177,7 +177,12 @@ const getLatestTransactionDate = (transactions?: any[]) => {
 
 // Helper function to safely display values (don't show null/undefined)
 const safeValue = (value: any, fallback: string = ""): string => {
-  if (value === null || value === undefined || value === "null" || value === "undefined") {
+  if (
+    value === null ||
+    value === undefined ||
+    value === "null" ||
+    value === "undefined"
+  ) {
     return fallback;
   }
   if (typeof value === "string" && value.trim() === "") {
@@ -741,26 +746,46 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           <!-- Bill To -->
           <div class="detail-card">
             <div class="detail-title">BILL TO:</div>
-            ${safeValue(patientInfo.patientName) ? `<div class="detail-item">
+            ${
+              safeValue(patientInfo.patientName)
+                ? `<div class="detail-item">
               <span class="detail-label">Patient Name:</span>
               <span class="detail-value">${safeValue(patientInfo.patientName)}</span>
-            </div>` : ""}
-            ${safeValue(patientInfo.id) ? `<div class="detail-item">
+            </div>`
+                : ""
+            }
+            ${
+              safeValue(patientInfo.id)
+                ? `<div class="detail-item">
               <span class="detail-label">Patient ID:</span>
               <span class="detail-value">${safeValue(patientInfo.id)}</span>
-            </div>` : ""}
-            ${safeValue(patientInfo.phone) ? `<div class="detail-item">
+            </div>`
+                : ""
+            }
+            ${
+              safeValue(patientInfo.phone)
+                ? `<div class="detail-item">
               <span class="detail-label">Phone:</span>
               <span class="detail-value">${safeValue(patientInfo.phone)}</span>
-            </div>` : ""}
-            ${safeValue(patientInfo.email) ? `<div class="detail-item">
+            </div>`
+                : ""
+            }
+            ${
+              safeValue(patientInfo.email)
+                ? `<div class="detail-item">
               <span class="detail-label">Email:</span>
               <span class="detail-value">${safeValue(patientInfo.email)}</span>
-            </div>` : ""}
-            ${safeValue(patientInfo.address) ? `<div class="detail-item">
+            </div>`
+                : ""
+            }
+            ${
+              safeValue(patientInfo.address)
+                ? `<div class="detail-item">
               <span class="detail-label">Address:</span>
               <span class="detail-value">${safeValue(patientInfo.address)}</span>
-            </div>` : ""}
+            </div>`
+                : ""
+            }
           </div>
 
           <!-- Payment Details -->
@@ -776,14 +801,22 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                 </div>`
                 : ""
             }
-            ${safeValue(paymentMethods) && paymentMethods !== "N/A" ? `<div class="detail-item">
+            ${
+              safeValue(paymentMethods) && paymentMethods !== "N/A"
+                ? `<div class="detail-item">
               <span class="detail-label">Payment Method:</span>
               <span class="detail-value">${safeValue(paymentMethods)}</span>
-            </div>` : ""}
-            ${safeValue(paymentDetails.status) ? `<div class="detail-item">
+            </div>`
+                : ""
+            }
+            ${
+              safeValue(paymentDetails.status)
+                ? `<div class="detail-item">
               <span class="detail-label">Payment Status:</span>
               <span class="detail-value">${safeValue(paymentDetails.status)}</span>
-            </div>` : ""}
+            </div>`
+                : ""
+            }
             ${
               displayOffer && displayOffer > 0
                 ? `<div class="detail-item">
@@ -846,6 +879,54 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           </table>
         </div>
 
+        <!-- Transaction History -->
+        ${
+          invoiceDetails.transactions && invoiceDetails.transactions.length > 0
+            ? `
+        <div class="services-section">
+          <div class="section-title">PAYMENT HISTORY:</div>
+          <table class="services-table">
+            <thead class="table-header">
+              <tr>
+                <th style="width: 8%;">Sl. No</th>
+                <th style="width: 42%;">Date & Time</th>
+                <th style="width: 25%;">Payment Method</th>
+                <th style="width: 25%;">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoiceDetails.transactions
+                .filter((t: any) => t.status === "SUCCESS")
+                .map((t: any, i: number) => {
+                  const d = new Date(t.transactionDate);
+                  const dateStr = d.toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  });
+                  const timeStr = d.toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                    timeZone: "Asia/Kolkata",
+                  });
+                  return `
+                <tr class="table-row">
+                  <td class="text-center">${i + 1}</td>
+                  <td class="text-center">${dateStr}, ${timeStr}</td>
+                  <td class="text-center">${t.paymentMethod || "—"}</td>
+                  <td class="text-right" style="padding-right:12px;">₹${parseFloat(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+              `;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+        `
+            : ""
+        }
+
         <!-- Totals Section -->
         <div class="totals-section">
           <table class="totals-table">
@@ -883,26 +964,21 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                 { minimumFractionDigits: 2, maximumFractionDigits: 2 },
               )}</td>
             </tr>
+            ${displayBalance > 0 ? `
             <tr>
-              <td class="totals-label">
-                ${displayBalance <= 0 ? "Paid (Change)" : "Balance Due"}:
-              </td>
-              <td
-                class="totals-value ${
-                  displayBalance <= 0 ? "paid-amount" : "due-amount"
-                }"
-              >
-                ₹${Math.abs(displayBalance).toLocaleString("en-IN", {
+              <td class="totals-label">Balance Due:</td>
+              <td class="totals-value due-amount">
+                ₹${displayBalance.toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </td>
             </tr>
+            ` : ""}
           </table>
         </div>
 
-        
-
+      
         <!-- Footer -->
         <div class="footer">
           <div class="footer-title">Thank you for choosing Thera-Cure!</div>

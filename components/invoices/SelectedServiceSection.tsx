@@ -89,33 +89,9 @@ export const SelectedServicesSection: React.FC<
 
         <Separator className="my-4" />
 
-        {/* Totals */}
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>₹{paymentDetails.subTotal.toFixed(2)}</span>
-            </div>
-            {paymentDetails.offer > 0 && (
-              <div className="flex justify-between">
-                <span>Offer applied ({paymentDetails.offer}%):</span>
-                <span>-₹{paymentDetails.discount.toFixed(2)}</span>
-              </div>
-            )}
-            <Separator />
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total:</span>
-              <span>₹{paymentDetails.totalAmount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-green-600">
-              <span>Amount Paid:</span>
-              <span>₹{paymentDetails.amountPaid.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-red-600 font-semibold">
-              <span>Balance Due:</span>
-              <span>₹{paymentDetails.balance.toFixed(2)}</span>
-            </div>
-          </div>
+        <div className="flex justify-between font-bold text-base">
+          <span>Subtotal</span>
+          <span>₹{paymentDetails.subTotal.toFixed(2)}</span>
         </div>
       </CardContent>
     </Card>

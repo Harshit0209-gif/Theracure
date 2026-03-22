@@ -6,6 +6,7 @@ import {
   Send,
   FileText,
   IndianRupee,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,17 +29,45 @@ interface InvoiceActionsProps {
   invoice: Invoice;
   onViewDetails: (invoice: Invoice) => void;
   onPrint: (invoice: Invoice) => void;
+  onPaymentSuccess?: () => void;
 }
 
 export const InvoiceActions: React.FC<InvoiceActionsProps> = ({
   invoice,
   onViewDetails,
   onPrint,
+  onPaymentSuccess,
 }) => {
   const { toast } = useToast();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] =
     useState<Invoice | null>(null);
+  const [isSendingSms, setIsSendingSms] = useState(false);
+
+  const handleSendInvoiceSms = useCallback(async () => {
+    if (!invoice.patient?.phone) {
+      toast({
+        title: "No Phone Number",
+        description: "This patient has no phone number on record.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSendingSms(true);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/send-sms`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast({ title: "SMS Sent", description: `Invoice link sent to ${invoice.patient.phone}.` });
+      } else {
+        toast({ title: "SMS Failed", description: data.error || "Could not send SMS.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "SMS Failed", description: "Network error. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSendingSms(false);
+    }
+  }, [invoice, toast]);
 
   const handleProcessPayment = useCallback((invoice: Invoice) => {
     setSelectedInvoiceForPayment(invoice);
@@ -50,8 +79,10 @@ export const InvoiceActions: React.FC<InvoiceActionsProps> = ({
       title: "Payment Successful",
       description: `Payment for Invoice #${selectedInvoiceForPayment?.id} has been processed successfully.`,
     });
-    window.location.reload();
-  }, [selectedInvoiceForPayment]);
+    if (onPaymentSuccess) {
+      onPaymentSuccess();
+    }
+  }, [selectedInvoiceForPayment, onPaymentSuccess]);
 
   const amountPaidFromTransactions = invoice.transactions
     ? parseFloat(
@@ -98,6 +129,20 @@ export const InvoiceActions: React.FC<InvoiceActionsProps> = ({
               <DropdownMenuSeparator />
             </>
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={handleSendInvoiceSms}
+            disabled={isSendingSms}
+            className="text-indigo-600 focus:text-indigo-600"
+          >
+            {isSendingSms ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            {isSendingSms ? "Sending..." : "Send Invoice SMS"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => {
               navigator.clipboard.writeText(

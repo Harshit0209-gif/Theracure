@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDay } from "date-fns";
 import { AppointmentStatus, CubicleStatus } from "@prisma/client";
 import { sendSMSNotification } from "@/config/smsConfig";
+import { validateAppointmentDate } from "@/lib/utils/appointmentDateValidation";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,10 +21,11 @@ export async function GET(req: NextRequest) {
       where.OR = [
         { patient: { patientName: { contains: search, mode: "insensitive" as const } } },
         { patient: { id: { contains: search, mode: "insensitive" as const } } },
+        { patientId: null }, // include orphaned appointments (patient deleted)
       ];
     }
 
-    const [appointments, totalCount] = await Promise.all([
+    const [rawAppointments, totalCount] = await Promise.all([
       prisma.appointment.findMany({
         where,
         skip,
@@ -39,6 +41,12 @@ export async function GET(req: NextRequest) {
       }),
       prisma.appointment.count({ where }),
     ]);
+
+    // Normalize deleted patients so frontend never receives null patient
+    const appointments = rawAppointments.map((appt) => ({
+      ...appt,
+      patient: appt.patient ?? { id: "", patientName: "Deleted Patient", phone: null, email: null },
+    }));
 
     const totalPages = Math.ceil(totalCount / limit);
 
@@ -98,6 +106,15 @@ export async function POST(req: NextRequest) {
     if (startTime >= endTime) {
       return NextResponse.json(
         { success: false, error: "End time must be after start time" },
+        { status: 400 }
+      );
+    }
+
+    // Block Sundays and holidays
+    const dateError = await validateAppointmentDate(startTime);
+    if (dateError) {
+      return NextResponse.json(
+        { success: false, error: dateError },
         { status: 400 }
       );
     }
@@ -227,6 +244,9 @@ export async function POST(req: NextRequest) {
           date: appointment.assignedDate,
           startTime: appointment.appointmentStartTime,
           endTime: appointment.appointmentEndTime,
+          cubicleInfo: appointment.cubicle
+            ? `${appointment.cubicle.name}${appointment.cubicle.location ? ` (${appointment.cubicle.location})` : ""}`
+            : undefined,
         });
       } catch {
         // SMS failure is non-fatal

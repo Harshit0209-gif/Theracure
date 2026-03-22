@@ -12,12 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertCircle,
-  CalendarIcon,
+  Calendar,
   CheckCircle,
+  Clock,
   User,
   XCircle,
 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
+import { DatePickerDialog } from "@/components/ui/date-picker-dialog";
 import { toast } from "@/components/ui/use-toast";
 import {
   Appointment,
@@ -31,7 +32,6 @@ import {
   formatTimeString,
   getDayName,
 } from "@/lib/utils/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 interface RescheduleAppointmentDialogProps {
   isOpen: boolean;
@@ -51,7 +51,7 @@ export function RescheduleAppointmentDialog({
   const [actionLoading, setActionLoading] = useState(false);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [availablePeriods, setAvailablePeriods] = useState<AvailablePeriod[]>(
-    []
+    [],
   );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
@@ -83,10 +83,10 @@ export function RescheduleAppointmentDialog({
 
       // Combine date and time to create full datetime
       const startDateTime = new Date(
-        `${rescheduleData.date}T${rescheduleData.appointmentStartTime}:00`
+        `${rescheduleData.date}T${rescheduleData.appointmentStartTime}:00`,
       );
       const endDateTime = new Date(
-        `${rescheduleData.date}T${rescheduleData.appointmentEndTime}:00`
+        `${rescheduleData.date}T${rescheduleData.appointmentEndTime}:00`,
       );
 
       const response = await fetch(
@@ -101,13 +101,13 @@ export function RescheduleAppointmentDialog({
             appointmentEndTime: endDateTime.toISOString(),
             reason: rescheduleData.reason,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.message || "Failed to reschedule appointment"
+          errorData.message || "Failed to reschedule appointment",
         );
       }
 
@@ -141,14 +141,14 @@ export function RescheduleAppointmentDialog({
       try {
         const appointmentDate = rescheduleData.date;
         const therapistResponse = await fetch(
-          `/api/therapists/${therapistId}/availability?date=${appointmentDate}`
+          `/api/therapists/${therapistId}/availability?date=${appointmentDate}`,
         );
         const therapistData = await therapistResponse.json();
 
         if (!therapistData?.success) {
           throw new Error(
             therapistData?.error ||
-              "Failed to fetch therapist schedule and availability"
+              "Failed to fetch therapist schedule and availability",
           );
         }
 
@@ -184,7 +184,7 @@ export function RescheduleAppointmentDialog({
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-blue-600" />
+            <Calendar className="h-5 w-5 text-indigo-600" />
             Reschedule Appointment
           </DialogTitle>
         </DialogHeader>
@@ -214,85 +214,76 @@ export function RescheduleAppointmentDialog({
         {/* Date + time pickers */}
         <div className="space-y-4">
           {/* Date picker */}
-          <div>
-            <Label>New Date</Label>
-            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-full justify-start text-left font-normal ${
-                    !rescheduleData.date ? "text-muted-foreground" : ""
-                  }`}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                  {rescheduleData.date
-                    ? formatDate(new Date(rescheduleData.date).toDateString())
-                    : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={
-                    rescheduleData.date
-                      ? new Date(rescheduleData.date)
-                      : undefined
-                  }
-                  onSelect={(date: Date | undefined) => {
-                    if (date) {
-                      setRescheduleData({
-                        ...rescheduleData,
-                        date: date.toISOString().split("T")[0],
-                      });
-                      setIsDatePickerOpen(false);
-                    }
-                  }}
-                  disabled={(date) =>
-                    date < new Date(new Date().setHours(0, 0, 0, 0))
-                  }
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="space-y-2">
+            <Label className="text-sm font-bold text-slate-700">Booking Date</Label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDatePickerOpen(true)}
+              className="w-full flex justify-between items-center bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 h-11 px-4 transition-all shadow-sm"
+            >
+              <span className={rescheduleData.date ? "text-slate-900 font-bold" : "text-slate-400 font-medium"}>
+                {rescheduleData.date
+                  ? new Date(rescheduleData.date).toLocaleDateString("en-IN", {
+                      day: "2-digit", month: "short", year: "numeric",
+                    })
+                  : "Select date..."}
+              </span>
+              <Calendar className="h-4 w-4 text-indigo-500 opacity-70" />
+            </Button>
           </div>
 
           {/* Time pickers */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Start time */}
-            <div>
-              <Label htmlFor="rescheduleStartTime">Start Time</Label>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="rescheduleStartTime" className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-indigo-500" />
+                Start Time
+              </Label>
               <Input
                 id="rescheduleStartTime"
                 type="time"
                 value={rescheduleData.appointmentStartTime}
-                onChange={(e) =>
-                  setRescheduleData({
-                    ...rescheduleData,
-                    appointmentStartTime: e.target.value,
-                  })
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setRescheduleData((prev) => ({
+                    ...prev,
+                    appointmentStartTime: val,
+                    appointmentEndTime: val >= prev.appointmentEndTime ? "" : prev.appointmentEndTime,
+                  }));
+                }}
                 disabled={!rescheduleData.date}
+                className="bg-white border-indigo-300 h-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
-            {/* End time */}
-            <div>
-              <Label htmlFor="rescheduleEndTime">End Time</Label>
+            <div className="space-y-2">
+              <Label htmlFor="rescheduleEndTime" className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-indigo-500" />
+                End Time
+              </Label>
               <Input
                 id="rescheduleEndTime"
                 type="time"
                 value={rescheduleData.appointmentEndTime}
                 onChange={(e) =>
-                  setRescheduleData({
-                    ...rescheduleData,
-                    appointmentEndTime: e.target.value,
-                  })
+                  setRescheduleData({ ...rescheduleData, appointmentEndTime: e.target.value })
                 }
-                disabled={!rescheduleData.date}
+                disabled={!rescheduleData.date || !rescheduleData.appointmentStartTime}
+                min={rescheduleData.appointmentStartTime || undefined}
+                className="bg-white border-indigo-300 h-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
         </div>
+
+        <DatePickerDialog
+          open={isDatePickerOpen}
+          onOpenChange={setIsDatePickerOpen}
+          value={rescheduleData.date}
+          onChange={(date) => setRescheduleData({ ...rescheduleData, date })}
+          title="Select Appointment Date"
+        />
 
         {/* Doctor availability */}
         {rescheduleData.date && (
@@ -310,7 +301,7 @@ export function RescheduleAppointmentDialog({
                     <span className="font-medium">
                       {getDayName(rescheduleData.date)} –{" "}
                       {new Date(rescheduleData.date).toLocaleDateString(
-                        "en-IN"
+                        "en-IN",
                       )}
                     </span>
                   </div>
@@ -377,7 +368,7 @@ export function RescheduleAppointmentDialog({
           rescheduleData.appointmentEndTime &&
           !validateTimeRange(
             rescheduleData.appointmentStartTime,
-            rescheduleData.appointmentEndTime
+            rescheduleData.appointmentEndTime,
           ) && (
             <p className="text-sm text-red-600">
               End time must be after start time
@@ -398,10 +389,10 @@ export function RescheduleAppointmentDialog({
               !rescheduleData.reason.trim() ||
               !validateTimeRange(
                 rescheduleData.appointmentStartTime,
-                rescheduleData.appointmentEndTime
+                rescheduleData.appointmentEndTime,
               )
             }
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-indigo-600 hover:bg-indigo-700"
           >
             {actionLoading ? (
               <div className="flex items-center">
@@ -410,7 +401,7 @@ export function RescheduleAppointmentDialog({
               </div>
             ) : (
               <>
-                <CalendarIcon className="h-4 w-4 mr-2" />
+                <Calendar className="h-4 w-4 mr-2" />
                 Confirm Reschedule
               </>
             )}

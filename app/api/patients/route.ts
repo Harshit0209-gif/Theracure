@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
-import {
-  createPatientSchema,
-  patientUpdateSchema,
-} from "@/lib/validations/patient";
+import { createPatientSchema } from "@/lib/validations/patient";
 import { getSession } from "@/lib/auth/session-provider";
 
 export async function GET(req: NextRequest) {
@@ -94,20 +91,25 @@ export async function POST(req: NextRequest) {
     const result = createPatientSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: result.error.format() },
+        { error: "Invalid input", details: result.error.issues },
         { status: 400 }
       );
     }
 
-    const existing = await prisma.patient.findFirst({
-      where: { email: body.email, phone: body.phone },
-    });
+    const emailToCheck = body.email && body.email.trim() !== "" ? body.email : null;
+    const phoneToCheck = body.phone && body.phone.trim() !== "" ? body.phone : null;
 
-    if (existing) {
-      return NextResponse.json(
-        { error: "Patient data already exists" },
-        { status: 409 }
-      );
+    if (emailToCheck && phoneToCheck) {
+      const existing = await prisma.patient.findFirst({
+        where: { email: emailToCheck, phone: phoneToCheck },
+      });
+
+      if (existing) {
+        return NextResponse.json(
+          { error: "Patient with this email and phone already exists" },
+          { status: 409 }
+        );
+      }
     }
 
     const { data } = result;
@@ -118,19 +120,20 @@ export async function POST(req: NextRequest) {
         email: data.email,
         phone: data.phone,
         address: data.address,
-        age: data.age,
+        age: data.age ?? 0,
         gender: data.gender,
         height: data.height,
         weight: data.weight,
         medicalHistory: data.medicalHistory,
-        createdBy: session?.user?.id || body.createdBy,
+        createdBy: session?.user?.id || body.createdBy || "system",
       },
     });
 
     return NextResponse.json(patient, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("Patient creation error:", error);
     return NextResponse.json(
-      { error: "Failed to create patient" },
+      { error: "Failed to create patient", detail: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

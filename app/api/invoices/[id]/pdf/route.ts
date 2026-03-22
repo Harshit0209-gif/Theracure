@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import generateInvoicePDF from "@/lib/utils/InvoicePDFGenerator";
-import { InvoicePayload, PaymentStatus } from "@/types/invoice";
+import {
+  InvoicePayload,
+  PaymentStatus,
+  InvoiceStatus as AppInvoiceStatus,
+  TransactionStatus as AppTransactionStatus,
+} from "@/types/invoice";
 
 export async function GET(
   request: NextRequest,
@@ -56,17 +61,52 @@ export async function GET(
         email: invoice.patient?.email || "",
         phone: invoice.patient?.phone || "",
         address: invoice.patient?.address || "",
+        age: invoice.patient?.age || 0,
+        gender: invoice.patient?.gender || "",
+        createdBy: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
       invoiceDetails: {
         id: invoice.id,
-        date: invoice.date,
-        status: invoice.status,
+        patientId: invoice.patientId || id,
+        patient: {
+          id: invoice.patient?.id || "N/A",
+          patientName: invoice.patient?.patientName || "Deleted Patient",
+          age: invoice.patient?.age || 0,
+          gender: invoice.patient?.gender || "",
+          createdBy: "",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        date: invoice.date instanceof Date ? invoice.date.toISOString() : invoice.date,
+        status: invoice.status as unknown as AppInvoiceStatus,
         subTotal: invoice.subTotal,
         totalAmount: invoice.totalAmount,
         amountPaid: totalPaid,
         offer: invoice.offer || 0,
-        invoiceItems: invoice.invoiceItems,
-        transactions: invoice.transactions,
+        createdAt: invoice.createdAt instanceof Date ? invoice.createdAt.toISOString() : String(invoice.createdAt),
+        updatedAt: invoice.updatedAt instanceof Date ? invoice.updatedAt.toISOString() : String(invoice.updatedAt),
+        createdBy: "",
+        invoiceItems: invoice.invoiceItems.map((item) => ({
+          invoiceId: item.invoiceId,
+          serviceId: item.serviceId,
+          serviceName: item.serviceName,
+          priceAtPurchase: item.priceAtPurchase,
+          quantity: item.quantity,
+          description: item.description || "",
+          category: item.category || "",
+        })),
+        transactions: invoice.transactions.map((t) => ({
+          id: t.id,
+          invoiceId: t.invoiceId,
+          amount: t.amount,
+          paymentMethod: t.paymentMethod,
+          transactionDate: t.transactionDate instanceof Date ? t.transactionDate.toISOString() : String(t.transactionDate),
+          status: t.status as unknown as AppTransactionStatus,
+          createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
+          updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt),
+        })),
       },
       paymentDetails: {
         subTotal: invoice.subTotal,
@@ -78,13 +118,14 @@ export async function GET(
         status: balance <= 0 ? PaymentStatus.PAID : PaymentStatus.PENDING,
       },
       selectedServices: [],
+      type: "invoice",
     };
 
     // Generate PDF
     const pdfBuffer = await generateInvoicePDF(invoicePayload);
 
     // Return PDF as response
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

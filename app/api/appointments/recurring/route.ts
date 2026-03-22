@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { AppointmentStatus, CubicleStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { validateAppointmentDate } from "@/lib/utils/appointmentDateValidation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,17 @@ export async function POST(request: NextRequest) {
     const validationResults = await Promise.all(
       appointments.map(async (appointment, index) => {
         try {
+          const dateError = await validateAppointmentDate(appointment.appointmentDate);
+          if (dateError) {
+            return {
+              index,
+              appointment,
+              isAvailable: false,
+              hasAvailableCubicle: false,
+              error: dateError,
+            };
+          }
+
           const isAvailable = await checkTherapistAvailability(
             appointment.therapistId,
             appointment.appointmentDate,
@@ -64,9 +76,9 @@ export async function POST(request: NextRequest) {
           error: "Some appointments have conflicts",
           conflicts: conflicts.map((conflict) => ({
             date: conflict.appointment.appointmentDate,
-            reason: !conflict.isAvailable
+            reason: conflict.error || (!conflict.isAvailable
               ? "Therapist not available"
-              : "No cubicles available - all rooms are occupied",
+              : "No cubicles available - all rooms are occupied"),
           })),
         },
         { status: 409 },

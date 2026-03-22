@@ -66,6 +66,48 @@ async function main() {
     },
   });
 
+  // Seed Indian national holidays for 2025 and 2026
+  const indianHolidays = [
+    // 2025 holidays
+    { date: new Date("2025-01-26"), name: "Republic Day" },
+    { date: new Date("2025-03-14"), name: "Holi" },
+    { date: new Date("2025-04-14"), name: "Dr. Ambedkar Jayanti" },
+    { date: new Date("2025-04-18"), name: "Good Friday" },
+    { date: new Date("2025-05-12"), name: "Buddha Purnima" },
+    { date: new Date("2025-08-15"), name: "Independence Day" },
+    { date: new Date("2025-10-02"), name: "Gandhi Jayanti" },
+    { date: new Date("2025-10-02"), name: "Dussehra" },
+    { date: new Date("2025-10-20"), name: "Diwali (Lakshmi Puja)" },
+    { date: new Date("2025-11-05"), name: "Guru Nanak Jayanti" },
+    { date: new Date("2025-12-25"), name: "Christmas Day" },
+    // 2026 holidays
+    { date: new Date("2026-01-26"), name: "Republic Day" },
+    { date: new Date("2026-03-03"), name: "Holi" },
+    { date: new Date("2026-03-20"), name: "Good Friday" },
+    { date: new Date("2026-04-14"), name: "Dr. Ambedkar Jayanti" },
+    { date: new Date("2026-05-31"), name: "Buddha Purnima" },
+    { date: new Date("2026-08-15"), name: "Independence Day" },
+    { date: new Date("2026-10-02"), name: "Gandhi Jayanti" },
+    { date: new Date("2026-11-14"), name: "Diwali (Lakshmi Puja)" },
+    { date: new Date("2026-11-25"), name: "Guru Nanak Jayanti" },
+    { date: new Date("2026-12-25"), name: "Christmas Day" },
+  ];
+
+  for (const holiday of indianHolidays) {
+    const existing = await prisma.holiday.findFirst({
+      where: { date: holiday.date, name: holiday.name },
+    });
+    if (!existing) {
+      await prisma.holiday.create({
+        data: {
+          date: holiday.date,
+          name: holiday.name,
+          isRecurring: false,
+        },
+      });
+    }
+  }
+
   console.log("🌱 Seed data inserted successfully!");
 }
 
