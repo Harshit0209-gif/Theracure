@@ -7,18 +7,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  AlertCircle,
-  Calendar,
-  CheckCircle,
-  Clock,
-  User,
-  XCircle,
-} from "lucide-react";
-import { DatePickerDialog } from "@/components/ui/date-picker-dialog";
+import { AlertCircle, Calendar, CheckCircle, User, XCircle } from "lucide-react";
+import { DatePickerButton } from "@/components/ui/date-picker-button";
+import { TimeInput } from "@/components/ui/time-input";
 import { toast } from "@/components/ui/use-toast";
 import {
   Appointment,
@@ -53,7 +46,7 @@ export function RescheduleAppointmentDialog({
   const [availablePeriods, setAvailablePeriods] = useState<AvailablePeriod[]>(
     [],
   );
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
 
   const validateTimeRange = (startTime: string, endTime: string) => {
     if (!startTime || !endTime) return false;
@@ -135,8 +128,6 @@ export function RescheduleAppointmentDialog({
   useEffect(() => {
     const checkTherapistAvailability = async (therapistId: string) => {
       setIsCheckingAvailability(true);
-      // Ensure date picker is closed when checking availability
-      setIsDatePickerOpen(false);
 
       try {
         const appointmentDate = rescheduleData.date;
@@ -175,7 +166,6 @@ export function RescheduleAppointmentDialog({
 
   const resetAndClose = () => {
     setRescheduleData(DefaultRescheduleAppointmentData);
-    setIsDatePickerOpen(false);
     onClose();
   };
 
@@ -213,77 +203,37 @@ export function RescheduleAppointmentDialog({
 
         {/* Date + time pickers */}
         <div className="space-y-4">
-          {/* Date picker */}
-          <div className="space-y-2">
-            <Label className="text-sm font-bold text-slate-700">Booking Date</Label>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsDatePickerOpen(true)}
-              className="w-full flex justify-between items-center bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 h-11 px-4 transition-all shadow-sm"
-            >
-              <span className={rescheduleData.date ? "text-slate-900 font-bold" : "text-slate-400 font-medium"}>
-                {rescheduleData.date
-                  ? new Date(rescheduleData.date).toLocaleDateString("en-IN", {
-                      day: "2-digit", month: "short", year: "numeric",
-                    })
-                  : "Select date..."}
-              </span>
-              <Calendar className="h-4 w-4 text-indigo-500 opacity-70" />
-            </Button>
-          </div>
+          <DatePickerButton
+            label="Booking Date"
+            value={rescheduleData.date}
+            onChange={(date) => setRescheduleData({ ...rescheduleData, date })}
+            title="Select Appointment Date"
+          />
 
-          {/* Time pickers */}
           <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="rescheduleStartTime" className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-indigo-500" />
-                Start Time
-              </Label>
-              <Input
-                id="rescheduleStartTime"
-                type="time"
-                value={rescheduleData.appointmentStartTime}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setRescheduleData((prev) => ({
-                    ...prev,
-                    appointmentStartTime: val,
-                    appointmentEndTime: val >= prev.appointmentEndTime ? "" : prev.appointmentEndTime,
-                  }));
-                }}
-                disabled={!rescheduleData.date}
-                className="bg-white border-indigo-300 h-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="rescheduleEndTime" className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-indigo-500" />
-                End Time
-              </Label>
-              <Input
-                id="rescheduleEndTime"
-                type="time"
-                value={rescheduleData.appointmentEndTime}
-                onChange={(e) =>
-                  setRescheduleData({ ...rescheduleData, appointmentEndTime: e.target.value })
-                }
-                disabled={!rescheduleData.date || !rescheduleData.appointmentStartTime}
-                min={rescheduleData.appointmentStartTime || undefined}
-                className="bg-white border-indigo-300 h-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
+            <TimeInput
+              id="rescheduleStartTime"
+              label="Start Time"
+              value={rescheduleData.appointmentStartTime}
+              onChange={(val) =>
+                setRescheduleData((prev) => ({
+                  ...prev,
+                  appointmentStartTime: val,
+                  appointmentEndTime: val >= prev.appointmentEndTime ? "" : prev.appointmentEndTime,
+                }))
+              }
+              disabled={!rescheduleData.date}
+            />
+            <TimeInput
+              id="rescheduleEndTime"
+              label="End Time"
+              value={rescheduleData.appointmentEndTime}
+              onChange={(val) => setRescheduleData({ ...rescheduleData, appointmentEndTime: val })}
+              disabled={!rescheduleData.date || !rescheduleData.appointmentStartTime}
+              min={rescheduleData.appointmentStartTime || undefined}
+            />
           </div>
         </div>
-
-        <DatePickerDialog
-          open={isDatePickerOpen}
-          onOpenChange={setIsDatePickerOpen}
-          value={rescheduleData.date}
-          onChange={(date) => setRescheduleData({ ...rescheduleData, date })}
-          title="Select Appointment Date"
-        />
 
         {/* Doctor availability */}
         {rescheduleData.date && (

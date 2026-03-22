@@ -66,11 +66,12 @@ import ReactSelect from "react-select";
 import { getServices } from "@/lib/api/services";
 import { getDayName } from "@/lib/utils/utils";
 import {
-  DatePickerDialog,
   getDaysInMonthData,
   formatDateToString,
   isPastDate,
 } from "@/components/ui/date-picker-dialog";
+import { DatePickerButton } from "@/components/ui/date-picker-button";
+import { TimeInput } from "@/components/ui/time-input";
 
 interface ScheduleNewDialogProps {
   open: boolean;
@@ -104,7 +105,6 @@ export function ScheduleNewDialog({
   >([]);
   const [customDates, setCustomDates] = useState<string[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isStartDateCalendarOpen, setIsStartDateCalendarOpen] = useState(false);
   const [isEndDateCalendarOpen, setIsEndDateCalendarOpen] = useState(false);
 
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
@@ -1005,37 +1005,13 @@ export function ScheduleNewDialog({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                      {watchedValues.isRecurring
-                        ? "Start Date"
-                        : "Booking Date"}
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsStartDateCalendarOpen(true)}
-                      className="w-full flex justify-between items-center bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 h-11 px-4 transition-all shadow-sm"
-                    >
-                      <span
-                        className={
-                          watchedValues.appointmentDate
-                            ? "text-slate-900 font-bold"
-                            : "text-slate-400 font-medium"
-                        }
-                      >
-                        {watchedValues.appointmentDate
-                          ? new Date(
-                              watchedValues.appointmentDate,
-                            ).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "Select date..."}
-                      </span>
-                      <Calendar className="h-4 w-4 text-indigo-500 opacity-70" />
-                    </Button>
+                  <div>
+                    <DatePickerButton
+                      label={watchedValues.isRecurring ? "Start Date" : "Booking Date"}
+                      value={watchedValues.appointmentDate}
+                      onChange={(date) => form.setValue("appointmentDate", date)}
+                      title={watchedValues.isRecurring ? "Select First Appointment Date" : "Select Appointment Date"}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -1073,49 +1049,25 @@ export function ScheduleNewDialog({
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="startTime"
-                      className="text-sm font-bold text-slate-700 flex items-center gap-2"
-                    >
-                      <Clock className="h-4 w-4 text-indigo-500" />
-                      Start Time
-                    </Label>
-                    <Input
-                      id="startTime"
-                      type="time"
-                      value={watchedValues.startTime || ""}
-                      onChange={(e) => {
-                        form.setValue("startTime", e.target.value);
-                        // Clear end time if it's before the new start time
-                        if (
-                          watchedValues.endTime &&
-                          e.target.value >= watchedValues.endTime
-                        ) {
-                          form.setValue("endTime", "");
-                        }
-                      }}
-                      className="bg-white border-indigo-300 h-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="endTime"
-                      className="text-sm font-bold text-slate-700 flex items-center gap-2"
-                    >
-                      <Clock className="h-4 w-4 text-indigo-500" />
-                      End Time
-                    </Label>
-                    <Input
-                      id="endTime"
-                      type="time"
-                      value={watchedValues.endTime || ""}
-                      onChange={(e) => form.setValue("endTime", e.target.value)}
-                      disabled={!watchedValues.startTime}
-                      min={watchedValues.startTime || undefined}
-                      className="bg-white border-indigo-300 h-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                  </div>
+                  <TimeInput
+                    id="startTime"
+                    label="Start Time"
+                    value={watchedValues.startTime || ""}
+                    onChange={(val) => {
+                      form.setValue("startTime", val);
+                      if (watchedValues.endTime && val >= watchedValues.endTime) {
+                        form.setValue("endTime", "");
+                      }
+                    }}
+                  />
+                  <TimeInput
+                    id="endTime"
+                    label="End Time"
+                    value={watchedValues.endTime || ""}
+                    onChange={(val) => form.setValue("endTime", val)}
+                    disabled={!watchedValues.startTime}
+                    min={watchedValues.startTime || undefined}
+                  />
                 </div>
               </div>
 
@@ -1721,15 +1673,6 @@ export function ScheduleNewDialog({
           </div>
         </DialogFooter>
       </DialogContent>
-
-      {/* Calendar Dialog for Single Start Date Selection */}
-      <DatePickerDialog
-        open={isStartDateCalendarOpen}
-        onOpenChange={setIsStartDateCalendarOpen}
-        value={watchedValues.appointmentDate}
-        onChange={(date) => form.setValue("appointmentDate", date)}
-        title={watchedValues.isRecurring ? "Select First Appointment Date" : "Select Appointment Date"}
-      />
 
       {/* Calendar Dialog for Custom Date Selection */}
       <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
