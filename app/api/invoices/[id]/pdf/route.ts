@@ -129,7 +129,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="invoice-${invoice.patient?.patientName || "deleted"}-${id}.pdf"`,
+        "Content-Disposition": `inline; filename="invoice-${invoice.patient?.patientName || "deleted"}-${id}.pdf"`,
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });

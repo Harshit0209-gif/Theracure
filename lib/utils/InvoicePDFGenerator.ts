@@ -237,9 +237,8 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
   const displayTotalAmount = isNewInvoice
     ? paymentDetails.totalAmount
     : invoiceDetails.totalAmount;
-  const displayOffer = isNewInvoice
-    ? paymentDetails.offer
-    : invoiceDetails.offer;
+  const displayOffer =
+    (isNewInvoice ? paymentDetails.offer : invoiceDetails.offer) ?? 0;
   const displayDiscount = paymentDetails.discount || 0;
   const displayAmountPaid = isNewInvoice
     ? paymentDetails.amountPaid
@@ -258,7 +257,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
         /* A4 Paper with exact dimensions - consistent with prescription */
         @page {
           size: A4 portrait;
-          margin: 6mm 8mm 10mm 8mm;
+          margin: 4mm 6mm 4mm 6mm;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
@@ -292,10 +291,10 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
         .container {
           width: 100%;
           max-width: 100%;
-          padding: 12px 10px;
+          padding: 10px 12px;
         }
 
-        /* Header - Consistent with Prescription */
+        /* Header - Large and Clear */
         .header {
           text-align: center;
           margin-bottom: 15px;
@@ -308,18 +307,18 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
 
         .logo-container {
           width: 100%;
-          height: 100px;
-          margin: 0 0 12px 0;
+          height: 180px;
+          margin: 0 0 1px 0;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .logo-image {
-          width: 450px;
-          max-width: 450px;
+          width: 660px;
+          max-width: 660px;
           height: auto;
-          max-height: 100px;
+          max-height: 180px;
           object-fit: contain;
           display: block;
         }
@@ -334,67 +333,58 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           justify-content: center;
           color: white;
           font-weight: bold;
-          font-size: 18px;
+          font-size: 20px;
           letter-spacing: 2px;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
 
-        .company-name {
-          font-size: 22pt;
-          font-weight: 900;
-          color: #ed1c24;
-          margin-bottom: 6px;
-          letter-spacing: -0.5px;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-
         .company-address {
-          font-size: 8.5pt;
+          font-size: 10.5pt;
           color: #231f20;
           margin-bottom: 4px;
           line-height: 1.4;
+          font-weight: 600;
         }
 
         .company-contact {
-          font-size: 8.5pt;
+          font-size: 11pt;
           color: #0054a6;
-          font-weight: 600;
+          font-weight: 700;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         
-        /* Invoice Info - Fixed Layout */
+        /* Invoice Info - Clear and Prominent */
         .invoice-info {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 12px;
-          padding: 10px 12px;
+          padding: 10px 15px;
           background: #f8f9fa;
-          border: 1px solid #ddd;
-          border-radius: 4px;
+          border: 1.5px solid #ddd;
+          border-radius: 6px;
           page-break-inside: avoid;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
 
         .invoice-number {
-          font-size: 11pt;
-          font-weight: 700;
+          font-size: 13pt;
+          font-weight: 800;
           color: #1a237e;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
 
         .invoice-date {
-          font-size: 9pt;
-          color: #555;
-          line-height: 1.5;
+          font-size: 10pt;
+          color: #444;
+          font-weight: 600;
         }
 
-        /* Patient Info and Payment Details - Consistent Grid */
+        /* Details Section */
         .details-section {
           display: flex;
           gap: 15px;
@@ -408,18 +398,18 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           background: #f8f9fa;
           border: 1px solid #ddd;
           border-radius: 4px;
-          padding: 12px;
+          padding: 10px 12px;
           page-break-inside: avoid;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
 
         .detail-title {
-          font-size: 9.5pt;
-          font-weight: 700;
+          font-size: 10.5pt;
+          font-weight: 800;
           color: #0054a6;
-          margin-bottom: 8px;
-          border-bottom: 1px solid #d0d0d0;
+          margin-bottom: 6px;
+          border-bottom: 1.5px solid #d0d0d0;
           padding-bottom: 4px;
           text-transform: uppercase;
           -webkit-print-color-adjust: exact;
@@ -429,36 +419,36 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
         .detail-item {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 5px;
-          font-size: 8.5pt;
+          margin-bottom: 4px;
+          font-size: 9.5pt;
           line-height: 1.4;
         }
 
         .detail-label {
           color: #555;
-          font-weight: 600;
+          font-weight: 700;
         }
 
         .detail-value {
-          font-weight: 500;
+          font-weight: 600;
           color: #000;
           text-align: right;
         }
         
-        /* Services Table - Standardized */
+        /* Services Table */
         .services-section {
           margin-bottom: 15px;
           page-break-inside: avoid;
         }
 
         .section-title {
-          font-size: 10pt;
-          font-weight: 700;
+          font-size: 10.5pt;
+          font-weight: 800;
           color: #0054a6;
           margin-bottom: 8px;
           text-transform: uppercase;
-          border-bottom: 1px solid #d0d0d0;
-          padding-bottom: 3px;
+          border-bottom: 1.5px solid #d0d0d0;
+          padding-bottom: 4px;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
@@ -467,7 +457,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           width: 100%;
           border-collapse: collapse;
           border: 1px solid #ddd;
-          border-radius: 4px;
+          border-radius: 6px;
           overflow: hidden;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
@@ -475,8 +465,8 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
 
         .table-header {
           background: #f3f4f6;
-          font-weight: 700;
-          font-size: 8.5pt;
+          font-weight: 800;
+          font-size: 9.5pt;
           color: #374151;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
@@ -485,59 +475,32 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
         .table-header th {
           padding: 8px 10px;
           text-align: left;
-          border-bottom: 2px solid #d0d0d0;
-          vertical-align: middle;
-        }
-
-        .table-header th:nth-child(2),
-        .table-header th:nth-child(3),
-        .table-header th:nth-child(4) {
-          text-align: center;
-        }
-
-        .table-row {
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .table-row:nth-child(even) {
-          background: #f9fafb;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          border-bottom: 2.5px solid #d0d0d0;
         }
 
         .table-row td {
           padding: 8px 10px;
-          font-size: 9pt;
-          vertical-align: middle;
+          font-size: 10pt;
           line-height: 1.4;
+          border-bottom: 1px solid #e5e7eb;
         }
 
         .service-name {
-          font-weight: 600;
+          font-weight: 700;
           color: #000;
-          margin-bottom: 3px;
-          font-size: 9pt;
+          font-size: 10.5pt;
+          margin-bottom: 2px;
         }
 
         .service-description {
-          font-size: 8pt;
+          font-size: 9pt;
           color: #555;
-          line-height: 1.3;
-        }
-
-        .text-center {
-          text-align: center;
-        }
-
-        .text-right {
-          text-align: right;
         }
         
-        /* Totals Section - Fixed Layout */
+        /* Totals Section */
         .totals-section {
           margin-left: auto;
           width: 320px;
-          max-width: 320px;
           margin-bottom: 15px;
           page-break-inside: avoid;
         }
@@ -546,178 +509,72 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           width: 100%;
           border-collapse: collapse;
           border: 1px solid #ddd;
-          border-radius: 4px;
-          overflow: hidden;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          border-radius: 6px;
         }
 
         .totals-table td {
-          padding: 8px 12px;
-          font-size: 9pt;
+          padding: 7px 12px;
+          font-size: 10pt;
           border-bottom: 1px solid #e5e7eb;
           line-height: 1.4;
         }
 
-        .totals-label {
-          color: #555;
-          font-weight: 600;
-        }
-
-        .totals-value {
-          font-weight: 700;
-          text-align: right;
-          color: #000;
-        }
-
         .total-final {
           background: #f3f4f6;
-          font-weight: 700;
-          font-size: 10pt;
-          border-top: 2px solid #d0d0d0;
-          border-bottom: 2px solid #d0d0d0;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          font-weight: 800;
+          font-size: 11.5pt;
+          border-top: 2.5px solid #d0d0d0;
         }
 
-        .paid-amount {
-          color: #059669;
-          font-weight: 700;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-
-        .due-amount {
-          color: #dc2626;
-          font-weight: 700;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
+        .paid-amount { color: #059669; font-weight: 800; }
+        .due-amount { color: #dc2626; font-weight: 800; }
         
-        /* Notes Section - Standardized */
-        .notes-section {
-          margin-bottom: 15px;
-          page-break-inside: avoid;
-        }
-
-        .notes-content {
-          background: #fef3c7;
-          border: 1px solid #f59e0b;
-          border-radius: 4px;
-          padding: 10px 12px;
-          font-size: 8.5pt;
-          color: #92400e;
-          line-height: 1.4;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-
-        /* Footer - Consistent with Prescription Theme */
+        /* Footer - Information and Taglines */
         .footer {
           text-align: center;
           background: #f8f9fa;
           padding: 12px 15px;
-          border-radius: 4px;
-          border-top: 3px solid #0054a6;
-          margin-top: 20px;
+          border-radius: 6px;
+          border-top: 4px solid #0054a6;
+          margin-top: 15px;
           page-break-inside: avoid;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
 
         .footer-title {
-          font-size: 12pt;
-          font-weight: 700;
+          font-size: 13pt;
+          font-weight: 800;
           color: #0054a6;
           margin-bottom: 4px;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
         }
 
-        .footer-subtitle {
-          font-size: 9pt;
-          color: #555;
-          margin-bottom: 6px;
-          font-weight: 500;
+        .footer-tagline {
+          font-size: 10.5pt;
+          color: #374151;
+          margin-bottom: 8px;
+          font-weight: 600;
+          font-style: italic;
         }
 
         .footer-info {
-          font-size: 7.5pt;
+          font-size: 9pt;
           color: #666;
-          line-height: 1.4;
+          line-height: 1.5;
         }
 
-        /* Print-Specific Media Query for Exact Consistency */
         @media print {
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          body {
-            width: 210mm;
-            height: 297mm;
-            margin: 0;
-            padding: 0;
-          }
-
-          .header,
-          .invoice-info,
-          .details-section,
-          .detail-card,
-          .services-section,
-          .totals-section,
-          .notes-section,
-          .footer {
-            page-break-inside: avoid;
-          }
-
-          /* Ensure borders and backgrounds print */
-          .header {
-            border-bottom: 6px solid #8fcbe5 !important;
-          }
-
-          .invoice-info,
-          .detail-card {
-            background: #f8f9fa !important;
-            border: 1px solid #ddd !important;
-          }
-
-          .table-row:nth-child(even) {
-            background: #f9fafb !important;
-          }
-
-          .total-final {
-            background: #f3f4f6 !important;
-          }
-
-          .footer {
-            border-top: 3px solid #0054a6 !important;
-            background: #f8f9fa !important;
-          }
-        }
-
-        /* Screen-only styles for preview */
-        @media screen {
-          body {
-            max-width: 210mm;
-            margin: 0 auto;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-          }
+          body { width: 210mm; height: 297mm; }
+          .container { page-break-after: avoid; }
         }
       </style>
     </head>
     <body>
       <div class="container">
-        
         <!-- Header -->
         <div class="header">
           <div class="logo-container">
-            ${
-              logoBase64
-                ? `<img class="logo-image" src="${logoBase64}" alt="Thera-Cure Logo" />`
-                : `<div class="logo-fallback">TC</div>`
-            }
+            ${logoBase64 ? `<img class="logo-image" src="${logoBase64}" />` : `<div class="logo-fallback">TC</div>`}
           </div>
           <div class="company-address">
             361/A, Basudevpur Road, Ground Floor, Nilanjana Apartment<br>
@@ -730,110 +587,27 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
 
         <!-- Invoice Info -->
         <div class="invoice-info">
-          <div>
-            <div class="invoice-number">Invoice No: ${invoiceDetails.id}</div>
-          </div>
+          <div class="invoice-number">Invoice No: ${invoiceDetails.id}</div>
           <div class="text-right">
-            <div class="invoice-date">Date: ${new Date(
-              invoiceDetails.date,
-            ).toLocaleDateString("en-IN")}</div>
+            <div class="invoice-date">Date: ${new Date(invoiceDetails.date).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</div>
             <div class="invoice-date">Status: ${invoiceDetails.status}</div>
           </div>
         </div>
 
         <!-- patientInfo and Payment Details -->
         <div class="details-section">
-          <!-- Bill To -->
           <div class="detail-card">
             <div class="detail-title">BILL TO:</div>
-            ${
-              safeValue(patientInfo.patientName)
-                ? `<div class="detail-item">
-              <span class="detail-label">Patient Name:</span>
-              <span class="detail-value">${safeValue(patientInfo.patientName)}</span>
-            </div>`
-                : ""
-            }
-            ${
-              safeValue(patientInfo.id)
-                ? `<div class="detail-item">
-              <span class="detail-label">Patient ID:</span>
-              <span class="detail-value">${safeValue(patientInfo.id)}</span>
-            </div>`
-                : ""
-            }
-            ${
-              safeValue(patientInfo.phone)
-                ? `<div class="detail-item">
-              <span class="detail-label">Phone:</span>
-              <span class="detail-value">${safeValue(patientInfo.phone)}</span>
-            </div>`
-                : ""
-            }
-            ${
-              safeValue(patientInfo.email)
-                ? `<div class="detail-item">
-              <span class="detail-label">Email:</span>
-              <span class="detail-value">${safeValue(patientInfo.email)}</span>
-            </div>`
-                : ""
-            }
-            ${
-              safeValue(patientInfo.address)
-                ? `<div class="detail-item">
-              <span class="detail-label">Address:</span>
-              <span class="detail-value">${safeValue(patientInfo.address)}</span>
-            </div>`
-                : ""
-            }
+            ${safeValue(patientInfo.patientName) ? `<div class="detail-item"><span class="detail-label">Name:</span><span class="detail-value">${safeValue(patientInfo.patientName)}</span></div>` : ""}
+            ${safeValue(patientInfo.id) ? `<div class="detail-item"><span class="detail-label">ID:</span><span class="detail-value">${safeValue(patientInfo.id)}</span></div>` : ""}
+            ${safeValue(patientInfo.phone) ? `<div class="detail-item"><span class="detail-label">Phone:</span><span class="detail-value">${safeValue(patientInfo.phone)}</span></div>` : ""}
+            ${safeValue(patientInfo.address) ? `<div class="detail-item"><span class="detail-label">Address:</span><span class="detail-value">${safeValue(patientInfo.address)}</span></div>` : ""}
           </div>
-
-          <!-- Payment Details -->
           <div class="detail-card">
-            <div class="detail-title">PAYMENT DETAILS:</div>
-            ${
-              latestPaymentDate
-                ? `<div class="detail-item">
-                  <span class="detail-label">Last Payment Date:</span>
-                  <span class="detail-value">${new Date(
-                    latestPaymentDate,
-                  ).toLocaleDateString("en-IN")}</span>
-                </div>`
-                : ""
-            }
-            ${
-              safeValue(paymentMethods) && paymentMethods !== "N/A"
-                ? `<div class="detail-item">
-              <span class="detail-label">Payment Method:</span>
-              <span class="detail-value">${safeValue(paymentMethods)}</span>
-            </div>`
-                : ""
-            }
-            ${
-              safeValue(paymentDetails.status)
-                ? `<div class="detail-item">
-              <span class="detail-label">Payment Status:</span>
-              <span class="detail-value">${safeValue(paymentDetails.status)}</span>
-            </div>`
-                : ""
-            }
-            ${
-              displayOffer && displayOffer > 0
-                ? `<div class="detail-item">
-                  <span class="detail-label">Offer Applied:</span>
-                  <span class="detail-value">${displayOffer}%</span>
-                </div>`
-                : ""
-            }
-            ${
-              invoiceDetails.transactions &&
-              invoiceDetails.transactions.length > 0
-                ? `<div class="detail-item">
-                  <span class="detail-label">Total Transactions:</span>
-                  <span class="detail-value">${invoiceDetails.transactions.length}</span>
-                </div>`
-                : ""
-            }
+            <div class="detail-title">PAYMENT:</div>
+            ${safeValue(paymentMethods) && paymentMethods !== "N/A" ? `<div class="detail-item"><span class="detail-label">Method:</span><span class="detail-value">${safeValue(paymentMethods)}</span></div>` : ""}
+            ${safeValue(paymentDetails.status) ? `<div class="detail-item"><span class="detail-label">Status:</span><span class="detail-value">${safeValue(paymentDetails.status)}</span></div>` : ""}
+            ${displayOffer > 0 ? `<div class="detail-item"><span class="detail-label">Offer:</span><span class="detail-value">${displayOffer}%</span></div>` : ""}
           </div>
         </div>
 
@@ -843,34 +617,21 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           <table class="services-table">
             <thead class="table-header">
               <tr>
-                <th style="width: 48%;">Service Description</th>
-                <th style="width: 15%;">Qty</th>
-                <th style="width: 18%;">Rate (₹)</th>
-                <th style="width: 19%;">Amount (₹)</th>
+                <th style="width: 50%;">Description</th>
+                <th style="width: 10%; text-align: center;">Qty</th>
+                <th style="width: 20%; text-align: center;">Rate (₹)</th>
+                <th style="width: 20%; text-align: center;">Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
               ${items
                 .map(
-                  (item: any) => `
+                  (item) => `
                 <tr class="table-row">
-                  <td>
-                    <div class="service-name">${item.name}</div>
-                    <div class="service-description">${
-                      item.description || ""
-                    }</div>
-                  </td>
-                  <td class="text-center">${item.quantity}</td>
-                  <td class="text-center">${item.price.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}</td>
-                  <td class="text-center">${(
-                    item.price * item.quantity
-                  ).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}</td>
+                  <td><div class="service-name">${item.name}</div><div class="service-description">${item.description || ""}</div></td>
+                  <td style="text-align: center;">${item.quantity}</td>
+                  <td style="text-align: center;">${item.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                  <td style="text-align: center;">${(item.price * item.quantity).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                 </tr>
               `,
                 )
@@ -879,19 +640,21 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           </table>
         </div>
 
-        <!-- Transaction History -->
+        <!-- Transaction History (Only if brief) -->
         ${
-          invoiceDetails.transactions && invoiceDetails.transactions.length > 0
+          invoiceDetails.transactions &&
+          invoiceDetails.transactions.filter((t: any) => t.status === "SUCCESS")
+            .length > 0
             ? `
         <div class="services-section">
           <div class="section-title">PAYMENT HISTORY:</div>
           <table class="services-table">
             <thead class="table-header">
               <tr>
-                <th style="width: 8%;">Sl. No</th>
-                <th style="width: 42%;">Date & Time</th>
-                <th style="width: 25%;">Payment Method</th>
-                <th style="width: 25%;">Amount (₹)</th>
+                <th style="width: 8%; text-align: center;">Sl. No</th>
+                <th style="width: 35%;">Date &amp; Time</th>
+                <th style="width: 30%;">Payment Method</th>
+                <th style="width: 27%; text-align: right; padding-right: 12px;">Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
@@ -903,6 +666,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
+                    timeZone: "Asia/Kolkata",
                   });
                   const timeStr = d.toLocaleTimeString("en-IN", {
                     hour: "2-digit",
@@ -912,83 +676,40 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
                   });
                   return `
                 <tr class="table-row">
-                  <td class="text-center">${i + 1}</td>
-                  <td class="text-center">${dateStr}, ${timeStr}</td>
-                  <td class="text-center">${t.paymentMethod || "—"}</td>
-                  <td class="text-right" style="padding-right:12px;">₹${parseFloat(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td style="text-align: center;">${i + 1}</td>
+                  <td>${dateStr}, ${timeStr}</td>
+                  <td style="text-transform: capitalize;">${t.paymentMethod || "N/A"}</td>
+                  <td style="text-align: right; padding-right: 12px; font-weight: 700;">₹${parseFloat(t.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                 </tr>
               `;
                 })
                 .join("")}
             </tbody>
           </table>
-        </div>
-        `
+        </div>`
             : ""
         }
 
         <!-- Totals Section -->
         <div class="totals-section">
           <table class="totals-table">
-            <tr>
-              <td class="totals-label">Subtotal:</td>
-              <td class="totals-value">₹${displaySubTotal.toLocaleString(
-                "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-              )}</td>
-            </tr>
-            ${
-              displayOffer && displayOffer > 0
-                ? `
-            <tr>
-              <td class="totals-label">Discount (${displayOffer}%):</td>
-              <td class="totals-value" style="color: #059669;">- ₹${displayDiscount.toLocaleString(
-                "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-              )}</td>
-            </tr>
-            `
-                : ""
-            }
-            <tr class="total-final">
-              <td class="totals-label">Total Amount:</td>
-              <td class="totals-value">₹${displayTotalAmount.toLocaleString(
-                "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-              )}</td>
-            </tr>
-            <tr>
-              <td class="totals-label">Amount Paid:</td>
-              <td class="totals-value paid-amount">₹${displayAmountPaid.toLocaleString(
-                "en-IN",
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-              )}</td>
-            </tr>
-            ${displayBalance > 0 ? `
-            <tr>
-              <td class="totals-label">Balance Due:</td>
-              <td class="totals-value due-amount">
-                ₹${displayBalance.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </td>
-            </tr>
-            ` : ""}
+            <tr><td>Subtotal:</td><td style="text-align: right;">₹${displaySubTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
+            ${displayOffer > 0 ? `<tr><td>Discount (${displayOffer}%):</td><td style="text-align: right; color: #059669;">- ₹${displayDiscount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>` : ""}
+            <tr class="total-final"><td><b>Total Amount:</b></td><td style="text-align: right;"><b>₹${displayTotalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</b></td></tr>
+            <tr><td>Amount Paid:</td><td style="text-align: right;" class="paid-amount">₹${displayAmountPaid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
+            ${displayBalance > 0 ? `<tr><td><b>Balance Due:</b></td><td style="text-align: right;" class="due-amount"><b>₹${displayBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</b></td></tr>` : ""}
           </table>
         </div>
 
-      
         <!-- Footer -->
         <div class="footer">
           <div class="footer-title">Thank you for choosing Thera-Cure!</div>
-          <div class="footer-subtitle">Your health and recovery are our priority.</div>
+          <div class="footer-tagline">Your health and recovery are our priority.</div>
           <div class="footer-info">
             For any queries regarding this invoice, please contact us at the above details.<br>
-            Generated on: ${new Date().toLocaleString("en-IN")}
+            Generated on: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
           </div>
         </div>
-
       </div>
     </body>
     </html>

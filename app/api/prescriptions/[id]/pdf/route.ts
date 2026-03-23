@@ -4,7 +4,7 @@ import generateAssessmentPDF from "@/lib/utils/PrescriptionPDFGenerator";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -53,19 +53,22 @@ export async function GET(
     if (!prescription) {
       return NextResponse.json(
         { success: false, error: "Prescription not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (!prescription.session?.sessionData) {
       return NextResponse.json(
-        { success: false, error: "No assessment data found for this prescription" },
-        { status: 404 }
+        {
+          success: false,
+          error: "No assessment data found for this prescription",
+        },
+        { status: 404 },
       );
     }
 
     // Parse assessment data
-    const assessmentData = JSON.parse(prescription.session.sessionData);
+    const assessmentData = JSON.parse(String(prescription.session.sessionData));
 
     // Generate PDF
     const pdfBuffer = await generateAssessmentPDF({
@@ -84,11 +87,11 @@ export async function GET(
     });
 
     // Return PDF as response
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="assessment-${prescription.patient?.patientName || "deleted"}-${id}.pdf"`,
+        "Content-Disposition": `inline; filename="assessment-${prescription.patient?.patientName || "deleted"}-${id}.pdf"`,
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });
@@ -99,7 +102,7 @@ export async function GET(
         success: false,
         error: "Failed to generate PDF",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

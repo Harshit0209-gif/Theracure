@@ -31,6 +31,7 @@ const RETRYABLE_ERRORS = [
   "connect ETIMEDOUT",
   "connect ECONNREFUSED",
   "socket hang up",
+  "Operation has timed out",
   "P1001", // Prisma: Can't reach database server
   "P1008", // Prisma: Operation timed out
   "P1017", // Prisma: Server closed the connection

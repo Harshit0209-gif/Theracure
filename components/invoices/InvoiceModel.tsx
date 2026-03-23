@@ -32,17 +32,20 @@ import { isPrintable } from "@/lib/utils/invoiceUtils";
 import { toast } from "@/components/ui/use-toast";
 import {
   InvoicePayload,
+  InvoiceStatus,
   invoiceStatusLabelMap,
   invoiceStatusStyles,
   PaymentStatus,
 } from "@/types/invoice";
-import React from "react";
+import React, { useState } from "react";
+import { PaymentDialog } from "./PaymentDialog";
 
 interface InvoiceDetailsModalProps {
   printPayload: InvoicePayload | null;
   isDetailsModalOpen: boolean;
   setIsDetailsModalOpen: (open: boolean) => void;
   handlePrintInvoice: () => void;
+  onPaymentSuccess?: () => void;
 }
 
 export const InvoiceDetailsModal = ({
@@ -50,7 +53,10 @@ export const InvoiceDetailsModal = ({
   isDetailsModalOpen,
   setIsDetailsModalOpen,
   handlePrintInvoice,
+  onPaymentSuccess,
 }: InvoiceDetailsModalProps) => {
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+
   if (!printPayload) return;
   const isValid = isPrintable(printPayload);
   if (!isValid) {
@@ -64,6 +70,7 @@ export const InvoiceDetailsModal = ({
   console.log("Selected Invoice for Details:", printPayload);
 
   return (
+    <>
     <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -82,7 +89,7 @@ export const InvoiceDetailsModal = ({
                     className:
                       invoiceStatusStyles[printPayload.invoiceDetails.status]
                         ?.className,
-                  }
+                  },
                 )}
 
                 {invoiceStatusLabelMap[printPayload.invoiceDetails.status]}
@@ -143,7 +150,7 @@ export const InvoiceDetailsModal = ({
                   <p className="text-sm text-gray-500">Invoice Date</p>
                   <p className="font-semibold">
                     {new Date(
-                      printPayload.invoiceDetails.date
+                      printPayload.invoiceDetails.date,
                     ).toLocaleString()}
                   </p>
                 </div>
@@ -206,7 +213,7 @@ export const InvoiceDetailsModal = ({
                           ₹{(item.priceAtPurchase * item.quantity).toFixed(2)}
                         </TableCell>
                       </TableRow>
-                    )
+                    ),
                   ) || (
                     <TableRow>
                       <TableCell
@@ -252,7 +259,7 @@ export const InvoiceDetailsModal = ({
                             </TableCell>
                             <TableCell>
                               {new Date(
-                                transaction.transactionDate
+                                transaction.transactionDate,
                               ).toLocaleString("en-IN", {
                                 year: "numeric",
                                 month: "short",
@@ -274,17 +281,17 @@ export const InvoiceDetailsModal = ({
                                   transaction.status === "SUCCESS"
                                     ? "bg-green-100 text-green-700"
                                     : transaction.status === "PENDING"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : transaction.status === "REFUNDED"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-red-100 text-red-700"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : transaction.status === "REFUNDED"
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-red-100 text-red-700"
                                 }
                               >
                                 {transaction.status}
                               </Badge>
                             </TableCell>
                           </TableRow>
-                        )
+                        ),
                       )}
                     </TableBody>
                   </Table>
@@ -365,6 +372,15 @@ export const InvoiceDetailsModal = ({
           >
             Cancel
           </Button>
+          {printPayload.invoiceDetails.status === InvoiceStatus.DUE && (
+            <Button
+              onClick={() => setIsPaymentDialogOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              <IndianRupee className="h-4 w-4 mr-2" />
+              Process Payment
+            </Button>
+          )}
           <Button
             onClick={() => handlePrintInvoice()}
             className="bg-indigo-600 hover:bg-indigo-700"
@@ -375,5 +391,22 @@ export const InvoiceDetailsModal = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <PaymentDialog
+      isOpen={isPaymentDialogOpen}
+      onClose={() => setIsPaymentDialogOpen(false)}
+      invoice={{
+        id: printPayload.invoiceDetails.id,
+        totalAmount: printPayload.paymentDetails.totalAmount,
+        amountPaid: printPayload.paymentDetails.amountPaid,
+        patient: { patientName: printPayload.patientInfo.patientName },
+      }}
+      onPaymentSuccess={() => {
+        setIsPaymentDialogOpen(false);
+        setIsDetailsModalOpen(false);
+        onPaymentSuccess?.();
+      }}
+    />
+    </>
   );
 };

@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         subTotal,
         offer: paymentDetails?.offer || 0,
         amountPaid,
-        paymentMethod: invoiceDetails?.paymentMethod || paymentDetails?.paymentMethod || "CASH",
+        paymentMethod: invoiceDetails?.paymentMethod || "CASH",
         createdBy: session?.user?.id || createdBy,
         notes: invoiceDetails.notes || "",
       },
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
         data: {
           invoiceId: invoiceDetails.id,
           amount: amountPaid,
-          paymentMethod: paymentDetails.paymentMethod || "Cash",
+          paymentMethod: invoiceDetails.paymentMethod || "Cash",
           transactionDate: new Date().toISOString(),
           status: TransactionStatus.SUCCESS,
         },

@@ -32,7 +32,11 @@ export const handlePrintInvoice = async ({
 }) => {
   const { invoiceDetails, patientInfo } = invoicePayload;
 
-  if (!patientInfo?.id || !invoiceDetails?.invoiceItems || invoiceDetails.invoiceItems.length === 0) {
+  if (
+    !patientInfo?.id ||
+    !invoiceDetails?.invoiceItems ||
+    invoiceDetails.invoiceItems.length === 0
+  ) {
     toast({
       title: "Cannot Print",
       description:
@@ -42,11 +46,24 @@ export const handlePrintInvoice = async ({
     return;
   }
 
+  if (invoicePayload.invoiceDetails?.id) {
+    window.open(
+      `/api/invoices/${invoicePayload.invoiceDetails.id}/pdf`,
+      "_blank",
+    );
+    return;
+  }
+
   try {
     const blob = await printInvoice(invoicePayload);
     const url = window.URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoice-${invoicePayload.patientInfo?.patientName || "patient"}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Print error:", error);
     toast({

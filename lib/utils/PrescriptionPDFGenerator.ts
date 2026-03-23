@@ -357,13 +357,13 @@ const generateAssessmentPDF = async (assessment: any) => {
         flex-direction: row; /* Changed from column */
         justify-content: space-between;
         align-items: center; /* Align items to the center for vertical balance */
-        padding: 10px 0 8px 0;
-        border-bottom: 5px solid #00a8e1;
-        margin-bottom: 5px;
+        padding: 12px 0 10px 0;
+        border-bottom: 6px solid #00a8e1;
+        margin-bottom: 8px;
         page-break-inside: avoid;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        gap: 10px;
+        gap: 15px;
       }
 
       /* Header Left (Logo & Address) */
@@ -376,26 +376,27 @@ const generateAssessmentPDF = async (assessment: any) => {
       }
       
       .logo-img {
-        width: 280px; /* Adjusted from 500px */
+        width: 380px; /* Increased from 280px */
         max-width: 100%;
         height: auto;
+        max-height: 160px;
         object-fit: contain;
         display: block;
-        margin-bottom: 5px; /* Space between logo and address */
+        margin-bottom: 8px; /* Space between logo and address */
       }
       
       /* Address Text Styling - Consistent Spacing */
       .clinic-address {
-        font-size: 8.5pt;
+        font-size: 10.5pt; /* Increased from 8.5pt */
         color: #1f1f1f;
-        line-height: 1.3;
+        line-height: 1.4;
         font-family: 'Roboto', sans-serif;
         width: 100%;
       }
       .addr-row {
         display: block;
-        margin-bottom: 1px;
-        line-height: 1.3;
+        margin-bottom: 2px;
+        line-height: 1.4;
       }
 
       /* Colors for Labels - Print Safe */
@@ -413,7 +414,7 @@ const generateAssessmentPDF = async (assessment: any) => {
       }
       .txt-red {
         color: #ed1c24;
-        font-weight: 500;
+        font-weight: 600; /* Increased weight */
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
@@ -435,11 +436,11 @@ const generateAssessmentPDF = async (assessment: any) => {
       
       /* Doctor Name - Large Red - Fixed Dimensions */
       .dr-name {
-        font-size: 20pt;
+        font-size: 26pt; /* Increased from 20pt */
         font-weight: 900;
         color: #d31e24;
         line-height: 1.1;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
         letter-spacing: -0.5px;
         white-space: normal;
         text-align: left; /* CHANGED */
@@ -450,10 +451,10 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       /* Qualifications - Blue - Consistent Spacing */
       .dr-degrees {
-        font-size: 9.5pt;
+        font-size: 12pt; /* Increased from 9.5pt */
         font-weight: 700;
         color: #005eb8;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
         line-height: 1.2;
         text-align: left; /* CHANGED */
         width: 100%;
@@ -463,10 +464,10 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       /* Reg No - Standard - Consistent Spacing */
       .dr-reg {
-        font-size: 8pt;
+        font-size: 9.5pt; /* Increased from 8pt */
         color: #333;
-        font-weight: 500;
-        margin-bottom: 1px;
+        font-weight: 600;
+        margin-bottom: 2px;
         line-height: 1.2;
         text-align: left; /* CHANGED */
         width: 100%;
@@ -474,10 +475,10 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       /* Sr. Consultant - Pink/Magenta - Fixed Spacing (from original, can be repurposed) */
       .dr-title {
-        font-size: 10.5pt;
+        font-size: 12.5pt; /* Increased from 10.5pt */
         font-weight: 700;
         color: #d6006f;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
         line-height: 1.2;
         text-align: left; /* CHANGED */
         width: 100%;
@@ -487,10 +488,10 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       /* Previous Exp - Purple - Fixed Spacing */
       .dr-exp {
-        font-size: 8.5pt;
+        font-size: 10pt; /* Increased from 8.5pt */
         color: #662d91;
         font-weight: 500;
-        line-height: 1.3;
+        line-height: 1.4;
         white-space: pre-line;
         text-align: left; /* CHANGED */
         width: 100%;
@@ -1051,7 +1052,7 @@ Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol`
           )}</span></div>
           <div class="info-row"><span class="p-label">Date:</span><span class="p-val">${new Date(
             assessmentData?.assessmentDate || Date.now(),
-          ).toLocaleDateString("en-IN")}</span></div>
+          ).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</span></div>
           <div class="info-row"><span class="p-label">Ht / Wt:</span><span class="p-val">${
             safeValue(assessmentData?.vitals?.height || patientInfo?.height)
               ? safeValue(

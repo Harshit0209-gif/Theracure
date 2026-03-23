@@ -29,7 +29,7 @@ export const calculateDiscount = (subTotal: number, offer: number) =>
 // Calculate discount percentage from a flat monetary amount
 export const calculateDiscountPercentage = (subTotal: number, discountAmount: number): number => {
   if (subTotal <= 0) return 0;
-  return parseFloat(((discountAmount / subTotal) * 100).toFixed(4));
+  return parseFloat(((discountAmount / subTotal) * 100).toFixed(2));
 };
 
 // Calculate total amount after discount

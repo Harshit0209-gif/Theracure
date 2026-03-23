@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import { Plus, Minus, Printer, Save, Loader2, CalendarDays, Zap } from "lucide-react";
+import {
+  Plus,
+  Minus,
+  Printer,
+  Save,
+  Loader2,
+  CalendarDays,
+  Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -64,7 +72,7 @@ export function InvoicesSection() {
         invoice.patient.patientName
           .toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
-        invoice.patient.id.toLowerCase().includes(searchQuery.toLowerCase())
+        invoice.patient.id.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [invoices, searchQuery]);
 
@@ -93,6 +101,8 @@ export function InvoicesSection() {
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>(
     defaultPaymentDetails,
   );
+  const [discountPctInput, setDiscountPctInput] = useState("");
+  const [discountAmtInput, setDiscountAmtInput] = useState("");
 
   // Calendar state
   const [isDateCalendarOpen, setIsDateCalendarOpen] = useState(false);
@@ -125,9 +135,12 @@ export function InvoicesSection() {
     }
   }, []);
 
-  const handlePatientFieldChange = useCallback((field: keyof Patient, value: string) => {
-    setPatientInfo((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  const handlePatientFieldChange = useCallback(
+    (field: keyof Patient, value: string) => {
+      setPatientInfo((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
 
   const addService = (service: SelectedService) => {
     const existingService = selectedServices.find((s) => s.id === service.id);
@@ -159,10 +172,13 @@ export function InvoicesSection() {
   };
 
   const openInvoiceDialog = () => {
-    setInvoiceDetails({
-      ...invoiceDetails,
-      id: generateInvoiceId(),
-    });
+    setPatientInfo(defaultPatient);
+    setPatientFound(false);
+    setSelectedServices([]);
+    setPaymentDetails(defaultPaymentDetails);
+    setInvoiceDetails({ ...defaultInvoice, id: generateInvoiceId() });
+    setDiscountPctInput("");
+    setDiscountAmtInput("");
     setIsInvoiceDialogOpen(true);
   };
 
@@ -201,9 +217,15 @@ export function InvoicesSection() {
         const { invoice, pdfPath } = result.data;
         setInvoices((prev) => [invoice, ...prev]);
         setPage(1);
-        toast({ title: "Invoice Created", description: "Invoice created successfully." });
+        toast({
+          title: "Invoice Created",
+          description: "Invoice created successfully.",
+        });
         if (pdfPath && invoice.patient?.phone) {
-          toast({ title: "SMS Sent", description: `Invoice link sent to ${invoice.patient.phone}.` });
+          toast({
+            title: "SMS Sent",
+            description: `Invoice link sent to ${invoice.patient.phone}.`,
+          });
         }
         closeInvoiceDialog();
       } else {
@@ -282,13 +304,25 @@ export function InvoicesSection() {
       return;
     }
 
+    // If invoice has an ID, open the server PDF URL directly so the browser's
+    // built-in download button works (blob URLs are tab-scoped and fail when
+    // the browser tries to re-fetch them from a new tab).
+    if (printData.invoiceDetails?.id) {
+      window.open(`/api/invoices/${printData.invoiceDetails.id}/pdf`, "_blank");
+      return;
+    }
+
     try {
       const blob = await printInvoice(printData);
 
       const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
-
-      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice-${printData.patientInfo?.patientName || "patient"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Print error:", error);
       toast({
@@ -428,7 +462,10 @@ export function InvoicesSection() {
                       New Invoice
                     </DialogTitle>
                     <DialogDescription className="text-xs text-gray-400 mt-0.5">
-                      ID: <span className="font-semibold text-indigo-500">{invoiceDetails.id}</span>
+                      ID:{" "}
+                      <span className="font-semibold text-indigo-500">
+                        {invoiceDetails.id}
+                      </span>
                     </DialogDescription>
                   </div>
                   <button
@@ -438,9 +475,14 @@ export function InvoicesSection() {
                   >
                     <CalendarDays className="h-4 w-4 text-indigo-400 flex-shrink-0" />
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none">Invoice Date</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none">
+                        Invoice Date
+                      </p>
                       <p className="text-xs font-semibold text-slate-700 mt-0.5">
-                        {new Date(invoiceDetails.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        {new Date(invoiceDetails.date).toLocaleDateString(
+                          "en-IN",
+                          { day: "2-digit", month: "short", year: "numeric" },
+                        )}
                       </p>
                     </div>
                   </button>
@@ -448,7 +490,6 @@ export function InvoicesSection() {
 
                 {/* Body — two columns */}
                 <div className="flex flex-1 overflow-hidden">
-
                   {/* Left — Patient + Services */}
                   <div className="flex-1 overflow-y-auto p-5 space-y-4 border-r border-gray-100">
                     <PatientInfoSection
@@ -469,48 +510,75 @@ export function InvoicesSection() {
 
                   {/* Right — Payment panel */}
                   <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden border-l border-gray-100">
-
                     {selectedServices.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center px-6 py-10">
                         <div className="w-10 h-10 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center mb-3">
                           <Plus className="h-4 w-4 text-gray-300" />
                         </div>
-                        <p className="text-sm text-gray-400 font-medium">No services selected</p>
-                        <p className="text-xs text-gray-300 mt-1">Pick services from the left</p>
+                        <p className="text-sm text-gray-400 font-medium">
+                          No services selected
+                        </p>
+                        <p className="text-xs text-gray-300 mt-1">
+                          Pick services from the left
+                        </p>
                       </div>
                     ) : (
                       <div className="flex flex-col h-full overflow-y-auto divide-y divide-gray-100">
-
                         {/* — Services list — */}
                         <div className="px-5 pt-5 pb-4">
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Services</p>
-                            <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">{selectedServices.length}</span>
+                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
+                              Services
+                            </p>
+                            <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">
+                              {selectedServices.length}
+                            </span>
                           </div>
                           <div className="space-y-1">
                             {selectedServices.map((s) => (
-                              <div key={s.id} className="flex items-center gap-2 rounded-lg border border-gray-100 px-2.5 py-2 hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors group">
+                              <div
+                                key={s.id}
+                                className="flex items-center gap-2 rounded-lg border border-gray-100 px-2.5 py-2 hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors group"
+                              >
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-800 truncate leading-tight">{s.name}</p>
-                                  <p className="text-xs text-gray-400 mt-0.5">₹{s.price.toFixed(0)} / unit</p>
+                                  <p className="text-sm font-semibold text-gray-800 truncate leading-tight">
+                                    {s.name}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    ₹{s.price.toFixed(2)} / unit
+                                  </p>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
                                   <button
                                     type="button"
-                                    onClick={() => updateServiceQuantity(s.id, s.quantity - 1)}
+                                    onClick={() =>
+                                      updateServiceQuantity(
+                                        s.id,
+                                        s.quantity - 1,
+                                      )
+                                    }
                                     className="w-5 h-5 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-colors"
                                   >
                                     <Minus className="h-2.5 w-2.5" />
                                   </button>
-                                  <span className="text-sm font-bold text-gray-800 w-4 text-center tabular-nums">{s.quantity}</span>
+                                  <span className="text-sm font-bold text-gray-800 w-4 text-center tabular-nums">
+                                    {s.quantity}
+                                  </span>
                                   <button
                                     type="button"
-                                    onClick={() => updateServiceQuantity(s.id, s.quantity + 1)}
+                                    onClick={() =>
+                                      updateServiceQuantity(
+                                        s.id,
+                                        s.quantity + 1,
+                                      )
+                                    }
                                     className="w-5 h-5 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:border-indigo-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors"
                                   >
                                     <Plus className="h-2.5 w-2.5" />
                                   </button>
-                                  <span className="text-sm font-bold text-gray-900 w-12 text-right tabular-nums">₹{(s.price * s.quantity).toFixed(0)}</span>
+                                  <span className="text-sm font-bold text-gray-900 w-12 text-right tabular-nums">
+                                    ₹{(s.price * s.quantity).toFixed(2)}
+                                  </span>
                                 </div>
                               </div>
                             ))}
@@ -519,13 +587,35 @@ export function InvoicesSection() {
 
                         {/* — Discount — */}
                         <div className="px-5 py-4 space-y-2.5">
-                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Discount</p>
+                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
+                            Discount
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
-                            {[0, 5, 10, 15, 20, 25].map((pct) => (
+                            {[0, 5, 10, 15, 20, 25, 50, 100].map((pct) => (
                               <button
                                 key={pct}
                                 type="button"
-                                onClick={() => setPaymentDetails((prev) => ({ ...prev, offer: pct }))}
+                                onClick={() => {
+                                  setPaymentDetails((prev) => ({
+                                    ...prev,
+                                    offer: pct,
+                                  }));
+                                  setDiscountPctInput(
+                                    pct === 0 ? "" : String(pct),
+                                  );
+                                  const amt =
+                                    pct === 0
+                                      ? 0
+                                      : parseFloat(
+                                          (
+                                            (paymentDetails.subTotal * pct) /
+                                            100
+                                          ).toFixed(2),
+                                        );
+                                  setDiscountAmtInput(
+                                    amt > 0 ? String(amt) : "",
+                                  );
+                                }}
                                 className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                                   paymentDetails.offer === pct
                                     ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
@@ -542,28 +632,72 @@ export function InvoicesSection() {
                                 type="text"
                                 inputMode="decimal"
                                 placeholder="0"
-                                value={paymentDetails.offer > 0 ? paymentDetails.offer : ""}
+                                value={discountPctInput}
                                 onChange={(e) => {
-                                  const raw = e.target.value.replace(/[^0-9.]/g, "");
-                                  const pct = Math.min(Math.max(0, Number(raw) || 0), 100);
-                                  setPaymentDetails((prev) => ({ ...prev, offer: pct }));
+                                  const raw = e.target.value.replace(
+                                    /[^0-9.]/g,
+                                    "",
+                                  );
+                                  setDiscountPctInput(raw);
+                                  const pct = Math.min(
+                                    Math.max(0, Number(raw) || 0),
+                                    100,
+                                  );
+                                  const amt = parseFloat(
+                                    (
+                                      (paymentDetails.subTotal * pct) /
+                                      100
+                                    ).toFixed(2),
+                                  );
+                                  setDiscountAmtInput(
+                                    amt > 0 ? String(amt) : "",
+                                  );
+                                  setPaymentDetails((prev) => ({
+                                    ...prev,
+                                    offer: pct,
+                                  }));
                                 }}
                                 className="w-full h-8 rounded-md border border-gray-200 bg-white px-2.5 pr-6 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
                               />
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                                %
+                              </span>
                             </div>
                             <div className="relative">
-                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                                ₹
+                              </span>
                               <input
                                 type="text"
                                 inputMode="decimal"
                                 placeholder="0.00"
-                                value={paymentDetails.discount > 0 ? paymentDetails.discount.toFixed(2) : ""}
+                                value={discountAmtInput}
                                 onChange={(e) => {
-                                  const raw = e.target.value.replace(/[^0-9.]/g, "");
-                                  const amt = Math.min(Math.max(0, Number(raw) || 0), paymentDetails.subTotal);
-                                  const pct = paymentDetails.subTotal > 0 ? (amt / paymentDetails.subTotal) * 100 : 0;
-                                  setPaymentDetails((prev) => ({ ...prev, offer: pct }));
+                                  const raw = e.target.value.replace(
+                                    /[^0-9.]/g,
+                                    "",
+                                  );
+                                  setDiscountAmtInput(raw);
+                                  const amt = Math.min(
+                                    Math.max(0, Number(raw) || 0),
+                                    paymentDetails.subTotal,
+                                  );
+                                  const pct =
+                                    paymentDetails.subTotal > 0
+                                      ? parseFloat(
+                                          (
+                                            (amt / paymentDetails.subTotal) *
+                                            100
+                                          ).toFixed(2),
+                                        )
+                                      : 0;
+                                  setDiscountPctInput(
+                                    pct > 0 ? String(pct) : "",
+                                  );
+                                  setPaymentDetails((prev) => ({
+                                    ...prev,
+                                    offer: pct,
+                                  }));
                                 }}
                                 className="w-full h-8 rounded-md border border-gray-200 bg-white pl-6 pr-2.5 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
                               />
@@ -575,23 +709,37 @@ export function InvoicesSection() {
                         <div className="px-5 py-4 space-y-2 text-sm">
                           <div className="flex justify-between items-center text-gray-500">
                             <span>Subtotal</span>
-                            <span className="tabular-nums">₹{paymentDetails.subTotal.toFixed(2)}</span>
+                            <span className="tabular-nums">
+                              ₹{paymentDetails.subTotal.toFixed(2)}
+                            </span>
                           </div>
                           {paymentDetails.offer > 0 && (
                             <div className="flex justify-between items-center text-emerald-600">
-                              <span>Discount ({paymentDetails.offer % 1 === 0 ? paymentDetails.offer : paymentDetails.offer.toFixed(1)}%)</span>
-                              <span className="tabular-nums font-medium">−₹{paymentDetails.discount.toFixed(2)}</span>
+                              <span>
+                                Discount (
+                                {paymentDetails.offer % 1 === 0
+                                  ? paymentDetails.offer
+                                  : paymentDetails.offer.toFixed(1)}
+                                %)
+                              </span>
+                              <span className="tabular-nums font-medium">
+                                −₹{paymentDetails.discount.toFixed(2)}
+                              </span>
                             </div>
                           )}
                           <div className="flex justify-between items-center font-semibold text-gray-900 pt-2 border-t border-gray-100">
                             <span>Total</span>
-                            <span className="text-base tabular-nums">₹{paymentDetails.totalAmount.toFixed(2)}</span>
+                            <span className="text-base tabular-nums">
+                              ₹{paymentDetails.totalAmount.toFixed(2)}
+                            </span>
                           </div>
                         </div>
 
                         {/* — Payment Method — */}
                         <div className="px-5 py-4 space-y-2.5">
-                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Payment Method</p>
+                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
+                            Payment Method
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
                             {[
                               { value: "cash", label: "Cash" },
@@ -603,7 +751,12 @@ export function InvoicesSection() {
                               <button
                                 key={value}
                                 type="button"
-                                onClick={() => setInvoiceDetails((prev) => ({ ...prev, paymentMethod: value as any }))}
+                                onClick={() =>
+                                  setInvoiceDetails((prev) => ({
+                                    ...prev,
+                                    paymentMethod: value as any,
+                                  }))
+                                }
                                 className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                                   invoiceDetails.paymentMethod === value
                                     ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
@@ -619,26 +772,44 @@ export function InvoicesSection() {
                         {/* — Amount Paid — */}
                         <div className="px-5 py-4 space-y-2">
                           <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Amount Paid</p>
+                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
+                              Amount Paid
+                            </p>
                             <button
                               type="button"
-                              onClick={() => setPaymentDetails((prev) => ({ ...prev, amountPaid: prev.totalAmount }))}
+                              onClick={() =>
+                                setPaymentDetails((prev) => ({
+                                  ...prev,
+                                  amountPaid: prev.totalAmount,
+                                }))
+                              }
                               className="text-[11px] font-semibold text-white bg-emerald-500 hover:bg-emerald-600 px-2.5 py-0.5 rounded-full transition-colors"
                             >
                               Pay full
                             </button>
                           </div>
                           <div className="relative">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                              ₹
+                            </span>
                             <input
                               type="text"
                               inputMode="decimal"
                               placeholder="0.00"
                               value={paymentDetails.amountPaid || ""}
                               onChange={(e) => {
-                                const raw = e.target.value.replace(/[^0-9.]/g, "");
-                                const val = Math.min(Math.max(0, Number(raw) || 0), paymentDetails.totalAmount);
-                                setPaymentDetails((prev) => ({ ...prev, amountPaid: val }));
+                                const raw = e.target.value.replace(
+                                  /[^0-9.]/g,
+                                  "",
+                                );
+                                const val = Math.min(
+                                  Math.max(0, Number(raw) || 0),
+                                  paymentDetails.totalAmount,
+                                );
+                                setPaymentDetails((prev) => ({
+                                  ...prev,
+                                  amountPaid: val,
+                                }));
                               }}
                               className="w-full h-8 rounded-md border border-gray-200 bg-white pl-6 pr-3 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
                             />
@@ -647,16 +818,19 @@ export function InvoicesSection() {
                           {paymentDetails.balance > 0 ? (
                             <div className="flex justify-between items-center text-xs pt-1">
                               <span className="text-gray-400">Balance due</span>
-                              <span className="font-semibold text-amber-600 tabular-nums">₹{paymentDetails.balance.toFixed(2)}</span>
+                              <span className="font-semibold text-amber-600 tabular-nums">
+                                ₹{paymentDetails.balance.toFixed(2)}
+                              </span>
                             </div>
                           ) : paymentDetails.amountPaid > 0 ? (
                             <div className="flex justify-between items-center text-xs pt-1">
                               <span className="text-gray-400">Status</span>
-                              <span className="font-semibold text-emerald-600">Paid ✓</span>
+                              <span className="font-semibold text-emerald-600">
+                                Paid ✓
+                              </span>
                             </div>
                           ) : null}
                         </div>
-
                       </div>
                     )}
                   </div>
@@ -664,7 +838,9 @@ export function InvoicesSection() {
 
                 {/* Sticky footer */}
                 <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-white">
-                  <Button variant="outline" onClick={closeInvoiceDialog}>Cancel</Button>
+                  <Button variant="outline" onClick={closeInvoiceDialog}>
+                    Cancel
+                  </Button>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -677,10 +853,18 @@ export function InvoicesSection() {
                     </Button>
                     <Button
                       onClick={handleSaveInvoice}
-                      disabled={isSaving || !patientFound || selectedServices.length === 0}
+                      disabled={
+                        isSaving ||
+                        !patientFound ||
+                        selectedServices.length === 0
+                      }
                       className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-1.5"
                     >
-                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
                       {isSaving ? "Creating..." : "Create Invoice"}
                     </Button>
                   </div>
@@ -735,6 +919,7 @@ export function InvoicesSection() {
         handlePrintInvoice={() =>
           printPayload && handlePrintInvoice(printPayload)
         }
+        onPaymentSuccess={fetchInvoices}
       />
     </>
   );

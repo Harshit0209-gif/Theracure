@@ -21,24 +21,43 @@ export async function GET(request: NextRequest) {
     const currentPeriodFilter = { date: { gte: currentPeriodStart, lte: currentPeriodEnd } };
     const previousPeriodFilter = { date: { gte: previousPeriodStart, lte: previousPeriodEnd } };
 
-    const [
-      totalInvoices, paidInvoices, dueInvoices, cancelledInvoices,
-      currentRevenue, currentPaid, previousRevenue, previousPaid,
-    ] = await withRetry(() => Promise.all([
-      prisma.invoice.count({ where: currentPeriodFilter }),
-      prisma.invoice.count({ where: { ...currentPeriodFilter, status: "PAID" } }),
-      prisma.invoice.count({ where: { ...currentPeriodFilter, status: "DUE" } }),
-      prisma.invoice.count({ where: { ...currentPeriodFilter, status: "CANCELLED" } }),
-      prisma.invoice.aggregate({ where: currentPeriodFilter, _sum: { totalAmount: true, amountPaid: true } }),
-      prisma.invoice.aggregate({ where: { ...currentPeriodFilter, status: "PAID" }, _sum: { totalAmount: true, amountPaid: true } }),
-      prisma.invoice.aggregate({ where: previousPeriodFilter, _sum: { totalAmount: true, amountPaid: true } }),
-      prisma.invoice.aggregate({ where: { ...previousPeriodFilter, status: "PAID" }, _sum: { totalAmount: true, amountPaid: true } }),
-    ]));
+    const [currentGroups, , currentAggregate, previousAggregate, partiallyPaidCount] =
+      await withRetry(() => Promise.all([
+        prisma.invoice.groupBy({
+          by: ["status"],
+          where: currentPeriodFilter,
+          _count: { _all: true },
+        }),
+        prisma.invoice.groupBy({
+          by: ["status"],
+          where: previousPeriodFilter,
+          _count: { _all: true },
+        }),
+        prisma.invoice.aggregate({
+          where: currentPeriodFilter,
+          _sum: { totalAmount: true, amountPaid: true },
+        }),
+        prisma.invoice.aggregate({
+          where: previousPeriodFilter,
+          _sum: { totalAmount: true, amountPaid: true },
+        }),
+        prisma.invoice.count({
+          where: { ...currentPeriodFilter, status: "DUE", amountPaid: { gt: 0 } },
+        }),
+      ]));
 
-    const thisMonthRevenue = currentRevenue._sum.totalAmount || 0;
-    const lastMonthRevenue = previousRevenue._sum.totalAmount || 0;
-    const thisMonthPaid = currentRevenue._sum.amountPaid || 0;
-    const lastMonthPaid = previousRevenue._sum.amountPaid || 0;
+    const countByStatus = (groups: typeof currentGroups, status: string) =>
+      groups.find((g) => g.status === status)?._count._all ?? 0;
+
+    const totalInvoices = currentGroups.reduce((s, g) => s + g._count._all, 0);
+    const paidInvoices = countByStatus(currentGroups, "PAID");
+    const dueInvoices = countByStatus(currentGroups, "DUE");
+    const cancelledInvoices = countByStatus(currentGroups, "CANCELLED");
+
+    const thisMonthRevenue = currentAggregate._sum.totalAmount || 0;
+    const lastMonthRevenue = previousAggregate._sum.totalAmount || 0;
+    const thisMonthPaid = currentAggregate._sum.amountPaid || 0;
+    const lastMonthPaid = previousAggregate._sum.amountPaid || 0;
     const thisMonthDue = thisMonthRevenue - thisMonthPaid;
     const lastMonthDue = lastMonthRevenue - lastMonthPaid;
 
@@ -46,10 +65,6 @@ export async function GET(request: NextRequest) {
     const paidGrowthPercentage = lastMonthPaid > 0 ? ((thisMonthPaid - lastMonthPaid) / lastMonthPaid) * 100 : 0;
     const dueGrowthPercentage = lastMonthDue > 0 ? ((thisMonthDue - lastMonthDue) / lastMonthDue) * 100 : 0;
     const collectionRate = thisMonthRevenue > 0 ? (thisMonthPaid / thisMonthRevenue) * 100 : 0;
-
-    const partiallyPaidCount = await prisma.invoice.count({
-      where: { ...currentPeriodFilter, status: "DUE", amountPaid: { gt: 0 } },
-    });
 
     const stats = {
       totalInvoices, paidInvoices, dueInvoices, cancelledInvoices,
