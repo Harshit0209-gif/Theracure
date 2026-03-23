@@ -276,7 +276,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
         }
 
         body {
-          font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial', 'Helvetica', sans-serif;
+          font-family: 'Roboto', 'Arial', sans-serif;
           font-size: 10pt;
           line-height: 1.35;
           color: #1f2937;
