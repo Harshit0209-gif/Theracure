@@ -47,15 +47,14 @@ export async function POST(
       );
     }
 
-    // Generate feedback link (you can customize this URL)
-    const feedbackLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/feedback/${appointment.id}`;
+    const googleReviewLink = "https://g.page/r/Cfxlq1dLFnEiEAE/review";
 
     // Send feedback SMS
     await sendSMSNotification("FEEDBACK_REQUEST", {
       phone: appointment.patient.phone,
       patientName: appointment.patient.patientName,
-      therapistName: "", // Not needed for feedback
-      link: feedbackLink,
+      therapistName: "",
+      link: googleReviewLink,
     });
 
     return NextResponse.json({
