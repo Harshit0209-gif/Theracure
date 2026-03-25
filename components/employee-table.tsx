@@ -1,16 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,408 +15,240 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/use-toast";
-import {
-  Edit,
-  MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
-  User as UserIcon,
-  Mail,
-  Phone,
-  Calendar,
-  Shield,
-  Clock,
-  Key,
-} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
-import { z } from "zod";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { toast } from "@/components/ui/use-toast";
+import {
+  MoreHorizontal,
+  User as UserIcon,
+  Shield,
+  Key,
+  Eye,
+  EyeOff,
+  Users,
+} from "lucide-react";
 import { passwordSchema } from "@/lib/validations/user";
 import { RoleColors, UserRoleLabel, UserStatusLabel } from "@/lib/userRoles";
-import { UserRole } from "@/lib/generated/userRoles";
-import { User } from "@/types/user";
-import { PaginationInfo } from "@/types";
-import { EmployeeProfileCard } from "./employee-profile-card";
 import { UserStatus } from "@/lib/generated/userEnums";
+import { User } from "@/types/user";
+import { EmployeeProfileCard } from "./employee-profile-card";
 
 interface EmployeeTableProps {
   users: User[];
   loading: boolean;
-  pagination: PaginationInfo;
-  onPageChange: (currentPage: number) => void;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalCount: number;
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onUserUpdated: () => void;
+}
+
+function initials(name: string) {
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
 export function EmployeeTable({
   users,
   loading,
-  pagination,
-  onPageChange,
+  page,
+  pageSize,
+  totalPages,
+  totalCount,
+  setPage,
+  setPageSize,
   onUserUpdated,
 }: EmployeeTableProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStatusBadge = (status: UserStatus) => {
-    return (
-      <Badge
-        variant={status === UserStatus.ACTIVE ? "default" : "secondary"}
-        className={
-          status === UserStatus.ACTIVE
-            ? "bg-green-100 text-green-800"
-            : "bg-gray-100 text-gray-800"
-        }
-      >
-        {UserStatusLabel[status]}
-      </Badge>
-    );
-  };
-
-  // Handle profile view
   const handleViewProfile = (user: User) => {
     setSelectedUser(user);
     setProfileDialogOpen(true);
   };
 
-  // Handle schedule view
-  const handleViewSchedule = (user: User) => {
-    setSelectedUser(user);
-    setScheduleDialogOpen(true);
-  };
-
-  // Handle password reset
   const handleResetPassword = (user: User) => {
     setSelectedUser(user);
     setNewPassword("");
+    setError("");
     setResetPasswordDialogOpen(true);
   };
 
-  // Handle status toggle (activate/deactivate)
   const handleToggleStatus = async (user: User) => {
     try {
       setIsLoading(true);
-      const newStatus =
-        user.status === UserStatus.ACTIVE
-          ? UserStatus.INACTIVE
-          : UserStatus.ACTIVE;
-
+      const newStatus = user.status === UserStatus.ACTIVE ? UserStatus.INACTIVE : UserStatus.ACTIVE;
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: newStatus,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to update user status");
-      }
-
-      toast({
-        title: "Success",
-        description: `User ${newStatus} successfully`,
-      });
-
+      if (!response.ok) throw new Error("Failed to update user status");
+      toast({ title: "Success", description: `User ${newStatus.toLowerCase()} successfully` });
       onUserUpdated();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Error", description: "Failed to update user status", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle password reset submission
   const handleSubmitPasswordReset = async () => {
     if (!selectedUser || !newPassword) return;
-
     const result = passwordSchema.safeParse(newPassword);
-
-    if (!result.success) {
-      setError(result.error.issues[0].message);
-      return;
-    }
-
+    if (!result.success) { setError(result.error.issues[0].message); return; }
     setError("");
-
     try {
       setIsLoading(true);
-
-      const response = await fetch(
-        `/api/users/${selectedUser.id}/reset-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            newPassword,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to reset password");
-      }
-
-      toast({
-        title: "Success",
-        description: "Password reset successfully",
+      const response = await fetch(`/api/users/${selectedUser.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword }),
       });
-
+      if (!response.ok) throw new Error("Failed to reset password");
+      toast({ title: "Success", description: "Password reset successfully" });
       setResetPasswordDialogOpen(false);
       setNewPassword("");
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reset password",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Error", description: "Failed to reset password", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <CardContent className="p-4">
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <span className="ml-3 text-gray-600">Loading employees...</span>
+  const columns: DataTableColumn<User>[] = [
+    {
+      header: "#",
+      headerClassName: "w-14 text-center",
+      cellClassName: "text-center text-sm text-gray-400 font-medium",
+      cell: (_, index) => (page - 1) * pageSize + index + 1,
+    },
+    {
+      header: "Employee",
+      cell: (user) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarFallback className="bg-indigo-100 text-indigo-700 text-xs font-semibold">
+              {initials(user.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-semibold text-gray-800">{user.name}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{user.email}</p>
+          </div>
         </div>
-      </CardContent>
-    );
-  }
+      ),
+    },
+    {
+      header: "Role",
+      cell: (user) => (
+        <Badge className={`${RoleColors[user.role]} border-0`}>
+          {UserRoleLabel[user.role]}
+        </Badge>
+      ),
+    },
+    {
+      header: "Phone",
+      cellClassName: "text-gray-600 text-sm",
+      cell: (user) => user.phone || <span className="text-gray-300">—</span>,
+    },
+    {
+      header: "Status",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
+      cell: (user) => (
+        <Badge
+          className={
+            user.status === UserStatus.ACTIVE
+              ? "bg-emerald-50 text-emerald-700 border-0 hover:bg-emerald-50"
+              : user.status === UserStatus.SUSPENDED
+              ? "bg-red-50 text-red-600 border-0 hover:bg-red-50"
+              : "bg-gray-100 text-gray-500 border-0 hover:bg-gray-100"
+          }
+        >
+          {UserStatusLabel[user.status]}
+        </Badge>
+      ),
+    },
+    {
+      header: "Joined",
+      cellClassName: "text-sm text-gray-500",
+      cell: (user) =>
+        new Date(user.createdAt).toLocaleDateString("en-IN", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
+    },
+    {
+      header: "Actions",
+      headerClassName: "text-right pr-6",
+      cellClassName: "text-right pr-4",
+      cell: (user) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleViewProfile(user); }}>
+              <UserIcon className="mr-2 h-4 w-4" />
+              View Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleResetPassword(user); }}>
+              <Key className="mr-2 h-4 w-4" />
+              Reset Password
+            </DropdownMenuItem>
+            {user.status !== UserStatus.SUSPENDED && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className={user.status === UserStatus.ACTIVE ? "text-red-600" : "text-green-600"}
+                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(user); }}
+                  disabled={isLoading}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  {user.status === UserStatus.ACTIVE ? "Deactivate" : "Activate"}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
     <>
-      <CardContent className="p-4">
-        <div className="overflow-x-auto bg-white rounded-b-lg">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-indigo-700">
-                <TableHead className="whitespace-nowrap font-semibold text-white">
-                  Employee
-                </TableHead>
-                <TableHead className="whitespace-nowrap font-semibold text-white">
-                  Role
-                </TableHead>
-                <TableHead className="whitespace-nowrap font-semibold text-white">
-                  Email
-                </TableHead>
-                <TableHead className="whitespace-nowrap font-semibold text-white">
-                  Phone
-                </TableHead>
-                <TableHead className="whitespace-nowrap font-semibold text-white">
-                  Status
-                </TableHead>
-                <TableHead className="whitespace-nowrap font-semibold text-white">
-                  Joined
-                </TableHead>
-                <TableHead className="whitespace-nowrap font-semibold text-white">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-8 text-gray-500"
-                  >
-                    No employees found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                users.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Avatar className="h-8 w-8 mr-3">
-                          <AvatarFallback>
-                            {user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {
-                        <Badge className={`${RoleColors[user.role]} `}>
-                          {UserRoleLabel[user.role]}
-                        </Badge>
-                      }
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone || "No Caller ID"}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {formatDate(user.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-
-                          <DropdownMenuContent
-                            align="end"
-                            onCloseAutoFocus={(e) => e.preventDefault()}
-                          >
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewProfile(user);
-                              }}
-                            >
-                              <UserIcon className="mr-2 h-4 w-4" />
-                              View Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleResetPassword(user);
-                              }}
-                            >
-                              <Key className="mr-2 h-4 w-4" />
-                              Reset Password
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {user.status != UserStatus.SUSPENDED && (
-                              <DropdownMenuItem
-                                className={
-                                  user.status === UserStatus.ACTIVE
-                                    ? "text-red-600"
-                                    : "text-green-600"
-                                }
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleStatus(user);
-                                }}
-                                disabled={isLoading}
-                              >
-                                <Shield className="mr-2 h-4 w-4" />
-                                {user.status === UserStatus.ACTIVE
-                                  ? "Deactivate"
-                                  : "Activate"}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination Controls */}
-          {users.length > 0 && (
-            <div className="flex justify-between items-center p-4 bg-white border-t">
-              <span className="text-sm text-gray-700">
-                Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
-                {Math.min(
-                  pagination.currentPage * pagination.limit,
-                  pagination.totalCount,
-                )}{" "}
-                of {pagination.totalCount} employees
-              </span>
-              <div className="flex gap-2 items-center">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                  disabled={pagination.currentPage === 1}
-                  onClick={() => onPageChange(pagination.currentPage - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-
-                <div className="flex items-center space-x-1">
-                  {Array.from(
-                    { length: pagination.totalPages },
-                    (_, i) => i + 1,
-                  ).map((pg) => (
-                    <Button
-                      key={pg}
-                      size="sm"
-                      variant={
-                        pg === pagination.currentPage ? "default" : "outline"
-                      }
-                      className={
-                        pg === pagination.currentPage
-                          ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600"
-                          : "border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                      }
-                      onClick={() => onPageChange(pg)}
-                    >
-                      {pg}
-                    </Button>
-                  ))}
-                </div>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  onClick={() => onPageChange(pagination.currentPage + 1)}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
+      <DataTable
+        columns={columns}
+        data={users}
+        rowKey={(u) => u.id}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        setPage={setPage}
+        setPageSize={setPageSize}
+        loading={loading}
+        countIcon={<Users className="h-5 w-5" />}
+        countLabel="employees"
+        emptyIcon={<Users className="h-10 w-10" />}
+        emptyTitle="No employees found"
+        emptyDescription="Try adjusting your search or role filter"
+        onRowClick={handleViewProfile}
+      />
 
       {/* Profile Dialog */}
-      <Dialog
-        open={profileDialogOpen}
-        onOpenChange={setProfileDialogOpen}
-        modal={false}
-      >
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
         <DialogContent
           className="max-w-2xl max-h-[90vh] overflow-y-auto"
           onInteractOutside={(e) => e.preventDefault()}
@@ -439,11 +262,7 @@ export function EmployeeTable({
       </Dialog>
 
       {/* Reset Password Dialog */}
-      <Dialog
-        open={resetPasswordDialogOpen}
-        onOpenChange={setResetPasswordDialogOpen}
-        modal={false}
-      >
+      <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
         <DialogContent
           className="max-w-md"
           onInteractOutside={(e) => e.preventDefault()}
@@ -454,14 +273,10 @@ export function EmployeeTable({
           </DialogHeader>
           {selectedUser && (
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback>
-                    {selectedUser.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
+                  <AvatarFallback className="bg-indigo-100 text-indigo-700 font-semibold">
+                    {initials(selectedUser.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -469,10 +284,8 @@ export function EmployeeTable({
                   <p className="text-sm text-gray-500">{selectedUser.email}</p>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
-
                 <div className="relative">
                   <Input
                     id="newPassword"
@@ -486,49 +299,33 @@ export function EmployeeTable({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPassword(!showPassword);
-                    }}
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={(e) => { e.stopPropagation(); setShowPassword(!showPassword); }}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-500" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
                   </Button>
                 </div>
               </div>
-              {error && <p style={{ color: "red" }}>{error}</p>}
-
-              <div className="flex space-x-2 pt-4">
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setResetPasswordDialogOpen(false);
-                  }}
                   className="flex-1"
+                  onClick={(e) => { e.stopPropagation(); setResetPasswordDialogOpen(false); }}
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSubmitPasswordReset();
-                  }}
-                  disabled={!newPassword || isLoading}
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  onClick={(e) => { e.stopPropagation(); handleSubmitPasswordReset(); }}
+                  disabled={!newPassword || isLoading}
                 >
                   {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                       Resetting...
                     </div>
-                  ) : (
-                    "Reset Password"
-                  )}
+                  ) : "Reset Password"}
                 </Button>
               </div>
             </div>

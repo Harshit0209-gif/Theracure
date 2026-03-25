@@ -43,11 +43,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
 
   // Initialize session management
-  useSessionManager({
-    refreshThreshold: 10, // Refresh 10 minutes before expiry
-    inactivityTimeout: 10, // Logout after 1 minute of inactivity (for testing)
-    checkInterval: 1, // Check every minute
-  });
+  useSessionManager();
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);

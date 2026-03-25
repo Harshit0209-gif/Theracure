@@ -9,7 +9,6 @@ export interface Session {
 }
 
 export interface SessionManagerConfig {
-  refreshThreshold: number;
   inactivityTimeout: number;
   checkInterval: number;
 }

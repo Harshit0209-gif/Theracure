@@ -20,6 +20,16 @@ const config = {
     },
     extend: {
       colors: {
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          50:  "hsl(var(--brand-h) var(--brand-s) 97%)",
+          100: "hsl(var(--brand-h) var(--brand-s) 93%)",
+          200: "hsl(var(--brand-h) var(--brand-s) 86%)",
+          500: "hsl(var(--brand-h) var(--brand-s) 65%)",
+          600: "hsl(var(--brand))",
+          700: "hsl(var(--brand-h) var(--brand-s) 48%)",
+          800: "hsl(var(--brand-h) var(--brand-s) 38%)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

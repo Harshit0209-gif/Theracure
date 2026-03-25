@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { toast } from "@/components/ui/use-toast";
-
 import { AppointmentHeader } from "@/components/appointment-header";
 import { AppointmentTable } from "@/components/appointments/appointment-table";
 import { ScheduleNewDialog } from "@/components/appointments/schedule-new-appointment";
@@ -11,90 +10,112 @@ import { CalendarViewDialog } from "@/components/calendar-view-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
 import { Appointment } from "@/types/appointments";
-import { PaginationDefaultValue, PaginationInfo } from "@/types/index";
 import { ServiceCategory } from "@/lib/generated/serviceEnums";
 
-const AppointmentPage = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [pagination, setPagination] = useState<PaginationInfo>(
-    PaginationDefaultValue
-  );
-  type TherapyTypeFilter = ServiceCategory | "all";
-  const [therapyTypeFilter, setTherapyTypeFilter] =
-    useState<TherapyTypeFilter>("all");
+const CACHE_LIMIT = 100;
 
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
+const AppointmentPage = () => {
   const { user } = useAuth();
 
-  const fetchAppointments = async (page: number = 1, search: string = "") => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
-        ...(search && { search }),
-        ...(user?.role === UserRole.THERAPIST && { therapistId: user.id }),
-      });
+  const [cachedAppointments, setCachedAppointments] = useState<Appointment[]>([]);
+  const [totalServerCount, setTotalServerCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-      const response = await fetch(`/api/appointments?${params}`);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch appointments");
-      }
+  type TherapyTypeFilter = ServiceCategory | "all";
+  const [therapyTypeFilter, setTherapyTypeFilter] = useState<TherapyTypeFilter>("all");
 
-      const data = await response.json();
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
 
-      if (data.success) {
-        setAppointments(data.appointments);
-        setPagination(data.pagination);
-      }
-    } catch (error) {
-      console.error("Error fetching appointments:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch appointments. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial load
+  // Debounce search
   useEffect(() => {
-    fetchAppointments();
-  }, []);
-
-  // Handle search with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchAppointments(1, searchQuery);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    fetchAppointments(newPage, searchQuery);
-  };
+  // Reset to page 1 on search or page size change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
 
-  // Handle successful appointment creation/update
+  // Slice cache for current page
+  const appointments = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return cachedAppointments.slice(start, start + pageSize);
+  }, [cachedAppointments, page, pageSize]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(totalServerCount / pageSize)),
+    [totalServerCount, pageSize]
+  );
+
+  const fetchAppointments = useCallback(
+    async (serverPage = 1, search = debouncedSearch, append = false) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: String(serverPage),
+          limit: String(CACHE_LIMIT),
+          ...(search ? { search } : {}),
+          ...(user?.role === UserRole.THERAPIST && user.id
+            ? { therapistId: user.id }
+            : {}),
+        });
+
+        const response = await fetch(`/api/appointments?${params}`);
+        if (!response.ok) throw new Error("Failed to fetch appointments");
+
+        const data = await response.json();
+        if (data.success) {
+          setCachedAppointments((prev) =>
+            append ? [...prev, ...data.appointments] : data.appointments
+          );
+          setTotalServerCount(data.pagination?.totalCount ?? data.appointments.length);
+        }
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch appointments. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [debouncedSearch, user]
+  );
+
+  // Re-fetch (replace cache) when search changes
+  useEffect(() => {
+    fetchAppointments(1, debouncedSearch, false);
+  }, [debouncedSearch]);
+
+  // Append next batch when user pages beyond cached records
+  useEffect(() => {
+    const cachedEnd = cachedAppointments.length;
+    const neededEnd = page * pageSize;
+    if (neededEnd > cachedEnd && cachedEnd < totalServerCount) {
+      const serverPage = Math.floor(cachedEnd / CACHE_LIMIT) + 1;
+      fetchAppointments(serverPage, debouncedSearch, true);
+    }
+  }, [page, pageSize]);
+
   const handleAppointmentUpdated = () => {
-    fetchAppointments(pagination.currentPage, searchQuery);
+    fetchAppointments(1, debouncedSearch, false);
   };
 
   return (
     <DashboardLayout>
-      <div className="bg-gray-200 rounded-lg p-6 mb-8">
-        {/* Header with action buttons */}
+      <div className="bg-indigo-50/30 rounded-xl p-6 mb-8">
         <AppointmentHeader
           onScheduleNew={() => setScheduleDialogOpen(true)}
-          onManageAppointments={() => setManageDialogOpen(true)}
+          onManageAppointments={() => {}}
           onViewCalendar={() => setCalendarDialogOpen(true)}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -103,25 +124,26 @@ const AppointmentPage = () => {
           setTherapyTypeFilter={setTherapyTypeFilter}
         />
 
-        {/* Appointments Table */}
         <AppointmentTable
           appointments={appointments}
           loading={loading}
-          pagination={pagination}
+          page={page}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          totalCount={totalServerCount}
           therapyTypeFilter={therapyTypeFilter}
           setTherapyTypeFilter={setTherapyTypeFilter}
-          onPageChange={handlePageChange}
+          setPage={setPage}
+          setPageSize={setPageSize}
           onAppointmentUpdated={handleAppointmentUpdated}
         />
 
-        {/* Schedule New Appointment Dialog */}
         <ScheduleNewDialog
           open={scheduleDialogOpen}
           onOpenChange={setScheduleDialogOpen}
           onAppointmentCreated={handleAppointmentUpdated}
         />
 
-        {/* Calendar View Dialog */}
         <CalendarViewDialog
           open={calendarDialogOpen}
           onOpenChange={setCalendarDialogOpen}

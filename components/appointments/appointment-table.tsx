@@ -1,24 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import {
-  Accessibility,
-  ChevronLeft,
-  ChevronRight,
+  CalendarClock,
   MoreHorizontal,
   Edit,
   Calendar,
@@ -45,23 +36,24 @@ import { formatDate, formatTime } from "@/lib/utils/utils";
 export function AppointmentTable({
   appointments,
   loading,
-  pagination,
-  onPageChange,
-  onAppointmentUpdated,
+  page,
+  pageSize,
+  totalPages,
+  totalCount,
   therapyTypeFilter,
+  setPage,
+  setPageSize,
+  onAppointmentUpdated,
 }: AppointmentTableProps) {
-  // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   const { user } = useAuth();
   const isTherapist = user?.role === UserRole.THERAPIST;
-  const hasFullControl =
-    user?.role === UserRole.ADMIN || user?.role === UserRole.RECEPTIONIST;
+  const hasFullControl = user?.role === UserRole.ADMIN || user?.role === UserRole.RECEPTIONIST;
 
   const filteredAppointments = useMemo(
     () =>
@@ -71,15 +63,6 @@ export function AppointmentTable({
     [appointments, therapyTypeFilter]
   );
 
-  const getStatusBadge = (status: string) => {
-    return (
-      <Badge className={statusStyles[status as keyof typeof statusStyles]}>
-        {statusLabels[status as keyof typeof statusLabels]}
-      </Badge>
-    );
-  };
-
-  // Dialog open handlers
   const openEditDialog = useCallback((appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setEditDialogOpen(true);
@@ -100,503 +83,289 @@ export function AppointmentTable({
     setDetailsDialogOpen(true);
   }, []);
 
-  // Handle Status Update (Mark as Completed)
-  const handleStatusUpdate = async (
-    appointmentId: string,
-    newStatus: string
-  ) => {
+  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
     try {
       const response = await fetch(`/api/appointments/${appointmentId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to update appointment");
-      }
-
-      toast({
-        title: "Success",
-        description: "Appointment status updated successfully",
-      });
-
+      if (!response.ok) throw new Error("Failed to update appointment");
+      toast({ title: "Success", description: "Appointment status updated successfully" });
       onAppointmentUpdated();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update appointment status",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Error", description: "Failed to update appointment status", variant: "destructive" });
     }
   };
 
-  // Handle Send Reminder SMS
   const handleSendReminder = async (appointmentId: string) => {
     try {
-      const response = await fetch(
-        `/api/appointments/${appointmentId}/send-reminder`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send reminder");
-      }
-
-      toast({
-        title: "Success",
-        description: data.message || "Reminder SMS sent successfully",
+      const response = await fetch(`/api/appointments/${appointmentId}/send-reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send reminder");
+      toast({ title: "Success", description: data.message || "Reminder SMS sent successfully" });
     } catch (error) {
       toast({
         title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to send reminder SMS",
+        description: error instanceof Error ? error.message : "Failed to send reminder SMS",
         variant: "destructive",
       });
     }
   };
 
-  // Handle Send Feedback SMS
   const handleSendFeedback = async (appointmentId: string) => {
     try {
-      const response = await fetch(
-        `/api/appointments/${appointmentId}/send-feedback`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send feedback SMS");
-      }
-
-      toast({
-        title: "Success",
-        description: data.message || "Feedback SMS sent successfully",
+      const response = await fetch(`/api/appointments/${appointmentId}/send-feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send feedback SMS");
+      toast({ title: "Success", description: data.message || "Feedback SMS sent successfully" });
     } catch (error) {
       toast({
         title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to send feedback SMS",
+        description: error instanceof Error ? error.message : "Failed to send feedback SMS",
         variant: "destructive",
       });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="bg-blue-200 rounded-lg p-8">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <span className="ml-3 text-gray-600">Loading appointments...</span>
-        </div>
-      </div>
-    );
-  }
+  const columns: DataTableColumn<Appointment>[] = [
+    {
+      header: "#",
+      headerClassName: "w-14 text-center",
+      cellClassName: "text-center text-sm text-gray-400 font-medium",
+      cell: (_, index) => index + 1,
+    },
+    {
+      header: "Patient",
+      cell: (appt) => (
+        <>
+          <div className="font-semibold text-gray-800">
+            {appt.patient?.patientName || "Unknown Patient"}
+          </div>
+          <div className="text-xs text-gray-400 mt-0.5">{appt.patientId}</div>
+        </>
+      ),
+    },
+    {
+      header: "Therapist",
+      cellClassName: "text-gray-700",
+      cell: (appt) => appt.therapist?.name || <span className="text-gray-400">—</span>,
+    },
+    {
+      header: "Date & Time",
+      cell: (appt) => (
+        <>
+          <div className="font-medium text-gray-800">{formatDate(appt.appointmentStartTime)}</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {formatTime(appt.appointmentStartTime)} – {formatTime(appt.appointmentEndTime)}
+          </div>
+        </>
+      ),
+    },
+    {
+      header: "Therapy",
+      cell: (appt) => (
+        <>
+          <div className="font-medium text-gray-800">
+            {appt.service?.name || <span className="text-gray-400">—</span>}
+          </div>
+          {appt.service?.category && (
+            <div className="text-xs text-gray-400 mt-0.5">
+              {ServiceCategoryLabel[appt.service.category]}
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      header: "Cubicle",
+      cell: (appt) =>
+        appt.cubicle ? (
+          <>
+            <div className="font-medium text-indigo-700">{appt.cubicle.name}</div>
+            {appt.cubicle.roomNumber && (
+              <div className="text-xs text-gray-400 mt-0.5">
+                {appt.cubicle.roomNumber}
+                {appt.cubicle.location && ` · ${appt.cubicle.location}`}
+              </div>
+            )}
+          </>
+        ) : (
+          <span className="text-gray-300">—</span>
+        ),
+    },
+    {
+      header: "Status",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
+      cell: (appt) => (
+        <Badge className={statusStyles[appt.status as keyof typeof statusStyles]}>
+          {statusLabels[appt.status as keyof typeof statusLabels]}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      headerClassName: "text-right pr-6",
+      cellClassName: "text-right pr-4",
+      cell: (appt) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openDetailsDialog(appt); }}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+
+            {appt.status === AppointmentStatus.COMPLETED && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={(e) => { e.stopPropagation(); handleSendFeedback(appt.id); }}
+                  className="text-green-600"
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Send Feedback SMS
+                </DropdownMenuItem>
+              </>
+            )}
+
+            {(appt.status === AppointmentStatus.CONFIRMED ||
+              appt.status === AppointmentStatus.CANCELLED ||
+              appt.status === AppointmentStatus.RESCHEDULED) && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={(e) => { e.stopPropagation(); handleSendReminder(appt.id); }}
+                  className="text-blue-600"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Reminder SMS
+                </DropdownMenuItem>
+              </>
+            )}
+
+            {appt.status !== AppointmentStatus.CANCELLED && (
+              <>
+                {hasFullControl && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(appt); }}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Appointment
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRescheduleDialog(appt); }}>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Reschedule
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {appt.status === AppointmentStatus.CONFIRMED && (
+                      <DropdownMenuItem
+                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(appt.id, AppointmentStatus.COMPLETED); }}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        Mark as Completed
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={(e) => { e.stopPropagation(); openCancelDialog(appt); }}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Cancel Appointment
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {isTherapist && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {appt.status === AppointmentStatus.CONFIRMED && (
+                      <DropdownMenuItem
+                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(appt.id, AppointmentStatus.COMPLETED); }}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        Mark as Completed
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={(e) => { e.stopPropagation(); openCancelDialog(appt); }}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Cancel Appointment
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </>
+            )}
+
+            {appt.status === AppointmentStatus.CANCELLED && (
+              <DropdownMenuItem disabled>
+                <X className="mr-2 h-4 w-4" />
+                Appointment Cancelled
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div className="bg-transparent rounded-lg overflow-hidden mb-6">
-        {/* Search and Stats Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-0 mb-6">
-          <div className="flex items-center gap-3 bg-white rounded-lg px-4 py-2 shadow min-w-[160px] justify-end">
-            <Accessibility className="h-8 w-8 text-indigo-700" />
-            <div className="flex flex-col items-center">
-              <span className="text-2xl font-bold text-indigo-700">
-                {filteredAppointments.length}
-              </span>
-              <span className="text-gray-700 text-sm">appointments</span>
-            </div>
-          </div>
-        </div>
+      <DataTable
+        columns={columns}
+        data={filteredAppointments}
+        rowKey={(a) => a.id}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        setPage={setPage}
+        setPageSize={setPageSize}
+        loading={loading}
+        countIcon={<CalendarClock className="h-5 w-5" />}
+        countLabel="appointments"
+        emptyIcon={<Calendar className="h-10 w-10" />}
+        emptyTitle="No appointments found"
+        emptyDescription={
+          therapyTypeFilter !== "all"
+            ? `No appointments for ${ServiceCategoryLabel[therapyTypeFilter as keyof typeof ServiceCategoryLabel]}`
+            : "No appointments scheduled yet"
+        }
+        onRowClick={openDetailsDialog}
+        className="mb-6"
+      />
 
-        {/* Appointments Table */}
-        <div className="overflow-x-auto">
-          <Table className="w-full">
-            <TableHeader>
-              <TableRow className="bg-indigo-700">
-                <TableHead className="text-white font-semibold">
-                  Patient
-                </TableHead>
-                <TableHead className="text-white font-semibold">
-                  Therapist
-                </TableHead>
-                <TableHead className="text-white font-semibold">
-                  Date & Time
-                </TableHead>
-                <TableHead className="text-white font-semibold">
-                  Therapy Name
-                </TableHead>
-                <TableHead className="text-white font-semibold">
-                  Cubicle
-                </TableHead>
-                <TableHead className="text-white font-semibold">
-                  Status
-                </TableHead>
-                <TableHead className="text-white font-semibold">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAppointments.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-8 text-gray-500"
-                  >
-                    {therapyTypeFilter !== "all"
-                      ? `No appointments found for ${
-                          ServiceCategoryLabel[
-                            therapyTypeFilter as keyof typeof ServiceCategoryLabel
-                          ]
-                        }.`
-                      : "No appointments found."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAppointments.map((appointment: Appointment) => (
-                  <TableRow
-                    key={appointment.id}
-                    className="border-b hover:bg-gray-50 cursor-pointer"
-                    onClick={() => openDetailsDialog(appointment)}
-                  >
-                    <TableCell className="font-medium bg-white">
-                      <div>
-                        <p>
-                          {appointment.patient?.patientName ||
-                            "Unknown Patient"}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          ID: {appointment.patientId}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="bg-white">
-                      {appointment.therapist?.name || "Unknown Therapist"}
-                    </TableCell>
-                    <TableCell className="bg-white">
-                      <div>
-                        <p className="font-medium">
-                          {formatDate(appointment.appointmentStartTime)}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {formatTime(appointment.appointmentStartTime)} -{" "}
-                          {formatTime(appointment.appointmentEndTime)}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="bg-white">
-                      <p className="font-medium">
-                        {appointment.service?.name || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {(appointment.service?.category &&
-                          ServiceCategoryLabel[appointment.service.category]) ||
-                          "N/A"}
-                      </p>
-                    </TableCell>
-                    <TableCell className="bg-white">
-                      {appointment.cubicle ? (
-                        <div>
-                          <p className="font-medium text-indigo-700">
-                            {appointment.cubicle.name}
-                          </p>
-                          {appointment.cubicle.roomNumber && (
-                            <p className="text-xs text-gray-500">
-                              {appointment.cubicle.roomNumber}
-                            </p>
-                          )}
-                          {appointment.cubicle.location && (
-                            <p className="text-xs text-gray-400">
-                              {appointment.cubicle.location}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-400">Not assigned</p>
-                      )}
-                    </TableCell>
-                    <TableCell className="bg-white">
-                      {getStatusBadge(appointment.status)}
-                    </TableCell>
-                    <TableCell className="bg-white">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          asChild
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDetailsDialog(appointment);
-                            }}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-
-                          {appointment.status === AppointmentStatus.COMPLETED && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSendFeedback(appointment.id);
-                                }}
-                                className="text-green-600"
-                              >
-                                <MessageCircle className="mr-2 h-4 w-4" />
-                                Send Feedback SMS
-                              </DropdownMenuItem>
-                            </>
-                          )}
-
-                          {(appointment.status ===
-                            AppointmentStatus.CONFIRMED ||
-                            appointment.status ===
-                              AppointmentStatus.CANCELLED ||
-                            appointment.status ===
-                              AppointmentStatus.RESCHEDULED) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSendReminder(appointment.id);
-                                }}
-                                className="text-blue-600"
-                              >
-                                <Mail className="mr-2 h-4 w-4" />
-                                Send Reminder SMS
-                              </DropdownMenuItem>
-                            </>
-                          )}
-
-                          {appointment.status !==
-                            AppointmentStatus.CANCELLED && (
-                            <>
-                              {hasFullControl && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openEditDialog(appointment);
-                                    }}
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit Appointment
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openRescheduleDialog(appointment);
-                                    }}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    Reschedule
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  {appointment.status ===
-                                    AppointmentStatus.CONFIRMED && (
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStatusUpdate(
-                                          appointment.id,
-                                          AppointmentStatus.COMPLETED
-                                        );
-                                      }}
-                                    >
-                                      <Clock className="mr-2 h-4 w-4" />
-                                      Mark as Completed
-                                    </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openCancelDialog(appointment);
-                                    }}
-                                  >
-                                    <X className="mr-2 h-4 w-4" />
-                                    Cancel Appointment
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-
-                              {isTherapist && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  {appointment.status ===
-                                    AppointmentStatus.CONFIRMED && (
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStatusUpdate(
-                                          appointment.id,
-                                          AppointmentStatus.COMPLETED
-                                        );
-                                      }}
-                                    >
-                                      <Clock className="mr-2 h-4 w-4" />
-                                      Mark as Completed
-                                    </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openCancelDialog(appointment);
-                                    }}
-                                  >
-                                    <X className="mr-2 h-4 w-4" />
-                                    Cancel Appointment
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </>
-                          )}
-
-                          {appointment.status ===
-                            AppointmentStatus.CANCELLED && (
-                            <DropdownMenuItem disabled>
-                              <X className="mr-2 h-4 w-4" />
-                              Appointment Cancelled
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        {filteredAppointments.length > 0 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center p-4 bg-white border-t gap-4">
-            <span className="text-sm text-gray-700 text-center sm:text-left">
-              Showing{" "}
-              {Math.min(
-                filteredAppointments.length,
-                (pagination.currentPage - 1) * pagination.limit + 1
-              )}{" "}
-              to{" "}
-              {Math.min(
-                pagination.currentPage * pagination.limit,
-                filteredAppointments.length
-              )}{" "}
-              of {filteredAppointments.length} appointments
-            </span>
-            <div className="flex gap-2 items-center flex-wrap justify-center">
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.currentPage === 1}
-                onClick={() => onPageChange(pagination.currentPage - 1)}
-              >
-                <ChevronLeft className="h-4 w-4 sm:h-8 sm:w-8" />
-                <span className="hidden sm:inline">Previous</span>
-              </Button>
-
-              {Array.from(
-                { length: Math.min(pagination.totalPages, 5) },
-                (_, i) => {
-                  const pageNumber =
-                    i + Math.max(1, pagination.currentPage - 2);
-                  return pageNumber <= pagination.totalPages ? (
-                    <Button
-                      key={pageNumber}
-                      size="sm"
-                      variant={
-                        pageNumber === pagination.currentPage
-                          ? "default"
-                          : "outline"
-                      }
-                      className={
-                        pageNumber === pagination.currentPage
-                          ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600"
-                          : "border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                      }
-                      onClick={() => onPageChange(pageNumber)}
-                    >
-                      {pageNumber}
-                    </Button>
-                  ) : null;
-                }
-              )}
-
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                disabled={pagination.currentPage === pagination.totalPages}
-                onClick={() => onPageChange(pagination.currentPage + 1)}
-              >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="h-4 w-4 sm:h-8 sm:w-8" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* All Dialog Components */}
       <AppointmentDetailsDialog
         isOpen={detailsDialogOpen}
         onClose={() => setDetailsDialogOpen(false)}
         appointment={selectedAppointment}
         onAppointmentUpdated={onAppointmentUpdated}
       />
-
       <EditAppointmentDialog
         isOpen={editDialogOpen}
         onClose={() => setEditDialogOpen(false)}
         appointment={selectedAppointment}
         onAppointmentUpdated={onAppointmentUpdated}
       />
-
       <RescheduleAppointmentDialog
         isOpen={rescheduleDialogOpen}
         onClose={() => setRescheduleDialogOpen(false)}
         appointment={selectedAppointment}
         onAppointmentUpdated={onAppointmentUpdated}
       />
-
       <CancelAppointmentDialog
         isOpen={cancelDialogOpen}
         onClose={() => setCancelDialogOpen(false)}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Minus,
@@ -7,6 +7,8 @@ import {
   Loader2,
   CalendarDays,
   Zap,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +20,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { generateInvoiceId } from "@/lib/utils/RandomIDGenerator";
 import {
@@ -58,34 +59,41 @@ export function InvoicesSection() {
   const { user } = useAuth();
   const [patientFound, setPatientFound] = useState(false);
   const [services, setServices] = useState<PurchasedService[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const CACHE_LIMIT = 100; // max records fetched in one server request
+
+  const [cachedInvoices, setCachedInvoices] = useState<Invoice[]>([]);
+  const [totalServerCount, setTotalServerCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isServicesLoading, setIsServicesLoading] = useState(true);
+  const [isInvoicesLoading, setIsInvoicesLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
 
-  const filteredInvoices = useMemo(() => {
-    if (!searchQuery) return invoices;
-    return invoices.filter(
-      (invoice) =>
-        invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        invoice.patient.patientName
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        invoice.patient.id.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-  }, [invoices, searchQuery]);
-
+  // Debounce search
   useEffect(() => {
-    setPage(1);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const totalPages = Math.ceil(filteredInvoices.length / pageSize);
+  // Reset to page 1 on search or page size change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
+
+  // Slice from cache for the current page — no API call needed
+  const invoices = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return cachedInvoices.slice(start, start + pageSize);
+  }, [cachedInvoices, page, pageSize]);
+
+  // Total pages always based on full server count
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(totalServerCount / pageSize)),
+    [totalServerCount, pageSize]
+  );
+
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const paginatedInvoices = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return filteredInvoices.slice(startIndex, startIndex + pageSize);
-  }, [filteredInvoices, page, pageSize]);
 
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedServices, setSelectedServices] = useState<PurchasedService[]>(
@@ -104,7 +112,6 @@ export function InvoicesSection() {
   const [discountPctInput, setDiscountPctInput] = useState("");
   const [discountAmtInput, setDiscountAmtInput] = useState("");
 
-  // Calendar state
   const [isDateCalendarOpen, setIsDateCalendarOpen] = useState(false);
 
   const fetchServices = useCallback(async () => {
@@ -120,7 +127,6 @@ export function InvoicesSection() {
     }
   }, []);
 
-  // Pre-load services on mount so they're ready when dialog opens
   useEffect(() => {
     fetchServices();
   }, [fetchServices]);
@@ -215,13 +221,13 @@ export function InvoicesSection() {
       const result = await saveInvoice(invoicePayload);
       if (result.success) {
         const { invoice, pdfPath } = result.data;
-        setInvoices((prev) => [invoice, ...prev]);
         setPage(1);
+        fetchInvoices(1, debouncedSearch, false);
         toast({
           title: "Invoice Created",
           description: "Invoice created successfully.",
         });
-        if (pdfPath && invoice.patient?.phone) {
+        if (pdfPath && invoice?.patient?.phone) {
           toast({
             title: "SMS Sent",
             description: `Invoice link sent to ${invoice.patient.phone}.`,
@@ -240,32 +246,58 @@ export function InvoicesSection() {
     }
   };
 
-  const fetchInvoices = async () => {
-    try {
-      const response = await fetch("/api/invoices");
-      const data = await response.json();
-      if (response.ok && data.success) {
-        console.log("Fetched invoices:", data.data);
-        setInvoices(data.data);
-      } else {
+  const fetchInvoices = useCallback(
+    async (serverPage = 1, search = debouncedSearch, append = false) => {
+      setIsInvoicesLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: String(serverPage),
+          limit: String(CACHE_LIMIT),
+          ...(search ? { search } : {}),
+        });
+        const response = await fetch(`/api/invoices?${params}`);
+        const data = await response.json();
+        if (response.ok && data.success) {
+          // append = true when loading next batch beyond current cache
+          setCachedInvoices((prev) =>
+            append ? [...prev, ...data.data] : data.data
+          );
+          setTotalServerCount(data.pagination?.totalCount ?? data.data.length);
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || "Failed to fetch invoices.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
         toast({
           title: "Error",
-          description: data.error || "Failed to fetch invoices.",
+          description: "Failed to fetch invoices. Please try again.",
           variant: "destructive",
         });
+      } finally {
+        setIsInvoicesLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch invoices. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+    },
+    [debouncedSearch, CACHE_LIMIT],
+  );
+
+  // Re-fetch (replace cache) when search changes
   useEffect(() => {
-    fetchInvoices();
-  }, []);
+    fetchInvoices(1, debouncedSearch, false);
+  }, [debouncedSearch]);
+
+  // Append next batch when user pages beyond what's cached
+  useEffect(() => {
+    const cachedEnd = cachedInvoices.length;
+    const neededEnd = page * pageSize;
+    if (neededEnd > cachedEnd && cachedEnd < totalServerCount) {
+      const serverPage = Math.floor(cachedEnd / CACHE_LIMIT) + 1;
+      fetchInvoices(serverPage, debouncedSearch, true);
+    }
+  }, [page, pageSize]);
 
   useEffect(() => {
     const newSubTotal = calculateSubtotal(selectedServices);
@@ -423,7 +455,7 @@ export function InvoicesSection() {
   }
   return (
     <>
-      <div className="bg-gray-50 rounded-lg p-6 mb-8">
+      <div className="bg-indigo-50/30 rounded-xl p-6 mb-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
@@ -881,23 +913,39 @@ export function InvoicesSection() {
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800">Recent Invoices</h3>
-            <div className="w-full max-w-xs">
-              <Input
-                placeholder="Search by Invoice ID, Patient Name, or Patient ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-white"
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                <Input
+                  placeholder="Search invoice ID, patient name or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-white pl-9 pr-8 w-80 border-gray-200 focus:border-indigo-400 focus:ring-indigo-400 rounded-lg shadow-sm"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <InvoiceList
-            invoices={paginatedInvoices}
+            invoices={invoices}
+            isLoading={isInvoicesLoading}
             page={page}
             totalPages={totalPages}
+            totalCount={totalServerCount}
+            pageSize={pageSize}
             setPage={setPage}
+            setPageSize={setPageSize}
             handleViewDetails={handleViewDetails}
             handleDirectPrint={handleDirectPrint}
-            onPaymentSuccess={fetchInvoices}
+            onPaymentSuccess={() => fetchInvoices(1, debouncedSearch, false)}
           />
         </div>
       </div>
@@ -919,7 +967,7 @@ export function InvoicesSection() {
         handlePrintInvoice={() =>
           printPayload && handlePrintInvoice(printPayload)
         }
-        onPaymentSuccess={fetchInvoices}
+        onPaymentSuccess={() => fetchInvoices(1, debouncedSearch, false)}
       />
     </>
   );

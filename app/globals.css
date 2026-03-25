@@ -10,13 +10,19 @@
   }
 
   :root {
+    /* ── Master brand color ── change this ONE value to retheme the entire app */
+    --brand-h: 239;
+    --brand-s: 84%;
+    --brand-l: 60%;
+    --brand: var(--brand-h) var(--brand-s) var(--brand-l);
+
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 240 82% 60%;
+    --primary: var(--brand);
     --primary-foreground: 0 0% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -28,7 +34,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 240 82% 60%;
+    --ring: var(--brand);
     --radius: 0.5rem;
   }
 

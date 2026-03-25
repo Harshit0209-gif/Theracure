@@ -6,11 +6,11 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils/utils";
 
-// Enhanced Dialog with default modal={false}
+// Enhanced Dialog with default modal={true} to lock background scroll
 const Dialog = React.forwardRef<
   HTMLDivElement,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>
->(({ modal = false, ...props }, ref) => (
+>(({ modal = true, ...props }, ref) => (
   <DialogPrimitive.Root modal={modal} {...props} />
 ));
 Dialog.displayName = "Dialog";

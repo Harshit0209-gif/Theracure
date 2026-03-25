@@ -53,6 +53,7 @@ export async function POST(req: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       path: "/",
+      maxAge: 7200, // 2 hours, matches JWT token expiry
     });
 
     return res;

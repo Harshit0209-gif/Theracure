@@ -1,6 +1,5 @@
 import { AppointmentStatus } from "@/lib/generated/bookingEnums";
 import { ServiceCategory } from "@/lib/generated/serviceEnums";
-import { PaginationInfo } from "@/types/index";
 import { Service } from "@/types/service";
 
 export interface Appointment {
@@ -48,10 +47,14 @@ export interface Appointment {
 export interface AppointmentTableProps {
   appointments: Appointment[];
   loading: boolean;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalCount: number;
   therapyTypeFilter: string;
   setTherapyTypeFilter: (type: ServiceCategory) => void;
-  pagination: PaginationInfo;
-  onPageChange: (page: number) => void;
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onAppointmentUpdated: () => void;
 }
 

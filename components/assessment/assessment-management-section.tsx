@@ -1,13 +1,7 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -15,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -36,10 +29,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   User,
   Eye,
@@ -49,15 +41,17 @@ import {
   Trash2,
   Loader2,
   MoreHorizontal,
+  X,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "@/components/ui/use-toast";
 import { AddAssessmentDialog } from "@/components/assessment/add-assessment-form";
 import { UserRole } from "@/lib/generated/userRoles";
-import { PaginationDefaultValue, PaginationInfo } from "@/types";
 import { PrescriptionDetailsView } from "@/components/prescription/PrescriptionDetailsView";
 
-// Prescription interface
+const CACHE_LIMIT = 100;
+
 interface Prescription {
   id: string;
   patientId: string;
@@ -66,37 +60,24 @@ interface Prescription {
   prescriptionDate: string;
   createdAt: string;
   updatedAt: string;
-  therapist: {
-    user: {
-      name: string;
-    };
-  };
-  patient: {
-    id: string;
-    patientName: string;
-  };
-  session?: {
-    completed: boolean;
-    sessionDate: string;
-  };
-}
-
-interface ApiResponse {
-  success: boolean;
-  prescriptions: Prescription[];
-  pagination: PaginationInfo;
+  therapist: { user: { name: string } };
+  patient: { id: string; patientName: string };
+  session?: { completed: boolean; sessionDate: string };
 }
 
 export function PrescriptionManagementSection() {
   const { user } = useAuth();
 
-  // State management
-  const [searchQuery, setSearchQuery] = useState("");
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [cachedPrescriptions, setCachedPrescriptions] = useState<
+    Prescription[]
+  >([]);
+  const [totalServerCount, setTotalServerCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationInfo>(
-    PaginationDefaultValue
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   const [selectedPrescriptionId, setSelectedPrescriptionId] = useState<
     string | null
   >(null);
@@ -104,117 +85,126 @@ export function PrescriptionManagementSection() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [prescriptionToDelete, setPrescriptionToDelete] = useState<Prescription | null>(null);
+  const [prescriptionToDelete, setPrescriptionToDelete] =
+    useState<Prescription | null>(null);
 
-  // Fetch prescriptions from API
-  const fetchPrescriptions = async (
-    currentPage: number = 1,
-    search: string = ""
-  ) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        currentPage: currentPage.toString(),
-        limit: pagination.limit.toString(),
-        ...(search && { search }),
-        ...(user?.role === UserRole.THERAPIST && { therapistId: user.id }),
-      });
-
-      const response = await fetch(`/api/prescriptions?${params}`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch prescriptions");
-      }
-
-      const data: ApiResponse = await response.json();
-
-      if (data.success) {
-        const transformedPrescriptions: Prescription[] = data.prescriptions.map(
-          (prescription) => ({
-            id: prescription.id,
-            patientId: prescription.patient?.id || "N/A",
-            patientName: prescription.patient?.patientName || "No Patient",
-            prescribedBy: prescription.therapist.user.name,
-            prescriptionDate: prescription.createdAt || "Not specified",
-            createdAt: prescription.createdAt,
-            updatedAt: prescription.updatedAt,
-            therapist: prescription.therapist,
-            patient: prescription.patient,
-            session: prescription.session,
-          })
-        );
-        setPrescriptions(transformedPrescriptions);
-        setPagination(data.pagination);
-      } else {
-        throw new Error("API returned error");
-      }
-    } catch (error) {
-      console.error("Error fetching prescriptions:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch prescriptions. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial load
+  // Debounce search
   useEffect(() => {
-    fetchPrescriptions();
-  }, []);
-
-  // Handle search with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchPrescriptions(1, searchQuery);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Handle currentPage change
-  const handlePageChange = (newPage: number) => {
-    fetchPrescriptions(newPage, searchQuery);
-  };
+  // Reset to page 1 on search or page size change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
 
-  // Handle prescription details view
+  // Slice cache for current page
+  const prescriptions = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return cachedPrescriptions.slice(start, start + pageSize);
+  }, [cachedPrescriptions, page, pageSize]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(totalServerCount / pageSize)),
+    [totalServerCount, pageSize],
+  );
+
+  const fetchPrescriptions = useCallback(
+    async (serverPage = 1, search = debouncedSearch, append = false) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          currentPage: String(serverPage),
+          limit: String(CACHE_LIMIT),
+          ...(search ? { search } : {}),
+          ...(user?.role === UserRole.THERAPIST && user.id
+            ? { therapistId: user.id }
+            : {}),
+        });
+
+        const response = await fetch(`/api/prescriptions?${params}`);
+        if (!response.ok) throw new Error("Failed to fetch prescriptions");
+
+        const data = await response.json();
+        if (data.success) {
+          const transformed: Prescription[] = data.prescriptions.map(
+            (p: Prescription) => ({
+              id: p.id,
+              patientId: p.patient?.id || "N/A",
+              patientName: p.patient?.patientName || "No Patient",
+              prescribedBy: p.therapist.user.name,
+              prescriptionDate: p.createdAt || "Not specified",
+              createdAt: p.createdAt,
+              updatedAt: p.updatedAt,
+              therapist: p.therapist,
+              patient: p.patient,
+              session: p.session,
+            }),
+          );
+          setCachedPrescriptions((prev) =>
+            append ? [...prev, ...transformed] : transformed,
+          );
+          setTotalServerCount(
+            data.pagination?.totalCount ?? data.prescriptions.length,
+          );
+        } else {
+          throw new Error("API returned error");
+        }
+      } catch (error) {
+        console.error("Error fetching prescriptions:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch prescriptions. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [debouncedSearch, user],
+  );
+
+  // Re-fetch when search changes
+  useEffect(() => {
+    fetchPrescriptions(1, debouncedSearch, false);
+  }, [debouncedSearch]);
+
+  // Append next batch when user pages beyond cache
+  useEffect(() => {
+    const cachedEnd = cachedPrescriptions.length;
+    const neededEnd = page * pageSize;
+    if (neededEnd > cachedEnd && cachedEnd < totalServerCount) {
+      const serverPage = Math.floor(cachedEnd / CACHE_LIMIT) + 1;
+      fetchPrescriptions(serverPage, debouncedSearch, true);
+    }
+  }, [page, pageSize]);
+
   const handleViewDetails = (prescriptionId: string) => {
     setSelectedPrescriptionId(prescriptionId);
     setDetailsOpen(true);
   };
 
-  // Handle PDF download
   const handleDownloadPDF = async (
     prescriptionId: string,
-    patientName: string
+    patientName: string,
   ) => {
     try {
       setDownloadingId(prescriptionId);
       const response = await fetch(`/api/prescriptions/${prescriptionId}/pdf`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${patientName.replace(
-          /\s+/g,
-          "_"
-        )}_Assessment_${prescriptionId.slice(0, 8)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+      if (!response.ok) throw new Error("Failed to generate PDF");
 
-        toast({
-          title: "Success",
-          description: "PDF downloaded successfully",
-        });
-      } else {
-        throw new Error("Failed to generate PDF");
-      }
-    } catch (error) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${patientName.replace(/\s+/g, "_")}_Assessment_${prescriptionId.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Success", description: "PDF downloaded successfully" });
+    } catch {
       toast({
         title: "Error",
         description: "Failed to download PDF. Please try again.",
@@ -225,36 +215,31 @@ export function PrescriptionManagementSection() {
     }
   };
 
-  // Handle delete prescription
   const handleDeletePrescription = (prescription: Prescription) => {
     setPrescriptionToDelete(prescription);
     setDeleteDialogOpen(true);
   };
 
-  // Confirm delete prescription
   const confirmDeletePrescription = async () => {
     if (!prescriptionToDelete) return;
-
     try {
       setDeletingId(prescriptionToDelete.id);
-      const response = await fetch(`/api/prescriptions/${prescriptionToDelete.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete prescription");
-      }
+      const response = await fetch(
+        `/api/prescriptions/${prescriptionToDelete.id}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) throw new Error("Failed to delete prescription");
 
       const data = await response.json();
-
       if (data.success) {
         toast({
           title: "Success",
           description: "Assessment deleted successfully",
         });
-
-        // Refresh the list
-        fetchPrescriptions(pagination.currentPage, searchQuery);
+        setCachedPrescriptions((prev) =>
+          prev.filter((p) => p.id !== prescriptionToDelete.id),
+        );
+        setTotalServerCount((prev) => prev - 1);
         setDeleteDialogOpen(false);
         setPrescriptionToDelete(null);
       } else {
@@ -263,7 +248,10 @@ export function PrescriptionManagementSection() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete assessment. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete assessment.",
         variant: "destructive",
       });
     } finally {
@@ -271,55 +259,162 @@ export function PrescriptionManagementSection() {
     }
   };
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-IN", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
-  };
 
-  // Format time for display
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-IN", {
+  const formatTime = (dateString: string) =>
+    new Date(dateString).toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
-  };
+
+  // Stats computed from full cache
+  const completedCount = useMemo(
+    () => cachedPrescriptions.filter((p) => p.session?.completed).length,
+    [cachedPrescriptions],
+  );
+  const inProgressCount = useMemo(
+    () => cachedPrescriptions.filter((p) => !p.session?.completed).length,
+    [cachedPrescriptions],
+  );
+  const todayCount = useMemo(
+    () =>
+      cachedPrescriptions.filter(
+        (p) =>
+          new Date(p.createdAt).toDateString() === new Date().toDateString(),
+      ).length,
+    [cachedPrescriptions],
+  );
+
+  const columns: DataTableColumn<Prescription>[] = [
+    {
+      header: "#",
+      headerClassName: "w-14 text-center",
+      cellClassName: "text-center text-sm text-gray-400 font-medium",
+      cell: (_, index) => (page - 1) * pageSize + index + 1,
+    },
+    {
+      header: "Patient Name",
+      cell: (p) => (
+        <div className="font-semibold text-gray-800">{p.patientName}</div>
+      ),
+    },
+    {
+      header: "Patient ID",
+      cell: (p) => (
+        <Badge className="bg-indigo-50 text-indigo-700 font-mono text-xs border-0 hover:bg-indigo-50">
+          {p.patientId}
+        </Badge>
+      ),
+    },
+    {
+      header: "Assessment Date",
+      cell: (p) => (
+        <>
+          <div className="font-medium text-gray-800">
+            {formatDate(p.prescriptionDate)}
+          </div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {formatTime(p.prescriptionDate)}
+          </div>
+        </>
+      ),
+    },
+    {
+      header: "Therapist",
+      cellClassName: "text-gray-700",
+      cell: (p) => p.prescribedBy,
+    },
+    {
+      header: "Actions",
+      headerClassName: "text-right pr-6",
+      cellClassName: "text-right pr-4",
+      cell: (p) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleViewDetails(p.id);
+              }}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownloadPDF(p.id, p.patientName);
+              }}
+              disabled={downloadingId === p.id}
+            >
+              {downloadingId === p.id ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Download PDF
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeletePrescription(p);
+              }}
+              disabled={deletingId === p.id}
+            >
+              {deletingId === p.id ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete Record
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
-    <div className="bg-gray-50 rounded-lg p-6 mb-8">
+    <div className="bg-indigo-50/30 rounded-xl p-6 mb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">
             Assessment Records
           </h2>
-          <p className="text-gray-600 mt-1">
-            Manage and view patient assessment records
+          <p className="text-sm text-gray-500 mt-0.5">
+            {totalServerCount > 0
+              ? `${totalServerCount} total records`
+              : "Manage and view patient assessment records"}
           </p>
         </div>
-        <div className="flex gap-3">
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search by patient name, ID, or therapist..."
-              className="bg-white pl-10 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className="flex items-center gap-3">
           {user?.role === UserRole.THERAPIST && (
             <AddAssessmentDialog
-              onAssessmentAdded={() => fetchPrescriptions()}
+              onAssessmentAdded={() =>
+                fetchPrescriptions(1, debouncedSearch, false)
+              }
             />
           )}
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
@@ -332,13 +427,12 @@ export function PrescriptionManagementSection() {
                   Total Records
                 </p>
                 <p className="text-lg font-bold text-gray-900">
-                  {pagination.totalPages || 0}
+                  {totalServerCount}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center">
@@ -348,13 +442,12 @@ export function PrescriptionManagementSection() {
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Completed</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {prescriptions.filter((p) => p.session?.completed).length}
+                  {completedCount}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center">
@@ -364,13 +457,12 @@ export function PrescriptionManagementSection() {
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">In Progress</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {prescriptions.filter((p) => !p.session?.completed).length}
+                  {inProgressCount}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center">
@@ -381,240 +473,58 @@ export function PrescriptionManagementSection() {
                 <p className="text-sm font-medium text-gray-600">
                   Today's Records
                 </p>
-                <p className="text-lg font-bold text-gray-900">
-                  {
-                    prescriptions.filter(
-                      (p) =>
-                        new Date(p.createdAt).toDateString() ===
-                        new Date().toDateString()
-                    ).length
-                  }
-                </p>
+                <p className="text-lg font-bold text-gray-900">{todayCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Prescriptions Table */}
-      <div className="bg-white  shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-indigo-700">
-              <TableHead className="text-white font-semibold">Sl. No</TableHead>
-              <TableHead className="text-white font-semibold">
-                Patient Name
-              </TableHead>
-              <TableHead className="text-white font-semibold">
-                Patient Id
-              </TableHead>
-              <TableHead className="text-white font-semibold">
-                Assessment Date
-              </TableHead>
-              <TableHead className="text-white font-semibold">
-                Therapist
-              </TableHead>
-
-              <TableHead className="text-white font-semibold">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12">
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                    <span className="ml-3 text-gray-600">
-                      Loading assessment records...
-                    </span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : prescriptions.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12">
-                  <div className="flex flex-col items-center">
-                    <FileText className="h-12 w-12 text-gray-300 mb-3" />
-                    <p className="text-gray-500 text-lg font-medium">
-                      {searchQuery
-                        ? "No assessment records found matching your search."
-                        : "No assessment records found."}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      {!searchQuery &&
-                        "Create your first assessment record to get started."}
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              prescriptions.map((prescription, index) => (
-                <TableRow
-                  key={prescription.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <TableCell className="font-medium">
-                    {(pagination.currentPage - 1) * pagination.limit +
-                      index +
-                      1}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-gray-900">
-                        {prescription.patientName}
-                      </p>
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="space-y-1">
-                      <Badge variant="outline" className="text-xs">
-                        {prescription.patientId}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <p className="font-medium text-gray-900">
-                        {formatDate(prescription.prescriptionDate)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatTime(prescription.prescriptionDate)}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-gray-900">{prescription.prescribedBy}</p>
-                  </TableCell>
-
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                          onClick={() => handleViewDetails(prescription.id)}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleDownloadPDF(
-                              prescription.id,
-                              prescription.patientName
-                            )
-                          }
-                          disabled={downloadingId === prescription.id}
-                        >
-                          {downloadingId === prescription.id ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Download className="mr-2 h-4 w-4" />
-                          )}
-                          Download PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
-                          onClick={() => handleDeletePrescription(prescription)}
-                          disabled={deletingId === prescription.id}
-                        >
-                          {deletingId === prescription.id ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="mr-2 h-4 w-4" />
-                          )}
-                          Delete Record
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Pagination Controls */}
-        {!loading && prescriptions.length > 0 && (
-          <div className="flex justify-between items-center p-4 bg-gray-50 border-t">
-            <div className="text-sm text-gray-600">
-              Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
-              {Math.min(
-                pagination.currentPage * pagination.limit,
-                pagination.totalCount
-              )}{" "}
-              of {pagination.totalCount} records
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pagination.currentPage === 1}
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                className="text-gray-600 border-gray-300 hover:bg-gray-100"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-
-              {/* Page Numbers */}
-              <div className="flex items-center space-x-1">
-                {Array.from(
-                  { length: Math.min(5, pagination.totalPages) },
-                  (_, i) => {
-                    const pageNum =
-                      pagination.currentPage <= 3
-                        ? i + 1
-                        : pagination.currentPage + i - 2;
-
-                    if (pageNum > pagination.totalPages) return null;
-
-                    return (
-                      <Button
-                        key={pageNum}
-                        size="sm"
-                        variant={
-                          pageNum === pagination.currentPage
-                            ? "default"
-                            : "outline"
-                        }
-                        className={
-                          pageNum === pagination.currentPage
-                            ? "bg-indigo-600 text-white hover:bg-indigo-700 w-8 h-8 p-0"
-                            : "text-gray-600 border-gray-300 hover:bg-gray-100 w-8 h-8 p-0"
-                        }
-                        onClick={() => handlePageChange(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  }
-                )}
-              </div>
-
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pagination.currentPage === pagination.totalPages}
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                className="text-gray-600 border-gray-300 hover:bg-gray-100"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
+      {/* Search bar */}
+      <div className="flex justify-end mb-4">
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+          <Input
+            placeholder="Search by patient name, ID, or therapist..."
+            className="bg-white pl-9 pr-8 w-72 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Table */}
+      <DataTable
+        columns={columns}
+        data={prescriptions}
+        rowKey={(p) => p.id}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        totalCount={totalServerCount}
+        setPage={setPage}
+        setPageSize={setPageSize}
+        loading={loading}
+        countIcon={<ClipboardList className="h-5 w-5" />}
+        countLabel="records"
+        emptyIcon={<FileText className="h-10 w-10" />}
+        emptyTitle="No assessment records found"
+        emptyDescription={
+          searchQuery
+            ? `No results for "${searchQuery}"`
+            : "Create your first assessment record to get started"
+        }
+        onRowClick={(p) => handleViewDetails(p.id)}
+      />
 
       {/* View Details Dialog */}
       <Dialog
@@ -645,12 +555,11 @@ export function PrescriptionManagementSection() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              assessment for patient
+              assessment for patient{" "}
               <span className="font-semibold text-gray-900">
-                {" "}
                 {prescriptionToDelete?.patientName}
-              </span>
-              {" "}and all associated data.
+              </span>{" "}
+              and all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

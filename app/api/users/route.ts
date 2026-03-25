@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, withRetry } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createUserSchema, deleteUserSchema } from "@/lib/validations/user";
 import { UserRole } from "@prisma/client";
@@ -35,25 +35,27 @@ export async function GET(req: NextRequest) {
       }),
     };
 
-    const [users, totalCount] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          phone: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.user.count({ where }),
-    ]);
+    const [users, totalCount] = await withRetry(() =>
+      Promise.all([
+        prisma.user.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            phone: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+        prisma.user.count({ where }),
+      ])
+    );
 
     const totalPages = Math.ceil(totalCount / limit);
 

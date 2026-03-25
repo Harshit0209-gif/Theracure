@@ -1,180 +1,142 @@
-
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  Invoice,
-  InvoiceStatus,
-  invoiceStatusLabelMap,
-  invoiceStatusStyles,
-} from "@/types/invoice";
+import { FileText, type LucideIcon } from "lucide-react";
+import { Invoice, InvoiceStatus, invoiceStatusLabelMap } from "@/types/invoice";
 import { InvoiceActions } from "./InvoiceActions";
-import { Button } from "../ui/button";
-import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 
 interface InvoiceListProps {
   invoices: Invoice[];
+  isLoading?: boolean;
   page: number;
   totalPages: number;
+  totalCount: number;
+  pageSize: number;
   setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   handleViewDetails: (invoice: Invoice) => void;
   handleDirectPrint: (invoice: Invoice) => void;
   onPaymentSuccess?: () => void;
+  /** Optional icon shown in the count bar. Defaults to FileText. */
+  icon?: LucideIcon;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    PAID: "bg-emerald-50 text-emerald-700 border-0 hover:bg-emerald-50",
+    DUE: "bg-red-50 text-red-600 border-0 hover:bg-red-50",
+    CANCELLED: "bg-gray-100 text-gray-500 border-0 hover:bg-gray-100",
+  };
+  return (
+    <Badge className={styles[status] ?? "bg-gray-100 text-gray-500 border-0 hover:bg-gray-100"}>
+      {invoiceStatusLabelMap[status] ?? status}
+    </Badge>
+  );
 }
 
 export const InvoiceList: React.FC<InvoiceListProps> = ({
   invoices,
+  isLoading = false,
   page,
   totalPages,
+  totalCount,
+  pageSize,
   setPage,
+  setPageSize,
   handleViewDetails,
   handleDirectPrint,
   onPaymentSuccess,
+  icon: Icon = FileText,
 }) => {
-  return (
-    <div className="bg-white rounded-lg overflow-hidden mb-6 shadow-sm">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-indigo-700">
-            <TableHead className="w-[120px] font-semibold text-white">
-              Invoice ID
-            </TableHead>
-            <TableHead className="font-semibold text-white">Patient</TableHead>
-            <TableHead className="font-semibold text-white">Date</TableHead>
-            <TableHead className="font-semibold text-white">Amount</TableHead>
-            <TableHead className="text-center font-semibold text-white">
-              Status
-            </TableHead>
-            <TableHead className="text-right font-semibold text-white">
-              Actions
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invoices.length > 0 ? (
-            invoices.map((invoice) => (
-              <TableRow key={invoice.id}>
-                <TableCell className="font-medium">{invoice.id}</TableCell>
-                <TableCell>
-                  <div className="font-medium">
-                    {invoice.patient?.patientName || "N/A"}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {invoice.patient?.email || ""}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    {new Date(invoice.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Due on:{" "}
-                    {new Date(invoice.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">
-                    ₹{invoice.totalAmount.toFixed(2)}
-                  </div>
-                  {invoice.status !== InvoiceStatus.PAID && (
-                    <div className="text-sm text-red-500">
-                      Balance: ₹
-                      {(invoice.totalAmount - invoice.amountPaid).toFixed(2)}
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge
-                    className={
-                      invoice.status === InvoiceStatus.PAID
-                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                        : "bg-red-100 text-red-600 border border-red-200 hover:bg-red-100"
-                    }
-                  >
-                    {invoiceStatusLabelMap[invoice.status]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <InvoiceActions
-                    invoice={invoice}
-                    onViewDetails={handleViewDetails}
-                    onPrint={handleDirectPrint}
-                    onPaymentSuccess={onPaymentSuccess}
-                  />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                <div className="flex flex-col items-center space-y-2">
-                  <FileText className="h-12 w-12 text-gray-300" />
-                  <p className="text-lg font-medium">No invoices found</p>
-                </div>
-              </TableCell>
-            </TableRow>
+  const columns: DataTableColumn<Invoice>[] = [
+    {
+      header: "#",
+      headerClassName: "w-14 text-center",
+      cellClassName: "text-center text-sm text-gray-400 font-medium",
+      cell: (_, index) => (page - 1) * pageSize + index + 1,
+    },
+    {
+      header: "Invoice ID",
+      cell: (invoice) => (
+        <Badge className="bg-indigo-50 text-indigo-700 font-mono text-xs border-0 hover:bg-indigo-50">
+          {invoice.id}
+        </Badge>
+      ),
+    },
+    {
+      header: "Patient",
+      cell: (invoice) => (
+        <>
+          <div className="font-semibold text-gray-800">
+            {invoice.patient?.patientName || <span className="text-gray-400">—</span>}
+          </div>
+          {invoice.patient?.email && (
+            <div className="text-xs text-gray-400 mt-0.5">{invoice.patient.email}</div>
           )}
-        </TableBody>
-      </Table>
-      <div className="flex justify-between items-center p-4 bg-white border-t">
-        <span className="text-sm text-gray-700">
-          Page {page} of {totalPages}
-        </span>
-        <div className="flex gap-2 items-center">
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
+        </>
+      ),
+    },
+    {
+      header: "Date",
+      cellClassName: "text-gray-600 text-sm",
+      cell: (invoice) =>
+        new Date(invoice.date).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+    },
+    {
+      header: "Amount",
+      cell: (invoice) => {
+        const balance = invoice.totalAmount - invoice.amountPaid;
+        return (
+          <>
+            <div className="font-semibold text-gray-800">₹{invoice.totalAmount.toFixed(2)}</div>
+            {invoice.status !== InvoiceStatus.PAID && balance > 0 && (
+              <div className="text-xs text-red-500 mt-0.5">Balance: ₹{balance.toFixed(2)}</div>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      header: "Status",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
+      cell: (invoice) => <StatusBadge status={invoice.status} />,
+    },
+    {
+      header: "Actions",
+      headerClassName: "text-right pr-6",
+      cellClassName: "text-right pr-4",
+      cell: (invoice) => (
+        <InvoiceActions
+          invoice={invoice}
+          onViewDetails={handleViewDetails}
+          onPrint={handleDirectPrint}
+          onPaymentSuccess={onPaymentSuccess}
+        />
+      ),
+    },
+  ];
 
-          {totalPages > 1 &&
-            Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-              <Button
-                key={pg}
-                size="sm"
-                variant={pg === page ? "default" : "outline"}
-                className={
-                  pg === page
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600"
-                    : "border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-                }
-                onClick={() => setPage(pg)}
-              >
-                {pg}
-              </Button>
-            ))}
-
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-indigo-600 text-indigo-700 hover:bg-indigo-50"
-            disabled={page === totalPages}
-            onClick={() => setPage(page + 1)}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
+  return (
+    <DataTable
+      columns={columns}
+      data={invoices}
+      rowKey={(inv) => inv.id}
+      page={page}
+      pageSize={pageSize}
+      totalPages={totalPages}
+      totalCount={totalCount}
+      setPage={setPage}
+      setPageSize={setPageSize}
+      loading={isLoading}
+      countIcon={<Icon className="h-5 w-5" />}
+      countLabel="invoices"
+      emptyIcon={<FileText className="h-10 w-10" />}
+      emptyTitle="No invoices found"
+      emptyDescription="Try adjusting your search or filters"
+    />
   );
 };

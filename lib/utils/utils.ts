@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export const getGreeting = () => {
   const now = new Date();
   const istTime = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
   );
   const hour = istTime.getHours();
 
@@ -58,4 +58,14 @@ export const formatDate = (dateString: string) => {
 
 export const getDayName = (date: string) => {
   return new Date(date).toLocaleDateString("en-US", { weekday: "long" });
+};
+
+export const toISTDateKey = (date: Date): string => {
+  const ist = new Date(
+    date.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+  );
+  const y = ist.getFullYear();
+  const m = String(ist.getMonth() + 1).padStart(2, "0");
+  const d = String(ist.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 };

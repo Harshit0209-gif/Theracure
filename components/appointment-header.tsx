@@ -1,15 +1,4 @@
 import { Button } from "@/components/ui/button";
-import {
-  CalendarCheck2,
-  Plus,
-  CalendarDays,
-  Search,
-  Filter,
-} from "lucide-react";
-import { useAuth } from "@/contexts/auth-context";
-import { UserRole } from "@/lib/generated/userRoles";
-import { useEffect, useMemo, useState } from "react";
-import { Appointment } from "@/types/appointments";
 import { Input } from "./ui/input";
 import {
   Select,
@@ -18,6 +7,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import {
+  CalendarDays,
+  Plus,
+  Search,
+  Filter,
+  X,
+} from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { UserRole } from "@/lib/generated/userRoles";
+import { useEffect } from "react";
+import { Appointment } from "@/types/appointments";
 import { AllServiceCatagory, ServiceCategoryLabel } from "@/lib/service";
 import { ServiceCategory } from "@/lib/generated/serviceEnums";
 
@@ -43,89 +43,76 @@ export function AppointmentHeader({
 }: AppointmentHeaderProps) {
   const { user } = useAuth();
 
-  // Debounce search input
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setSearchQuery(searchQuery);
     }, 300);
-
     return () => clearTimeout(timeoutId);
   }, [searchQuery, setSearchQuery]);
-
-  const therapyTypes = useMemo(() => {
-    const types = new Set<string>();
-    appointments.forEach((appointment) => {
-      if (appointment.service?.name) {
-        types.add(appointment.service.name);
-      }
-    });
-    return Array.from(types).sort();
-  }, [appointments]);
 
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
       <div>
-        <h1 className="text-2xl font-bold mb-1 text-gray-800">
-          Appointment Management
-        </h1>
-        <p className="text-gray-600">
-          Manage patient appointments and schedules
-        </p>
+        <h2 className="text-2xl font-bold text-gray-800">Appointment Management</h2>
+        <p className="text-sm text-gray-500 mt-0.5">Manage patient appointments and schedules</p>
       </div>
 
-      <div className="flex gap-2 w-full md:w-auto justify-end">
-        <div className="flex items-center">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
-            {/* Search Input */}
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-indigo-400 h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Search by patient name"
-                className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg w-full text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Therapy Type Filter */}
-            <div className="relative w-full sm:w-48">
-              <Select
-                value={therapyTypeFilter}
-                onValueChange={setTherapyTypeFilter}
-              >
-                <SelectTrigger className="bg-white border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-indigo-400" />
-                    <SelectValue placeholder="Filter by therapy type" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Select Therapy</SelectItem>
-                  {AllServiceCatagory.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {ServiceCategoryLabel[type]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <div className="flex flex-wrap items-center gap-3 justify-end">
+        {/* Search */}
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+          <Input
+            type="text"
+            placeholder="Search by patient name..."
+            className="bg-white pl-9 pr-8 w-64 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
-        {user?.role != UserRole.THERAPIST ? (
+
+        {/* Therapy filter */}
+        <Select value={therapyTypeFilter} onValueChange={setTherapyTypeFilter}>
+          <SelectTrigger className="w-44 bg-white border-gray-200 shadow-sm text-sm">
+            <div className="flex items-center gap-2">
+              <Filter className="h-3.5 w-3.5 text-gray-400" />
+              <SelectValue placeholder="All therapies" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Therapies</SelectItem>
+            {AllServiceCatagory.map((type) => (
+              <SelectItem key={type} value={type}>
+                {ServiceCategoryLabel[type]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {user?.role !== UserRole.THERAPIST && (
           <Button
             onClick={onScheduleNew}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg flex items-center gap-2"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
             Schedule New
           </Button>
-        ) : null}
+        )}
+
         <Button
           onClick={onViewCalendar}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg flex items-center gap-2"
+          variant="outline"
+          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex items-center gap-2"
         >
-          <CalendarDays className="h-5 w-5" />
+          <CalendarDays className="h-4 w-4" />
           View Calendar
         </Button>
       </div>

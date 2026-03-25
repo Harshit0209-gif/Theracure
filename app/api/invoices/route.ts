@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
     const status = searchParams.get("status");
     const patientId = searchParams.get("patientId");
@@ -42,7 +42,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { id: { contains: search, mode: "insensitive" } },
-        { notes: { contains: search, mode: "insensitive" } },
+        { patient: { patientName: { contains: search, mode: "insensitive" } } },
+        { patient: { id: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -134,7 +135,16 @@ export async function POST(request: NextRequest) {
       (paymentDetails?.totalAmount || 0).toFixed(2),
     );
     const subTotal = parseFloat((paymentDetails?.subTotal || 0).toFixed(2));
-    const amountPaid = parseFloat((paymentDetails?.amountPaid || 0).toFixed(2));
+    const rawAmountPaid = parseFloat((paymentDetails?.amountPaid || 0).toFixed(2));
+
+    if (rawAmountPaid > totalAmount) {
+      return NextResponse.json(
+        { success: false, error: `Amount paid (₹${rawAmountPaid}) cannot exceed total amount (₹${totalAmount})` },
+        { status: 400 },
+      );
+    }
+
+    const amountPaid = rawAmountPaid;
 
     const invoice = await prisma.invoice.create({
       data: {
@@ -203,7 +213,10 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch (pdfError) {
-      console.error("PDF generation failed (non-fatal):", pdfError instanceof Error ? pdfError.message : pdfError);
+      console.error(
+        "PDF generation failed (non-fatal):",
+        pdfError instanceof Error ? pdfError.message : pdfError,
+      );
     }
 
     if (invoice.patient?.phone && pdfPath) {
