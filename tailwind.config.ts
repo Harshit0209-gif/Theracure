@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import { fontFamily } from "tailwindcss/defaultTheme"
 
 const config = {
   darkMode: ["class"],
@@ -19,6 +20,9 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Plus Jakarta Sans", ...fontFamily.sans],
+      },
       colors: {
         brand: {
           DEFAULT: "hsl(var(--brand))",

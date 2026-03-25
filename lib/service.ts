@@ -47,6 +47,7 @@ export const ServiceCategoryColors: Record<
     gradient: string;
     hoverBg: string;
     selectedBg: string;
+    hex: string;
   }
 > = {
   [ServiceCategory.MANUAL_THERAPY]: {
@@ -57,6 +58,7 @@ export const ServiceCategoryColors: Record<
     gradient: "bg-gradient-to-r from-blue-50 to-blue-100",
     hoverBg: "hover:bg-blue-100",
     selectedBg: "bg-blue-500",
+    hex: "#3b82f6",
   },
   [ServiceCategory.CONSULTATION]: {
     bg: "bg-green-50",
@@ -66,6 +68,7 @@ export const ServiceCategoryColors: Record<
     gradient: "bg-gradient-to-r from-green-50 to-emerald-50",
     hoverBg: "hover:bg-green-100",
     selectedBg: "bg-green-500",
+    hex: "#22c55e",
   },
   [ServiceCategory.ELECTROTHERAPY]: {
     bg: "bg-yellow-50",
@@ -75,6 +78,7 @@ export const ServiceCategoryColors: Record<
     gradient: "bg-gradient-to-r from-yellow-50 to-amber-50",
     hoverBg: "hover:bg-yellow-100",
     selectedBg: "bg-yellow-500",
+    hex: "#eab308",
   },
   [ServiceCategory.EXERCISE_THERAPY]: {
     bg: "bg-orange-50",
@@ -84,6 +88,7 @@ export const ServiceCategoryColors: Record<
     gradient: "bg-gradient-to-r from-orange-50 to-red-50",
     hoverBg: "hover:bg-orange-100",
     selectedBg: "bg-orange-500",
+    hex: "#f97316",
   },
   [ServiceCategory.COMBO_TREATMENT]: {
     bg: "bg-purple-50",
@@ -93,6 +98,7 @@ export const ServiceCategoryColors: Record<
     gradient: "bg-gradient-to-r from-purple-50 to-pink-50",
     hoverBg: "hover:bg-purple-100",
     selectedBg: "bg-purple-500",
+    hex: "#a855f7",
   },
 };
 
