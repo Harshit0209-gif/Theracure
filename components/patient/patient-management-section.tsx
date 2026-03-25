@@ -22,15 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import {
-  Search,
-  Eye,
-  Edit,
-  Trash,
-  X,
-  Users,
-  Loader2,
-} from "lucide-react";
+import { Search, Eye, Edit, Trash, X, Users, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { AddPatientDialog } from "./add-patient-dialog";
 import { toast } from "@/components/ui/use-toast";
@@ -77,7 +69,7 @@ export function PatientManagementSection() {
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalServerCount / pageSize)),
-    [totalServerCount, pageSize]
+    [totalServerCount, pageSize],
   );
 
   const fetchPatients = useCallback(
@@ -99,9 +91,11 @@ export function PatientManagementSection() {
         const data = await response.json();
         if (data.success) {
           setCachedPatients((prev) =>
-            append ? [...prev, ...data.patients] : data.patients
+            append ? [...prev, ...data.patients] : data.patients,
           );
-          setTotalServerCount(data.pagination?.totalCount ?? data.patients.length);
+          setTotalServerCount(
+            data.pagination?.totalCount ?? data.patients.length,
+          );
         } else {
           throw new Error("API returned error");
         }
@@ -116,7 +110,7 @@ export function PatientManagementSection() {
         setLoading(false);
       }
     },
-    [debouncedSearch, user]
+    [debouncedSearch, user],
   );
 
   // Re-fetch (replace cache) when search changes
@@ -147,7 +141,7 @@ export function PatientManagementSection() {
 
   const handlePatientUpdate = (updatedPatient: Patient) => {
     setCachedPatients((prev) =>
-      prev.map((p) => (p.id === updatedPatient.id ? updatedPatient : p))
+      prev.map((p) => (p.id === updatedPatient.id ? updatedPatient : p)),
     );
     setSelectedPatient(updatedPatient);
   };
@@ -190,7 +184,9 @@ export function PatientManagementSection() {
       header: "Patient Name",
       cell: (patient) => (
         <>
-          <div className="font-semibold text-gray-800">{patient.patientName}</div>
+          <div className="font-semibold text-gray-800">
+            {patient.patientName}
+          </div>
           {patient.email && (
             <div className="text-xs text-gray-400 mt-0.5">{patient.email}</div>
           )}
@@ -220,12 +216,13 @@ export function PatientManagementSection() {
             patient.gender?.toLowerCase() === "male"
               ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-0"
               : patient.gender?.toLowerCase() === "female"
-              ? "bg-pink-50 text-pink-700 hover:bg-pink-50 border-0"
-              : "bg-gray-50 text-gray-600 hover:bg-gray-50 border-0"
+                ? "bg-pink-50 text-pink-700 hover:bg-pink-50 border-0"
+                : "bg-gray-50 text-gray-600 hover:bg-gray-50 border-0"
           }
         >
           {patient.gender
-            ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1).toLowerCase()
+            ? patient.gender.charAt(0).toUpperCase() +
+              patient.gender.slice(1).toLowerCase()
             : "—"}
         </Badge>
       ),
@@ -233,7 +230,8 @@ export function PatientManagementSection() {
     {
       header: "Phone",
       cellClassName: "text-gray-600 text-sm",
-      cell: (patient) => patient.phone || <span className="text-gray-300">—</span>,
+      cell: (patient) =>
+        patient.phone || <span className="text-gray-300">—</span>,
     },
     {
       header: "Actions",
@@ -245,7 +243,10 @@ export function PatientManagementSection() {
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
-            onClick={(e) => { e.stopPropagation(); handleViewDetails(patient); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewDetails(patient);
+            }}
             title="View details"
           >
             <Eye className="h-4 w-4" />
@@ -257,7 +258,10 @@ export function PatientManagementSection() {
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg"
-                onClick={(e) => { e.stopPropagation(); handleEditPatient(patient); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditPatient(patient);
+                }}
                 title="Edit patient"
               >
                 <Edit className="h-4 w-4" />
@@ -285,7 +289,9 @@ export function PatientManagementSection() {
                     <AlertDialogTitle>Delete patient?</AlertDialogTitle>
                     <AlertDialogDescription>
                       This will permanently delete{" "}
-                      <span className="font-semibold text-gray-800">{patient.patientName}</span>{" "}
+                      <span className="font-semibold text-gray-800">
+                        {patient.patientName}
+                      </span>{" "}
                       and all associated data. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -312,12 +318,9 @@ export function PatientManagementSection() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Patient Management</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {totalServerCount > 0
-              ? `${totalServerCount} total patients`
-              : "Manage your patients"}
-          </p>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Patient Management
+          </h2>
         </div>
         <div className="flex items-center gap-3">
           {/* Search */}
@@ -339,7 +342,11 @@ export function PatientManagementSection() {
               </button>
             )}
           </div>
-          {!isTherapist && <AddPatientDialog fetchPatients={() => fetchPatients(1, debouncedSearch, false)} />}
+          {!isTherapist && (
+            <AddPatientDialog
+              fetchPatients={() => fetchPatients(1, debouncedSearch, false)}
+            />
+          )}
         </div>
       </div>
 
@@ -358,7 +365,11 @@ export function PatientManagementSection() {
         countLabel="patients"
         emptyIcon={<Users className="h-10 w-10" />}
         emptyTitle="No patients found"
-        emptyDescription={searchQuery ? `No results for "${searchQuery}"` : "Add your first patient to get started"}
+        emptyDescription={
+          searchQuery
+            ? `No results for "${searchQuery}"`
+            : "Add your first patient to get started"
+        }
       />
 
       {/* Patient Details Dialog */}

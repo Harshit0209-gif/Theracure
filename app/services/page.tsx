@@ -8,6 +8,14 @@ import {
   Settings,
   ToggleLeft,
   ToggleRight,
+  ShieldCheck,
+  Stethoscope,
+  Clock,
+  LayoutGrid,
+  MoreVertical,
+  X,
+  Search,
+  Activity,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -17,6 +25,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,25 +93,39 @@ function ServiceForm({
     <>
       <div className="grid gap-4 py-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="svc-name">Service Name</Label>
+          <Label
+            htmlFor="svc-name"
+            className="text-sm font-medium text-gray-700"
+          >
+            Service Name
+          </Label>
           <Input
             id="svc-name"
-            placeholder="e.g. Deep Tissue Massage"
+            placeholder="e.g. Therapeutic Exercise"
             value={data.name}
             onChange={(e) => onChange({ ...data, name: e.target.value })}
+            className="border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
-            <Label htmlFor="svc-category">Category</Label>
+            <Label
+              htmlFor="svc-category"
+              className="text-sm font-medium text-gray-700"
+            >
+              Category
+            </Label>
             <Select
               value={data.category}
               onValueChange={(v: ServiceCategory) =>
                 onChange({ ...data, category: v })
               }
             >
-              <SelectTrigger id="svc-category">
-                <SelectValue placeholder="Select category" />
+              <SelectTrigger
+                id="svc-category"
+                className="border-gray-200 rounded-lg shadow-sm"
+              >
+                <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
                 {AllServiceCatagory.map((cat) => (
@@ -108,7 +137,12 @@ function ServiceForm({
             </Select>
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="svc-price">Price (₹)</Label>
+            <Label
+              htmlFor="svc-price"
+              className="text-sm font-medium text-gray-700"
+            >
+              Price (₹)
+            </Label>
             <Input
               id="svc-price"
               type="number"
@@ -117,44 +151,64 @@ function ServiceForm({
               placeholder="0.00"
               value={data.price}
               onChange={(e) => onChange({ ...data, price: e.target.value })}
+              className="border-gray-200 rounded-lg shadow-sm"
             />
           </div>
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="svc-desc">Description</Label>
+          <Label
+            htmlFor="svc-desc"
+            className="text-sm font-medium text-gray-700"
+          >
+            Description
+          </Label>
           <Textarea
             id="svc-desc"
-            placeholder="Describe the service..."
+            placeholder="Clinical description of the service..."
             rows={3}
             value={data.description}
             onChange={(e) => onChange({ ...data, description: e.target.value })}
+            className="border-gray-200 rounded-lg shadow-sm resize-none"
           />
         </div>
         <div
-          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer"
+          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100/80 transition-colors"
           onClick={() => onChange({ ...data, isActive: !data.isActive })}
         >
-          <div>
-            <p className="text-sm font-medium text-gray-700">Active Service</p>
-            <p className="text-xs text-gray-400">
-              Visible and bookable by patients
-            </p>
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-1.5 rounded-md ${data.isActive ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-500"}`}
+            >
+              {data.isActive ? (
+                <ShieldCheck className="h-3.5 w-3.5" />
+              ) : (
+                <Clock className="h-3.5 w-3.5" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700 leading-none">
+                Available Status
+              </p>
+              <p className="text-[11px] text-gray-400 mt-1">
+                {data.isActive ? "Visible in catalog" : "Hidden from catalog"}
+              </p>
+            </div>
           </div>
           {data.isActive ? (
-            <ToggleRight className="h-6 w-6 text-indigo-600" />
+            <ToggleRight className="h-5 w-5 text-indigo-600" />
           ) : (
-            <ToggleLeft className="h-6 w-6 text-gray-400" />
+            <ToggleLeft className="h-5 w-5 text-gray-300" />
           )}
         </div>
       </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onCancel}>
+      <DialogFooter className="gap-2">
+        <Button variant="outline" onClick={onCancel} className="rounded-lg">
           Cancel
         </Button>
         <Button
           onClick={onSubmit}
           disabled={loading || !data.name || !data.price}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm"
         >
           {loading
             ? "Saving..."
@@ -183,84 +237,98 @@ function ServiceCard({
   onToggleActive,
 }: ServiceCardProps) {
   const colors = ServiceCategoryColors[service.category];
+  const { icon: CategoryIcon, label: categoryLabel } =
+    ServiceCategoryOptionsMap[service.category];
 
   return (
     <div
-      className={`bg-white rounded-xl border hover:shadow-md transition-shadow ${!service.isActive ? "opacity-60" : ""}`}
-      style={{ borderColor: `${colors.hex}40` }}
+      className={`group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${!service.isActive ? "opacity-75 grayscale-[0.3]" : ""}`}
     >
-      {/* Color accent bar */}
-      <div className="h-1 rounded-t-xl" style={{ backgroundColor: colors.hex }} />
-
       <div className="p-4">
-        {/* Name + actions */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-gray-800 truncate leading-snug">
-              {service.name}
-            </p>
-            <p className="text-[11px] text-gray-400 mt-0.5 tracking-wide">
-              Added{" "}
-              {new Date(service.createdAt).toLocaleDateString("en-IN", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
-            </p>
+        <div className="flex items-start justify-between mb-3">
+          <div
+            className="p-2 rounded-lg transition-colors"
+            style={{ backgroundColor: `${colors.hex}15`, color: colors.hex }}
+          >
+            <CategoryIcon className="h-4 w-4" />
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              onClick={() => onToggleActive(service.id, !service.isActive)}
-              className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-              title={service.isActive ? "Deactivate" : "Activate"}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"
+              >
+                <MoreVertical className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-44 rounded-lg border-gray-100 shadow-lg p-1"
             >
-              {service.isActive ? (
-                <ToggleRight className="h-3.5 w-3.5" />
-              ) : (
-                <ToggleLeft className="h-3.5 w-3.5" />
-              )}
-            </button>
-            <button
-              onClick={() => onEdit(service)}
-              className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-            >
-              <Edit className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => onDelete(service.id)}
-              className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
+              <DropdownMenuItem
+                onClick={() => onToggleActive(service.id, !service.isActive)}
+                className="cursor-pointer rounded-md focus:bg-indigo-50 focus:text-indigo-700"
+              >
+                {service.isActive ? (
+                  <>
+                    <ToggleLeft className="mr-2 h-3.5 w-3.5 text-gray-400" />{" "}
+                    Deactivate
+                  </>
+                ) : (
+                  <>
+                    <ToggleRight className="mr-2 h-3.5 w-3.5 text-emerald-500" />{" "}
+                    Activate
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onEdit(service)}
+                className="cursor-pointer rounded-md focus:bg-indigo-50 focus:text-indigo-700"
+              >
+                <Edit className="mr-2 h-3.5 w-3.5 text-gray-400" /> Edit Details
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-gray-50" />
+              <DropdownMenuItem
+                onClick={() => onDelete(service.id)}
+                className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-md"
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Description */}
-        <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 mb-3">
-          {service.description || (
-            <span className="text-gray-300 italic">No description</span>
-          )}
+        <div className="mb-2">
+          <h4 className="font-bold text-gray-800 text-sm leading-tight line-clamp-1 group-hover:text-indigo-600 transition-colors">
+            {service.name}
+          </h4>
+          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-1 block">
+            {categoryLabel}
+          </span>
+        </div>
+
+        <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2 min-h-[2rem] mb-4">
+          {service.description ||
+            "Medical service specialized for therapeutic care and patient recovery."}
         </p>
 
-        {/* Price + status */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-xs text-gray-400 font-medium">₹</span>
-            <span
-              className="text-lg font-extrabold tracking-tight"
-              style={{ color: colors.hex }}
-            >
+        <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+          <div className="flex items-baseline gap-1">
+            <span className="text-[10px] font-semibold text-gray-400">₹</span>
+            <span className="text-base font-bold text-gray-900 tracking-tight">
               {service.price.toLocaleString("en-IN")}
             </span>
           </div>
           <Badge
-            className={`text-[11px] font-semibold border-0 ${
+            variant="outline"
+            className={`px-2 py-0 h-4.5 rounded-full text-[9px] font-bold border shadow-none ${
               service.isActive
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-gray-100 text-gray-400"
+                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                : "bg-gray-50 text-gray-400 border-gray-100"
             }`}
           >
-            {service.isActive ? "Active" : "Inactive"}
+            {service.isActive ? "ACTIVE" : "INACTIVE"}
           </Badge>
         </div>
       </div>
@@ -278,23 +346,54 @@ function StatsBar({ services }: { services: Service[] }) {
   ).length;
 
   const stats = [
-    { label: "Total Services", value: services.length, color: "text-gray-800" },
-    { label: "Active", value: active, color: "text-emerald-600" },
-    { label: "Inactive", value: inactive, color: "text-gray-400" },
-    { label: "Categories", value: categoryCount, color: "text-indigo-600" },
+    {
+      label: "Total Services",
+      value: services.length,
+      icon: LayoutGrid,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
+    },
+    {
+      label: "Active",
+      value: active,
+      icon: ShieldCheck,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      label: "Inactive",
+      value: inactive,
+      icon: Clock,
+      color: "text-gray-400",
+      bg: "bg-gray-100",
+    },
+    {
+      label: "Categories",
+      value: categoryCount,
+      icon: Stethoscope,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-      {stats.map(({ label, value, color }) => (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      {stats.map(({ label, value, icon: Icon, color, bg }) => (
         <div
           key={label}
-          className="bg-white rounded-xl border border-gray-100 px-4 py-3"
+          className="bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm flex items-center gap-3"
         >
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-            {label}
-          </p>
-          <p className={`text-3xl font-extrabold mt-1 ${color}`}>{value}</p>
+          <div className={`p-2 rounded-lg ${bg} ${color}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              {label}
+            </p>
+            <p className="text-lg font-bold text-gray-800 leading-none mt-1">
+              {value}
+            </p>
+          </div>
         </div>
       ))}
     </div>
@@ -310,6 +409,7 @@ const ServiceManagement = () => {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [addForm, setAddForm] = useState<ServiceFormData>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<ServiceFormData>(EMPTY_FORM);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchServices = async () => {
     setLoading(true);
@@ -346,7 +446,11 @@ const ServiceManagement = () => {
       setServices((prev) => [...prev, data]);
       setAddForm(EMPTY_FORM);
       setShowAddDialog(false);
-      toast({ title: "Service added successfully" });
+      toast({
+        title: "Success",
+        description: "Service added successfully",
+        variant: "default",
+      });
     } catch {
       toast({
         title: "Error",
@@ -376,7 +480,11 @@ const ServiceManagement = () => {
         prev.map((s) => (s.id === editingService.id ? updated : s)),
       );
       setEditingService(null);
-      toast({ title: "Service updated successfully" });
+      toast({
+        title: "Success",
+        description: "Service updated successfully",
+        variant: "default",
+      });
     } catch {
       toast({
         title: "Error",
@@ -399,7 +507,11 @@ const ServiceManagement = () => {
       setServices((prev) =>
         prev.map((s) => (s.id === id ? { ...s, isActive } : s)),
       );
-      toast({ title: `Service ${isActive ? "activated" : "deactivated"}` });
+      toast({
+        title: "Success",
+        description: `Service ${isActive ? "activated" : "deactivated"} successfully`,
+        variant: "default",
+      });
     } catch {
       toast({
         title: "Error",
@@ -414,7 +526,11 @@ const ServiceManagement = () => {
     try {
       await fetch(`/api/services/${id}`, { method: "DELETE" });
       setServices((prev) => prev.filter((s) => s.id !== id));
-      toast({ title: "Service deleted" });
+      toast({
+        title: "Success",
+        description: "Service deleted successfully",
+        variant: "default",
+      });
     } catch {
       toast({
         title: "Error",
@@ -435,108 +551,158 @@ const ServiceManagement = () => {
     setEditingService(service);
   };
 
+  const filteredServices = services.filter(
+    (s) =>
+      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      false ||
+      s.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      false,
+  );
+
   return (
     <DashboardLayout>
       <div className="bg-indigo-50/30 rounded-xl p-6 mb-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <Settings className="h-5 w-5 text-indigo-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-gray-800">
-                Service Management
-              </h2>
-              <p className="text-sm text-gray-400 mt-0.5">
-                {services.length > 0
-                  ? `${services.length} services across ${AllServiceCatagory.filter((c) => services.some((s) => s.category === c)).length} categories`
-                  : "Manage your healthcare services"}
-              </p>
-            </div>
+        {/* Header Section - Matches Patient Page */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Service Management
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {services.length > 0
+                ? `${services.length} services available`
+                : "Manage your healthcare services"}
+            </p>
           </div>
-          <Button
-            onClick={() => {
-              setAddForm(EMPTY_FORM);
-              setShowAddDialog(true);
-            }}
-            className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Service
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* Search Bar - Matches Patient Page */}
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+              <Input
+                placeholder="Search services..."
+                className="bg-white pl-9 pr-8 w-64 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <Button
+              onClick={() => {
+                setAddForm(EMPTY_FORM);
+                setShowAddDialog(true);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm h-10 px-4 transition-all active:scale-95 flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Service
+            </Button>
+          </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats Bar */}
         {services.length > 0 && <StatsBar services={services} />}
 
-        {/* Loading */}
+        {/* Loading / Empty States */}
         {loading && services.length === 0 && (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent" />
-          </div>
-        )}
-
-        {/* Empty */}
-        {!loading && services.length === 0 && (
-          <div className="text-center py-20">
-            <Settings className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No services yet</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Click "Add Service" to get started
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent mb-3" />
+            <p className="text-sm text-gray-500 font-medium">
+              Loading services...
             </p>
           </div>
         )}
 
-        {/* Category sections */}
-        {AllServiceCatagory.map((cat) => {
-          const catServices = services.filter((s) => s.category === cat);
-          if (catServices.length === 0) return null;
-
-          const { label, icon: Icon, colors } = ServiceCategoryOptionsMap[cat];
-
-          return (
-            <div key={cat} className="mb-8">
-              {/* Section heading */}
-              <div
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl mb-3 border"
-                style={{ backgroundColor: `${colors.hex}18`, borderColor: `${colors.hex}40` }}
-              >
-                <Icon className="h-4 w-4" style={{ color: colors.hex }} />
-                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: colors.hex }}>
-                  {label}
-                </h3>
-                <span
-                  className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/60"
-                  style={{ color: colors.hex }}
-                >
-                  {catServices.length} service{catServices.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-
-              {/* Cards grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {catServices.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    onEdit={openEdit}
-                    onDelete={handleDelete}
-                    onToggleActive={handleToggleActive}
-                  />
-                ))}
-              </div>
+        {!loading && services.length === 0 && (
+          <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Settings className="h-8 w-8 text-gray-200" />
             </div>
-          );
-        })}
+            <h3 className="text-lg font-bold text-gray-800 mb-1">
+              No services found
+            </h3>
+            <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
+              Start by adding your first medical service to the catalog.
+            </p>
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              variant="outline"
+              className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-lg font-medium"
+            >
+              Add New Service
+            </Button>
+          </div>
+        )}
+
+        {/* Category Sections */}
+        <div className="space-y-10">
+          {AllServiceCatagory.map((cat) => {
+            const catServices = filteredServices.filter(
+              (s) => s.category === cat,
+            );
+            if (catServices.length === 0) return null;
+
+            const {
+              label,
+              icon: Icon,
+              colors,
+            } = ServiceCategoryOptionsMap[cat];
+
+            return (
+              <div key={cat}>
+                {/* Section Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className="p-1.5 rounded-lg"
+                    style={{
+                      backgroundColor: `${colors.hex}15`,
+                      color: colors.hex,
+                    }}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                    {label}
+                  </h3>
+                  <div className="h-px flex-1 bg-gray-100"></div>
+                  <span className="text-[10px] font-bold text-gray-400 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-100">
+                    {catServices.length} ITEMS
+                  </span>
+                </div>
+
+                {/* Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {catServices.map((service) => (
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
+                      onEdit={openEdit}
+                      onDelete={handleDelete}
+                      onToggleActive={handleToggleActive}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Add Dialog */}
+      {/* Dialogs */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-4 w-4 text-indigo-600" />
+              <div className="p-1.5 bg-indigo-50 rounded-lg">
+                <Plus className="h-4 w-4 text-indigo-600" />
+              </div>
               Add New Service
             </DialogTitle>
           </DialogHeader>
@@ -551,17 +717,18 @@ const ServiceManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
       <Dialog
         open={editingService !== null}
         onOpenChange={(open) => {
           if (!open) setEditingService(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Edit className="h-4 w-4 text-indigo-600" />
+              <div className="p-1.5 bg-indigo-50 rounded-lg">
+                <Edit className="h-4 w-4 text-indigo-600" />
+              </div>
               Edit Service
             </DialogTitle>
           </DialogHeader>
