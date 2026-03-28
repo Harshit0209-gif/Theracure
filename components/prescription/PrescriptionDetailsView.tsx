@@ -24,7 +24,6 @@ import { toast } from "@/components/ui/use-toast";
 import { PrescriptionData } from "@/types/prescription";
 import { AssessmentFormData } from "@/types/assessment";
 import { calculateSimpleBMI } from "@/lib/utils/bmi-claculator";
-import PrintAssessment from "../assessment/print-assessment";
 
 interface PrescriptionDetailsViewProps {
   prescriptionId: string;
@@ -84,24 +83,20 @@ export const PrescriptionDetailsView: React.FC<
   const handleDownloadPDF = async () => {
     try {
       setDownloading(true);
-
       const response = await fetch(`/api/prescriptions/${prescriptionId}/pdf`);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || "Failed to download PDF");
       }
-
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `assessment-${prescription?.patient?.patientName || prescriptionId}-${new Date().toLocaleDateString()}.pdf`;
+      a.download = `assessment-${prescription?.patient?.patientName || prescriptionId}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-
       toast({
         title: "Success",
         description: "PDF downloaded successfully",
@@ -319,23 +314,13 @@ export const PrescriptionDetailsView: React.FC<
             )}
             {downloading ? "Downloading..." : "Download PDF"}
           </Button>
-          {assessmentData && prescription.patient && (
-            <PrintAssessment
-              assessmentData={assessmentData}
-              patientInfo={{
-                id: prescription.patient.id,
-                patientName: prescription.patient.patientName,
-                age: prescription.patient.age,
-                gender: prescription.patient.gender,
-                phone: prescription.patient.phone || "",
-                email: prescription.patient.email || "",
-                createdBy: prescription.therapistId,
-                createdAt: prescription.createdAt,
-                updatedAt: prescription.updatedAt,
-              }}
-              therapistId={prescription.therapistId}
-            />
-          )}
+          <Button
+            onClick={() => window.open(`/api/prescriptions/${prescriptionId}/pdf`, "_blank")}
+            className="flex items-center gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            Print PDF
+          </Button>
         </div>
       </div>
 

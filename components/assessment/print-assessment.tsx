@@ -57,15 +57,8 @@ const PrintAssessment = ({
       }
 
       const blob = await response.blob();
-
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `assessment-${patientInfo?.patientName || "patient"}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      window.open(url, "_blank");
     } catch (error) {
       console.error("Print error:", error);
       toast({

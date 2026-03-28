@@ -25,7 +25,6 @@ export const usePrescriptionActions = () => {
    */
   const handleView = async (prescriptionId: string) => {
     try {
-      // Open prescription PDF in new tab
       window.open(`/api/prescriptions/${prescriptionId}/pdf`, "_blank");
     } catch (error) {
       console.error("View error:", error);
@@ -44,10 +43,7 @@ export const usePrescriptionActions = () => {
   const handleDownload = async (prescriptionId: string) => {
     try {
       const response = await fetch(`/api/prescriptions/${prescriptionId}/pdf`);
-
-      if (!response.ok) {
-        throw new Error("Download failed");
-      }
+      if (!response.ok) throw new Error("Download failed");
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -59,11 +55,7 @@ export const usePrescriptionActions = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
-      toast({
-        title: "Download started",
-        description: "Downloading prescription PDF",
-      });
+      toast({ title: "Download started", description: "Downloading prescription PDF" });
     } catch (error) {
       console.error("Download error:", error);
       toast({

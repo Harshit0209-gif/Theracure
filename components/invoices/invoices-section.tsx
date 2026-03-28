@@ -90,7 +90,7 @@ export function InvoicesSection() {
   // Total pages always based on full server count
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalServerCount / pageSize)),
-    [totalServerCount, pageSize]
+    [totalServerCount, pageSize],
   );
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -260,7 +260,7 @@ export function InvoicesSection() {
         if (response.ok && data.success) {
           // append = true when loading next batch beyond current cache
           setCachedInvoices((prev) =>
-            append ? [...prev, ...data.data] : data.data
+            append ? [...prev, ...data.data] : data.data,
           );
           setTotalServerCount(data.pagination?.totalCount ?? data.data.length);
         } else {
@@ -335,10 +335,6 @@ export function InvoicesSection() {
       });
       return;
     }
-
-    // If invoice has an ID, open the server PDF URL directly so the browser's
-    // built-in download button works (blob URLs are tab-scoped and fail when
-    // the browser tries to re-fetch them from a new tab).
     if (printData.invoiceDetails?.id) {
       window.open(`/api/invoices/${printData.invoiceDetails.id}/pdf`, "_blank");
       return;

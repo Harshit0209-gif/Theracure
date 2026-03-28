@@ -1139,7 +1139,7 @@ Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol`
   `;
 
     await page.setContent(htmlTemplate, {
-      waitUntil: "networkidle0",
+      waitUntil: "domcontentloaded",
       timeout: 30000,
     });
 

@@ -193,7 +193,6 @@ export function PrescriptionManagementSection() {
       setDownloadingId(prescriptionId);
       const response = await fetch(`/api/prescriptions/${prescriptionId}/pdf`);
       if (!response.ok) throw new Error("Failed to generate PDF");
-
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");

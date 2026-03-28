@@ -80,7 +80,7 @@ export function PrescriptionTableView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const pageSize = 10;
   const { apiFetch } = useApiFetch();
-  const { handleDownload } = usePrescriptionActions();
+  const { handleView, handleDownload } = usePrescriptionActions();
 
   // Fetch prescriptions
   const fetchPrescriptions = async () => {
@@ -318,7 +318,7 @@ export function PrescriptionTableView({
                           View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleDownload(prescription.id)}
+                          onClick={() => handleView(prescription.id)}
                           className="flex items-center gap-2"
                         >
                           <Download className="h-4 w-4" />

@@ -590,7 +590,7 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           <div class="invoice-number">Invoice No: ${invoiceDetails.id}</div>
           <div class="text-right">
             <div class="invoice-date">Date: ${new Date(invoiceDetails.date).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</div>
-            <div class="invoice-date">Status: ${invoiceDetails.status}</div>
+            <div class="invoice-date">Status: ${{ PAID: "Paid", DUE: "Due", CANCELLED: "Cancelled", DRAFT: "Draft" }[invoiceDetails.status as string] || invoiceDetails.status}</div>
           </div>
         </div>
 
@@ -606,7 +606,6 @@ const generateInvoiceHTML = async (data: InvoicePayload) => {
           <div class="detail-card">
             <div class="detail-title">PAYMENT:</div>
             ${safeValue(paymentMethods) && paymentMethods !== "N/A" ? `<div class="detail-item"><span class="detail-label">Method:</span><span class="detail-value">${safeValue(paymentMethods)}</span></div>` : ""}
-            ${safeValue(paymentDetails.status) ? `<div class="detail-item"><span class="detail-label">Status:</span><span class="detail-value">${safeValue(paymentDetails.status)}</span></div>` : ""}
             ${displayOffer > 0 ? `<div class="detail-item"><span class="detail-label">Offer:</span><span class="detail-value">${displayOffer}%</span></div>` : ""}
           </div>
         </div>
