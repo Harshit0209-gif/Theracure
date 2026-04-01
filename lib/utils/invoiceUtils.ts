@@ -18,7 +18,7 @@ export const calculateSubtotal = (services: PurchasedService[]) =>
         const itemTotal = parseFloat((s.price * s.quantity).toFixed(2));
         return sum + itemTotal;
       }, 0)
-      .toFixed(2)
+      .toFixed(2),
   );
 
 // Calculate discount amount from percentage
@@ -27,7 +27,10 @@ export const calculateDiscount = (subTotal: number, offer: number) =>
   parseFloat(((subTotal * offer) / 100).toFixed(2));
 
 // Calculate discount percentage from a flat monetary amount
-export const calculateDiscountPercentage = (subTotal: number, discountAmount: number): number => {
+export const calculateDiscountPercentage = (
+  subTotal: number,
+  discountAmount: number,
+): number => {
   if (subTotal <= 0) return 0;
   return parseFloat(((discountAmount / subTotal) * 100).toFixed(2));
 };
@@ -58,15 +61,15 @@ export const isPrintable = (payload: InvoicePayload): boolean => {
     Array.isArray(payload.selectedServices) &&
     payload.selectedServices.length > 0;
 
-  return hasPatientInfo && hasInvoiceId && (hasInvoiceItems || hasSelectedServices);
+  return (
+    hasPatientInfo && hasInvoiceId && (hasInvoiceItems || hasSelectedServices)
+  );
 };
 
 export const mapInvoiceToPrintPayload = (
   invoice: Invoice,
-  paymentDetails: PaymentDetails
+  paymentDetails: PaymentDetails,
 ): InvoicePayload => {
-  // Calculate total amount paid from transactions with 2 decimal accuracy
-  // Round each transaction before summing to prevent floating point precision drift
   const amountPaidFromTransactions = invoice.transactions
     ? formatCurrency(
         invoice.transactions
@@ -74,15 +77,20 @@ export const mapInvoiceToPrintPayload = (
           .reduce((sum, t) => {
             const transactionAmount = parseFloat(t.amount.toFixed(2));
             return sum + transactionAmount;
-          }, 0)
+          }, 0),
       )
     : 0;
 
   // Calculate the actual discount amount based on offer percentage
-  const discountAmount = calculateDiscount(invoice.subTotal, invoice.offer || 0);
+  const discountAmount = calculateDiscount(
+    invoice.subTotal,
+    invoice.offer || 0,
+  );
 
   // Ensure all monetary values have 2 decimal precision
-  const finalAmountPaid = formatCurrency(amountPaidFromTransactions || invoice.amountPaid);
+  const finalAmountPaid = formatCurrency(
+    amountPaidFromTransactions || invoice.amountPaid,
+  );
   const subTotal = formatCurrency(invoice.subTotal);
   const totalAmount = formatCurrency(invoice.totalAmount);
 

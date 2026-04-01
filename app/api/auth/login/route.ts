@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid input", details: result.error.format() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -23,20 +23,21 @@ export async function POST(req: Request) {
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
       return NextResponse.json(
         { error: "Invalid email or password" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (user.role !== role) {
       return NextResponse.json(
         { error: "Invalid role for this user" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     // Create token
     const token = signToken({
       id: user.id,
+      name: user.name,
       email: user.email,
       role: user.role,
     });
@@ -52,8 +53,9 @@ export async function POST(req: Request) {
     res.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       path: "/",
-      maxAge: 7200, // 2 hours, matches JWT token expiry
+      maxAge: 7200,
     });
 
     return res;

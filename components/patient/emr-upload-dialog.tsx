@@ -77,13 +77,14 @@ export function EMRUploadDialog({
         "image/jpg",
         "image/png",
         "image/webp",
+        "image/heic",
+        "image/heif",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ];
 
       const isValidType = supportedTypes.includes(file.type);
-      const maxSize =
-        file.type === "application/pdf" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+      const maxSize = 10 * 1024 * 1024;
       const isValidSize = file.size <= maxSize;
 
       if (!isValidType) {
@@ -96,7 +97,7 @@ export function EMRUploadDialog({
       }
 
       if (!isValidSize) {
-        const limit = file.type === "application/pdf" ? "10MB" : "5MB";
+        const limit = "10MB";
         toast({
           title: "File too large",
           description: `${file.name} exceeds the ${limit} size limit`,
@@ -126,7 +127,7 @@ export function EMRUploadDialog({
     onDrop,
     accept: {
       "application/pdf": [".pdf"],
-      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+      "image/*": [".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif"],
       "application/msword": [".doc"],
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         [".docx"],
@@ -387,7 +388,7 @@ export function EMRUploadDialog({
                   <p className="font-medium mb-1">File Requirements:</p>
                   <ul className="space-y-1 text-xs">
                     <li>• PDF files: Max 10MB</li>
-                    <li>• Image files (PNG, JPG, WEBP): Max 5MB</li>
+                    <li>• Image files (PNG, JPG, WEBP): Max 10MB</li>
                     <li>• Document files (DOC, DOCX): Max 10MB</li>
                     <li>• Maximum 10 files per upload</li>
                   </ul>

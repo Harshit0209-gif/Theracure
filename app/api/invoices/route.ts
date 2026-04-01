@@ -135,11 +135,16 @@ export async function POST(request: NextRequest) {
       (paymentDetails?.totalAmount || 0).toFixed(2),
     );
     const subTotal = parseFloat((paymentDetails?.subTotal || 0).toFixed(2));
-    const rawAmountPaid = parseFloat((paymentDetails?.amountPaid || 0).toFixed(2));
+    const rawAmountPaid = parseFloat(
+      (paymentDetails?.amountPaid || 0).toFixed(2),
+    );
 
     if (rawAmountPaid > totalAmount) {
       return NextResponse.json(
-        { success: false, error: `Amount paid (₹${rawAmountPaid}) cannot exceed total amount (₹${totalAmount})` },
+        {
+          success: false,
+          error: `Amount paid (₹${rawAmountPaid}) cannot exceed total amount (₹${totalAmount})`,
+        },
         { status: 400 },
       );
     }
@@ -156,7 +161,7 @@ export async function POST(request: NextRequest) {
         offer: paymentDetails?.offer || 0,
         amountPaid,
         paymentMethod: invoiceDetails?.paymentMethod || "CASH",
-        createdBy: session?.user?.id || createdBy,
+        createdBy: session?.user?.email || createdBy,
         notes: invoiceDetails.notes || "",
       },
       include: {

@@ -5,7 +5,11 @@ const nextConfig = {
   experimental: {
     workerThreads: false,
     cpus: 1,
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
   },
+
 
   typescript: {
     ignoreBuildErrors: true,

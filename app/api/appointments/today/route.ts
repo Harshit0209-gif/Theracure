@@ -1,30 +1,36 @@
 import { prisma, withRetry } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session-provider";
+import { toISTDateKey } from "@/lib/utils/utils";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const now = new Date();
-    const startOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(startOfDay.getDate() + 1);
+    const session = await getSession(req);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
 
-    const appointments = await withRetry(() => prisma.appointment.findMany({
-      where: {
-        assignedDate: {
-          gte: startOfDay,
-          lt: endOfDay,
+    const { role, id: userId } = session.user;
+
+    const todayIST = toISTDateKey(new Date());
+    const todayDate = new Date(`${todayIST}T00:00:00.000Z`);
+
+    const appointments = await withRetry(() =>
+      prisma.appointment.findMany({
+        where: {
+          assignedDate: todayDate,
+          ...(role === "THERAPIST" && { therapistId: userId }),
         },
-      },
-      include: {
-        patient: { select: { patientName: true } },
-        therapist: { select: { name: true } },
-      },
-      orderBy: { appointmentStartTime: "asc" },
-    }));
+        include: {
+          patient: { select: { patientName: true } },
+          therapist: { select: { name: true } },
+        },
+        orderBy: { appointmentStartTime: "asc" },
+      }),
+    );
 
     return NextResponse.json({
       success: true,
@@ -39,7 +45,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json(
       { success: false, error: "Failed to fetch today's appointments" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

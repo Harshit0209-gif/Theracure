@@ -49,18 +49,20 @@ export function AppointmentTable({
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
 
   const { user } = useAuth();
   const isTherapist = user?.role === UserRole.THERAPIST;
-  const hasFullControl = user?.role === UserRole.ADMIN || user?.role === UserRole.RECEPTIONIST;
+  const hasFullControl =
+    user?.role === UserRole.ADMIN || user?.role === UserRole.RECEPTIONIST;
 
   const filteredAppointments = useMemo(
     () =>
       therapyTypeFilter === "all"
         ? appointments
         : appointments.filter((a) => a.service?.category === therapyTypeFilter),
-    [appointments, therapyTypeFilter]
+    [appointments, therapyTypeFilter],
   );
 
   const openEditDialog = useCallback((appointment: Appointment) => {
@@ -83,7 +85,10 @@ export function AppointmentTable({
     setDetailsDialogOpen(true);
   }, []);
 
-  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
+  const handleStatusUpdate = async (
+    appointmentId: string,
+    newStatus: string,
+  ) => {
     try {
       const response = await fetch(`/api/appointments/${appointmentId}`, {
         method: "PATCH",
@@ -91,26 +96,43 @@ export function AppointmentTable({
         body: JSON.stringify({ status: newStatus }),
       });
       if (!response.ok) throw new Error("Failed to update appointment");
-      toast({ title: "Success", description: "Appointment status updated successfully" });
+      toast({
+        title: "Success",
+        description: "Appointment status updated successfully",
+      });
       onAppointmentUpdated();
     } catch {
-      toast({ title: "Error", description: "Failed to update appointment status", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to update appointment status",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSendReminder = async (appointmentId: string) => {
     try {
-      const response = await fetch(`/api/appointments/${appointmentId}/send-reminder`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `/api/appointments/${appointmentId}/send-reminder`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to send reminder");
-      toast({ title: "Success", description: data.message || "Reminder SMS sent successfully" });
+      if (!response.ok)
+        throw new Error(data.error || "Failed to send reminder");
+      toast({
+        title: "Success",
+        description: data.message || "Reminder SMS sent successfully",
+      });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send reminder SMS",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to send reminder SMS",
         variant: "destructive",
       });
     }
@@ -118,17 +140,27 @@ export function AppointmentTable({
 
   const handleSendFeedback = async (appointmentId: string) => {
     try {
-      const response = await fetch(`/api/appointments/${appointmentId}/send-feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `/api/appointments/${appointmentId}/send-feedback`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to send feedback SMS");
-      toast({ title: "Success", description: data.message || "Feedback SMS sent successfully" });
+      if (!response.ok)
+        throw new Error(data.error || "Failed to send feedback SMS");
+      toast({
+        title: "Success",
+        description: data.message || "Feedback SMS sent successfully",
+      });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send feedback SMS",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to send feedback SMS",
         variant: "destructive",
       });
     }
@@ -155,15 +187,19 @@ export function AppointmentTable({
     {
       header: "Therapist",
       cellClassName: "text-gray-700",
-      cell: (appt) => appt.therapist?.name || <span className="text-gray-400">—</span>,
+      cell: (appt) =>
+        appt.therapist?.name || <span className="text-gray-400">—</span>,
     },
     {
       header: "Date & Time",
       cell: (appt) => (
         <>
-          <div className="font-medium text-gray-800">{formatDate(appt.appointmentStartTime)}</div>
+          <div className="font-medium text-gray-800">
+            {formatDate(appt.appointmentStartTime)}
+          </div>
           <div className="text-xs text-gray-400 mt-0.5">
-            {formatTime(appt.appointmentStartTime)} – {formatTime(appt.appointmentEndTime)}
+            {formatTime(appt.appointmentStartTime)} –{" "}
+            {formatTime(appt.appointmentEndTime)}
           </div>
         </>
       ),
@@ -188,7 +224,9 @@ export function AppointmentTable({
       cell: (appt) =>
         appt.cubicle ? (
           <>
-            <div className="font-medium text-indigo-700">{appt.cubicle.name}</div>
+            <div className="font-medium text-indigo-700">
+              {appt.cubicle.name}
+            </div>
             {appt.cubicle.roomNumber && (
               <div className="text-xs text-gray-400 mt-0.5">
                 {appt.cubicle.roomNumber}
@@ -205,7 +243,9 @@ export function AppointmentTable({
       headerClassName: "text-center",
       cellClassName: "text-center",
       cell: (appt) => (
-        <Badge className={statusStyles[appt.status as keyof typeof statusStyles]}>
+        <Badge
+          className={statusStyles[appt.status as keyof typeof statusStyles]}
+        >
           {statusLabels[appt.status as keyof typeof statusLabels]}
         </Badge>
       ),
@@ -222,7 +262,12 @@ export function AppointmentTable({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openDetailsDialog(appt); }}>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                openDetailsDialog(appt);
+              }}
+            >
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
@@ -231,7 +276,10 @@ export function AppointmentTable({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={(e) => { e.stopPropagation(); handleSendFeedback(appt.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendFeedback(appt.id);
+                  }}
                   className="text-green-600"
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
@@ -246,7 +294,10 @@ export function AppointmentTable({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={(e) => { e.stopPropagation(); handleSendReminder(appt.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendReminder(appt.id);
+                  }}
                   className="text-blue-600"
                 >
                   <Mail className="mr-2 h-4 w-4" />
@@ -260,18 +311,34 @@ export function AppointmentTable({
                 {hasFullControl && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(appt); }}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(appt);
+                      }}
+                    >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Appointment
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRescheduleDialog(appt); }}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRescheduleDialog(appt);
+                      }}
+                    >
                       <Calendar className="mr-2 h-4 w-4" />
                       Reschedule
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {appt.status === AppointmentStatus.CONFIRMED && (
                       <DropdownMenuItem
-                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(appt.id, AppointmentStatus.COMPLETED); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusUpdate(
+                            appt.id,
+                            AppointmentStatus.COMPLETED,
+                          );
+                        }}
                       >
                         <Clock className="mr-2 h-4 w-4" />
                         Mark as Completed
@@ -279,7 +346,10 @@ export function AppointmentTable({
                     )}
                     <DropdownMenuItem
                       className="text-red-600"
-                      onClick={(e) => { e.stopPropagation(); openCancelDialog(appt); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCancelDialog(appt);
+                      }}
                     >
                       <X className="mr-2 h-4 w-4" />
                       Cancel Appointment
@@ -292,7 +362,13 @@ export function AppointmentTable({
                     <DropdownMenuSeparator />
                     {appt.status === AppointmentStatus.CONFIRMED && (
                       <DropdownMenuItem
-                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(appt.id, AppointmentStatus.COMPLETED); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusUpdate(
+                            appt.id,
+                            AppointmentStatus.COMPLETED,
+                          );
+                        }}
                       >
                         <Clock className="mr-2 h-4 w-4" />
                         Mark as Completed
@@ -300,7 +376,10 @@ export function AppointmentTable({
                     )}
                     <DropdownMenuItem
                       className="text-red-600"
-                      onClick={(e) => { e.stopPropagation(); openCancelDialog(appt); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCancelDialog(appt);
+                      }}
                     >
                       <X className="mr-2 h-4 w-4" />
                       Cancel Appointment

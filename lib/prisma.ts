@@ -9,7 +9,7 @@ function createPrismaClient() {
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL!,
     max: 10,
-    connectionTimeoutMillis: 5000,  // fail fast → withRetry kicks in sooner
+    connectionTimeoutMillis: 15000,
     query_timeout: 10000,
     idleTimeoutMillis: 30000,
     allowExitOnIdle: false,

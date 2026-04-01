@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, withRetry } from "@/lib/prisma";
 import { EMRUploadRequestSchema, validateFiles } from "@/lib/validations/emr";
 import { generateUniqueFileName } from "@/lib/utils/RandomIDGenerator";
 import {
@@ -106,7 +106,7 @@ export class EMRService {
     tags: string[];
   }) {
     try {
-      const record = await prisma.medicalRecord.create({
+      const record = await withRetry(() => prisma.medicalRecord.create({
         data: {
           patientId: data.patientId,
           documentType: data.documentType as DocumentType,
@@ -135,7 +135,7 @@ export class EMRService {
             },
           },
         },
-      });
+      }));
 
       console.log(`EMR record saved to database: ${record.id}`);
       return record;

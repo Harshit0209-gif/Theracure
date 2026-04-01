@@ -89,9 +89,9 @@ export const validateFiles = (files: File[]) => {
       errors.push(`File ${index + 1}: File is empty`);
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-      // 50MB limit
-      errors.push(`File ${index + 1}: File size exceeds 50MB limit`);
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit
+      errors.push(`File ${index + 1}: File size exceeds 10MB limit`);
     }
 
     // Validate file types
@@ -101,6 +101,9 @@ export const validateFiles = (files: File[]) => {
       "image/jpg",
       "image/png",
       "image/gif",
+      "image/webp",
+      "image/heic",
+      "image/heif",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "text/plain",
@@ -110,7 +113,7 @@ export const validateFiles = (files: File[]) => {
       errors.push(
         `File ${
           index + 1
-        }: Unsupported file type. Allowed: PDF, Images, Word docs, Text files`
+        }: Unsupported file type. Allowed: PDF, Images, Word docs, Text files`,
       );
     }
   });

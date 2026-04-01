@@ -28,8 +28,14 @@ import {
 import Link from "next/link";
 import { useAdminDashboardData } from "@/hooks/use-admin-dashboard-data";
 import { useAuth } from "@/contexts/auth-context";
-import { formatCurrency, getGreeting } from "@/lib/utils/utils";
+import {
+  formatCurrency,
+  getGreeting,
+  formatTimeToIST,
+} from "@/lib/utils/utils";
+import { statusLabels, statusStyles } from "@/lib/appointment";
 import { StatsCard } from "@/components/stats/stats-section";
+import { AppointmentStatus } from "@/lib/generated/bookingEnums";
 
 interface PatientStatusItemProps {
   title: string;
@@ -69,17 +75,6 @@ const formatGrowthPercentage = (
       {prefix} {Math.abs(percentage).toFixed(1)}% {label}
     </p>
   );
-};
-
-const getStatusConfig = (status: string) => {
-  const configs = {
-    confirmed: "bg-green-100 text-green-700",
-    pending: "bg-yellow-100 text-yellow-700",
-    "in-progress": "bg-blue-100 text-blue-700",
-    completed: "bg-gray-100 text-gray-700",
-    cancelled: "bg-red-100 text-red-700",
-  };
-  return configs[status as keyof typeof configs] || "bg-gray-100 text-gray-700";
 };
 
 const PatientStatusItem: React.FC<PatientStatusItemProps> = ({
@@ -156,47 +151,68 @@ const AppointmentsTable: React.FC<{
 
   return (
     <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-indigo-700">
-            <TableHead className="font-semibold text-white">Patient</TableHead>
-            <TableHead className="font-semibold text-white">
-              Therapist
-            </TableHead>
-            <TableHead className="font-semibold text-white">Time</TableHead>
-            <TableHead className="font-semibold text-white">Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {appointments && appointments.length > 0 ? (
-            appointments.slice(0, 3).map((appointment) => (
-              <TableRow key={appointment.id}>
-                <TableCell className="font-medium">
-                  {appointment.patientName}
-                </TableCell>
-                <TableCell>{appointment.therapistName}</TableCell>
-                <TableCell>{appointment.time}</TableCell>
-                <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${getStatusConfig(
-                      appointment.status,
-                    )}`}
-                  >
-                    {appointment.status.charAt(0).toUpperCase() +
-                      appointment.status.slice(1).replace("-", " ")}
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
+      <div className="border rounded-lg overflow-hidden shadow-sm">
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-indigo-700 to-indigo-600">
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-4 text-gray-500">
-                No appointments scheduled for today
-              </TableCell>
+              <TableHead className="font-semibold text-white text-center w-1/4 py-3">
+                Patient
+              </TableHead>
+              <TableHead className="font-semibold text-white text-center w-1/4 py-3">
+                Therapist
+              </TableHead>
+              <TableHead className="font-semibold text-white text-center w-1/4 py-3">
+                Time
+              </TableHead>
+              <TableHead className="font-semibold text-white text-center w-1/4 py-3">
+                Status
+              </TableHead>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+        </Table>
+        <div className="max-h-64 overflow-y-auto">
+          <Table>
+            <TableBody>
+              {appointments && appointments.length > 0 ? (
+                appointments.map((appointment, index) => (
+                  <TableRow
+                    key={appointment.id}
+                    className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                  >
+                    <TableCell className="font-medium w-1/4 text-center py-3">
+                      {appointment.patientName}
+                    </TableCell>
+                    <TableCell className="w-1/4 text-center py-3">
+                      {appointment.therapistName}
+                    </TableCell>
+                    <TableCell className="w-1/4 text-center py-3 text-sm">
+                      {formatTimeToIST(appointment.time)}
+                    </TableCell>
+                    <TableCell className="w-1/4 text-center py-3">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-md inline-block ${
+                          statusStyles[appointment.status as AppointmentStatus]
+                        }`}
+                      >
+                        {statusLabels[appointment.status as AppointmentStatus]}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center py-8 text-gray-500 text-sm"
+                  >
+                    No appointments scheduled for today
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </div>
   );
 };
@@ -384,7 +400,7 @@ export default function AdminDashboard() {
           <Card className="bg-white shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">
-                Today's Consultations
+                Today's Appointments
               </CardTitle>
               <Link href="/appointments">
                 <Button variant="ghost" size="sm">

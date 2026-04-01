@@ -69,3 +69,13 @@ export const toISTDateKey = (date: Date): string => {
   const d = String(ist.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
+
+export const formatTimeToIST = (dateString: string | Date): string => {
+  const date = typeof dateString === "string" ? new Date(dateString) : dateString;
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  });
+};
