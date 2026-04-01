@@ -86,6 +86,7 @@ interface Therapist {
   id: string;
   specialization?: string;
   qualification?: string;
+  experiences?: string;
 }
 
 interface Availability {
@@ -192,6 +193,7 @@ export default function UserProfile() {
         therapistForm.reset({
           specialization: data.therapist.specialization || "",
           qualification: data.therapist.qualification || "",
+          experiences: data.therapist.experiences || "",
         });
       }
     } catch (error) {

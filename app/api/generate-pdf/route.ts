@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
           select: {
             specialization: true,
             qualification: true,
+            experiences: true,
             user: { select: { name: true, email: true } },
           },
         })

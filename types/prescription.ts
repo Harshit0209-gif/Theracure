@@ -19,7 +19,8 @@ export interface PrescriptionData {
   therapist: {
     id: string;
     specialization: string;
-    qualification: string;
+    qualification: string | null;
+    experiences?: string | null;
     user: {
       name: string;
       email: string;

@@ -30,6 +30,7 @@ export async function GET(
             id: true,
             specialization: true,
             qualification: true,
+            experiences: true,
             user: {
               select: {
                 name: true,
@@ -49,6 +50,8 @@ export async function GET(
         },
       },
     });
+
+    console.log("Fetched prescription for PDF generation:", prescription);
 
     if (!prescription) {
       return NextResponse.json(

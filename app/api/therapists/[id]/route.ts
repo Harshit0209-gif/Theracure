@@ -57,7 +57,18 @@ export async function PUT(
     const { id } = await params;
     const therapistId = id;
     const body = await req.json();
-    const { specialization, qualification } = body;
+    const {
+      specialization,
+      qualification,
+      experiences,
+      experience,
+    } = body;
+    const normalizedExperiences =
+      typeof experiences === "string"
+        ? experiences
+        : typeof experience === "string"
+          ? experience
+          : null;
 
     // First check if the user exists and is a therapist
     const user = await prisma.user.findUnique({
@@ -95,8 +106,9 @@ export async function PUT(
       therapist = await prisma.therapist.update({
         where: { id: therapistId },
         data: {
-          specialization,
-          qualification,
+          specialization: specialization?.trim() || null,
+          qualification: qualification?.trim() || null,
+          experiences: normalizedExperiences?.trim() || null,
         },
       });
     } else {
@@ -104,8 +116,9 @@ export async function PUT(
       therapist = await prisma.therapist.create({
         data: {
           id: therapistId, // This will link to the existing user
-          specialization,
-          qualification,
+          specialization: specialization?.trim() || null,
+          qualification: qualification?.trim() || null,
+          experiences: normalizedExperiences?.trim() || null,
         },
       });
     }

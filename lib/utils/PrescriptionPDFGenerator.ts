@@ -318,7 +318,7 @@ const generateAssessmentPDF = async (assessment: any) => {
     <meta charset="UTF-8">
     <title>OPD Assessment Sheet</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Allura:wght@600&family=Roboto:wght@300;400;500;700;900&display=swap');
 
       /* A4 Paper with exact dimensions */
       @page {
@@ -334,169 +334,192 @@ const generateAssessmentPDF = async (assessment: any) => {
         print-color-adjust: exact;
       }
 
-      html {
-        width: 210mm;
-        height: 297mm;
-      }
+     
 
       body {
-        font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        font-size: 9.5pt;
-        color: #000;
-        margin: 0;
-        padding: 0;
-        line-height: 1.25;
-        width: 100%;
-        height: 100%;
-        background: white;
-      }
+      font-family: 'Roboto', sans-serif;
+      font-size: 9.5pt;
+      margin: 0;
+      padding: 0;
+      line-height: 1.2;
+    }
       
-      /* --- HEADER STYLES - ALIGNED WITH REFERENCE PDF --- */
+      /* --- HEADER --- */
       .header-wrapper {
         display: flex;
-        flex-direction: row; /* Changed from column */
+        flex-direction: row;
         justify-content: space-between;
-        align-items: center; /* Align items to the center for vertical balance */
-        padding: 12px 0 10px 0;
-        border-bottom: 6px solid #00a8e1;
-        margin-bottom: 8px;
+        align-items: center;
+        padding: 5px 0 4px 0;
+        border-bottom: 4px solid #00a8e1;
+        margin-bottom: 3px;
         page-break-inside: avoid;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        gap: 15px;
+        gap: 6px;
       }
 
       /* Header Left (Logo & Address) */
       .header-left {
-        width: 45%;
-        max-width: 45%;
+        width: 48%;
+        max-width: 48%;
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
       }
       
-      .logo-img {
-        width: 380px; /* Increased from 280px */
-        max-width: 100%;
+      .logo-shell {
+        width: 100%;
         height: auto;
-        max-height: 160px;
-        object-fit: contain;
-        display: block;
-        margin-bottom: 8px; /* Space between logo and address */
+        overflow: visible;
+        margin-bottom: 0;
       }
-      
-      /* Address Text Styling - Consistent Spacing */
+
+      .logo-img {
+        width: 240px;
+        height: auto;
+        object-fit: contain;
+        margin: 0;
+      }
       .clinic-address {
-        font-size: 10.5pt; /* Increased from 8.5pt */
+        font-size: 8pt;
         color: #1f1f1f;
-        line-height: 1.4;
+        line-height: 1.15;
         font-family: 'Roboto', sans-serif;
         width: 100%;
       }
       .addr-row {
         display: block;
-        margin-bottom: 2px;
-        line-height: 1.4;
+        margin-bottom: 1px;
       }
 
-      /* Colors for Labels - Print Safe */
-      .lbl-blue {
-        color: #0054a6;
-        font-weight: 700;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .lbl-red {
-        color: #ed1c24;
-        font-weight: 700;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .txt-red {
-        color: #ed1c24;
-        font-weight: 600; /* Increased weight */
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .txt-blue {
-        color: #0054a6;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
+      /* Colors for Labels */
+      .lbl-blue { color: #0054a6; font-weight: 700; }
+      .lbl-red { color: #ed1c24; font-weight: 700; }
+      .txt-red { color: #ed1c24; font-weight: 600; }
+      .txt-blue { color: #0054a6; }
 
-      /* Header Right (Doctor Info) - Fixed Width */
+      /* Header Right (Doctor Info) */
       .header-right {
-        width: 55%;
-        max-width: 55%;
+        width: 50%;
+        max-width: 50%;
         display: flex;
         flex-direction: column;
-        align-items: flex-start; /* CHANGED */
-        text-align: left; /* CHANGED */
+        align-items: center;
+        text-align: left;
       }
       
-      /* Doctor Name - Large Red - Fixed Dimensions */
       .dr-name {
-        font-size: 26pt; /* Increased from 20pt */
+        font-size: 18pt;
         font-weight: 900;
         color: #d31e24;
-        line-height: 1.1;
-        margin-bottom: 4px;
-        letter-spacing: -0.5px;
-        white-space: normal;
-        text-align: left; /* CHANGED */
+        line-height: 1.02;
+        margin-bottom: 1px;
+        letter-spacing: -0.3px;
         width: 100%;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
       }
 
-      /* Qualifications - Blue - Consistent Spacing */
       .dr-degrees {
-        font-size: 12pt; /* Increased from 9.5pt */
+        font-size: 10pt;
         font-weight: 700;
         color: #005eb8;
-        margin-bottom: 4px;
-        line-height: 1.2;
-        text-align: left; /* CHANGED */
+        margin-bottom: 1px;
+        line-height: 1.25;
         width: 100%;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
       }
 
-      /* Reg No - Standard - Consistent Spacing */
       .dr-reg {
-        font-size: 9.5pt; /* Increased from 8pt */
+        font-size: 9pt;
         color: #333;
         font-weight: 600;
-        margin-bottom: 2px;
-        line-height: 1.2;
-        text-align: left; /* CHANGED */
+        margin-bottom: 0;
+        line-height: 1.05;
         width: 100%;
       }
 
-      /* Sr. Consultant - Pink/Magenta - Fixed Spacing (from original, can be repurposed) */
       .dr-title {
-        font-size: 12.5pt; /* Increased from 10.5pt */
+        font-size: 10pt;
         font-weight: 700;
         color: #d6006f;
-        margin-bottom: 4px;
-        line-height: 1.2;
-        text-align: left; /* CHANGED */
+        margin-bottom: 2px;
+        line-height: 1.1;
         width: 100%;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
       }
 
-      /* Previous Exp - Purple - Fixed Spacing */
       .dr-exp {
-        font-size: 10pt; /* Increased from 8.5pt */
+        font-size: 9pt;
         color: #662d91;
         font-weight: 500;
-        line-height: 1.4;
+        line-height: 1.25;
         white-space: pre-line;
-        text-align: left; /* CHANGED */
         width: 100%;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+      }
+
+      /* Final Signature Area - End of Content */
+      .final-signature-container {
+        margin-top: 18px;
+        width: 100%;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .sig-row {
+        display: flex; 
+        justify-content: flex-end; 
+        align-items: flex-end; 
+        margin-bottom: 8px;
+      }
+      .sig-block {
+        min-width: 180px;
+        text-align: center;
+      }
+   .sig-name {
+  font-family: 'Allura', cursive;
+  font-size: 17pt;
+  font-weight: 500;
+  color: #000;
+}
+
+.sig-line {
+  border-top: 1.5px solid #000;
+  width: 140px;
+  margin: 0 auto 3px auto;
+}
+
+.sig-label {
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+      .end-note {
+        text-align: center;
+        margin-bottom: 6px;
+        font-weight: 600;
+        font-size: 8.5pt;
+        color: #555;
+        letter-spacing: 0.3px;
+      }
+      .emergency-banner {
+        background-color: #0054a6;
+        color: white;
+        text-align: center;
+        padding: 5px 8px;
+        font-weight: 700;
+        font-size: 7.5px;
+        border-radius: 2px;
+        letter-spacing: 0.3px;
+      }
+      .sig-box {
+        text-align: right;
+        width: 200px;
+      }
+      .end-mark {
+        text-align: center; 
+        margin-top: 15px;
+        margin-bottom: 5px; 
+        font-weight: 700; 
+        font-size: 8.5pt; 
+        color: #666; 
+        letter-spacing: 1px;
+        border-top: 1px dashed #ccc;
+        padding-top: 8px;
       }
         /* --- NEW VAS TABLE STYLES --- */
       .vas-section-wrapper {
@@ -583,23 +606,23 @@ const generateAssessmentPDF = async (assessment: any) => {
 
       /* --- BODY & CONTENT STYLES - STANDARDIZED --- */
       .sheet-title {
-        text-align: center;
-        margin: 10px 0 12px 0;
-        page-break-inside: avoid;
-      }
+      text-align: center;
+      margin: 4px 0 6px 0;
+    }
       .title-badge {
-        background-color: #1e3a8a;
-        color: white;
-        padding: 6px 28px;
-        border-radius: 14px;
-        font-weight: 800;
-        font-size: 10.5pt;
-        text-transform: uppercase;
-        display: inline-block;
-        letter-spacing: 0.5px;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
+  background-color: #1e3a8a;
+  color: white;
+  padding: 6px 28px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 8pt;
+  text-transform: uppercase;
+  display: inline-block;
+  letter-spacing: 0.5px;
+
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
 
       /* Patient Details Grid - Fixed Layout */
       .patient-grid {
@@ -927,8 +950,6 @@ const generateAssessmentPDF = async (assessment: any) => {
         }
 
         body {
-          width: 210mm;
-          height: 297mm;
           margin: 0;
           padding: 0;
         }
@@ -946,11 +967,6 @@ const generateAssessmentPDF = async (assessment: any) => {
         /* Ensure borders and backgrounds print */
         .header-wrapper {
           border-bottom: 5px solid #00a8e1 !important;
-        }
-
-        .title-badge {
-          background-color: #1e3a8a !important;
-          color: white !important;
         }
 
         .patient-grid {
@@ -978,7 +994,7 @@ const generateAssessmentPDF = async (assessment: any) => {
         <div class="header-left">
           ${
             logoBase64
-              ? `<img class="logo-img" src="${logoBase64}" />`
+              ? `<div class="logo-shell"><img class="logo-img" src="${logoBase64}" /></div>`
               : '<div style="font-weight:900; font-size:24pt; color:#222; margin-bottom: 15px;">THERA-CURE</div>'
           }
           <div class="clinic-address">
@@ -1052,7 +1068,9 @@ Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol`
           )}</span></div>
           <div class="info-row"><span class="p-label">Date:</span><span class="p-val">${new Date(
             assessmentData?.assessmentDate || Date.now(),
-          ).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</span></div>
+          ).toLocaleDateString("en-IN", {
+            timeZone: "Asia/Kolkata",
+          })}</span></div>
           <div class="info-row"><span class="p-label">Ht / Wt:</span><span class="p-val">${
             safeValue(assessmentData?.vitals?.height || patientInfo?.height)
               ? safeValue(
@@ -1132,6 +1150,19 @@ Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol`
             assessmentData?.physiotherapyMgmt,
           )}
           ${renderSection("Additional Notes", assessmentData?.notes)}
+          <div class="final-signature-container">
+            <div class="sig-row">
+              <div class="sig-block">
+                <div class="sig-name">${therapist?.user?.name || therapist?.name || "Signature"}</div>
+                <div class="sig-line"></div>
+                <div class="sig-label">SIGNATURE</div>
+              </div>
+            </div>
+            <div class="end-note">--- End of Assessment ---</div>
+            <div class="emergency-banner">
+              IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
+            </div>
+          </div>
       </div>
     </div>
   </body>
@@ -1149,25 +1180,7 @@ Ex-Asst. Professor, Nopany Institute of Healthcare Studies, Kol`
       margin: { top: "6mm", right: "8mm", bottom: "12mm", left: "8mm" },
       displayHeaderFooter: true,
       headerTemplate: "<div></div>",
-      footerTemplate: `
-        <div style="width: 100%; font-size: 10px; font-family: 'Roboto', sans-serif; padding-right: 8mm; padding-left: 8mm; margin-top: 5mm;">
-          <div style="display: flex; justify-content: flex-end; align-items: flex-end; margin-bottom: 8px; page-break-inside: avoid;">
-             <div style="text-align: right;">
-                 <div style="font-family: 'Dancing Script', cursive; font-size: 18px; color: #000; margin-bottom: 3px; font-weight: 600;">
-                    ${therapist?.user?.name || therapist?.name || "Signature"}
-                 </div>
-                 <div style="border-top: 2px solid #000; width: 140px; display: inline-block; margin-bottom: 2px;"></div>
-                 <div style="font-size: 7.5px; font-weight: bold; color: #333; letter-spacing: 0.5px;">DIGITAL SIGNATURE</div>
-             </div>
-          </div>
-          <div style="text-align: center; margin-bottom: 6px; font-weight: 600; font-size: 9pt; color: #555; letter-spacing: 0.3px;">
-              --- End of Assessment ---
-          </div>
-          <div style="background-color: #0054a6; color: white; text-align: center; padding: 5px 8px; font-weight: bold; font-size: 7.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; border-radius: 2px; letter-spacing: 0.3px;">
-            IN CASE OF ANY EMERGENCY CONTACT THE NEAREST HOSPITAL IMMEDIATELY
-          </div>
-        </div>
-      `,
+      footerTemplate: "<div></div>",
     });
 
     return pdfBuffer;
