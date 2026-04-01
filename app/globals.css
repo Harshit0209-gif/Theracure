@@ -188,64 +188,51 @@
   display: none;
 }
 
-/* Clock Face Styles */
-.react-clock {
-  background-color: white;
-  border: none;
-  display: block;
-  position: relative;
+/* Custom Scrollbar for Sidebar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
 
-.react-clock__face {
-  border: 2px solid #e0e7ff;
-  border-radius: 50%;
-  background-color: #fafafa;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.react-clock__hand {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  right: 50%;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
 }
 
-.react-clock__hand__body {
-  background-color: #6366f1;
-  transform-origin: bottom;
-  position: absolute;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.react-clock__mark {
-  position: absolute;
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }
 
-.react-clock__mark__body {
-  background-color: #cbd5e1;
-  width: 1px;
-  height: 6px;
+/* Custom animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
 }
 
-.react-clock__hand__tip {
-  background-color: #4f46e5;
-  border-radius: 50%;
-  width: 8px;
-  height: 8px;
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
 
-.react-clock__minute-mark__body {
-  background-color: #e2e8f0;
-  width: 1px;
-  height: 3px;
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
 }
 
-.react-clock__number {
-  position: absolute;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #475569;
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Perspective utility */
+.perspective-1000 {
+  perspective: 1000px;
 }

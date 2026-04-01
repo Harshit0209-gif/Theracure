@@ -50,27 +50,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-100">
+    <div className="flex h-screen bg-gray-100 flex-col">
       <Toaster />
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Fixed Sidebar */}
         <div
           className={`${
             sidebarCollapsed ? "w-16" : "w-64"
-          } transition-all duration-300 ease-in-out flex flex-col`}
+          } transition-all duration-300 ease-in-out flex-shrink-0 overflow-y-auto`}
         >
           <Sidebar collapsed={sidebarCollapsed} userRole={user?.role} />
         </div>
+
+        {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="bg-white border-b border-gray-200 z-10 shadow-sm">
-            <div className="flex items-center justify-between px-6 py-3">
+          {/* Fixed Header */}
+          <header className="bg-white border-b border-gray-200 z-10 shadow-sm flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center space-x-4">
                 <Button
                   variant="ghost"
-                  size="icon"
                   onClick={toggleSidebar}
-                  className="text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+                  className="h-10 w-10 p-0 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 rounded-lg"
                 >
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-6 w-6" />
                 </Button>
               </div>
 
@@ -88,7 +91,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                               src={
                                 user?.avatar ||
                                 `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                  user?.name || "User"
+                                  user?.name || "User",
                                 )}&background=4f46e5&color=ffffff&size=128&font-size=0.5`
                               }
                               alt={user?.name || "User"}
@@ -168,11 +171,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </header>
 
+          {/* Scrollable Main Content */}
           <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
             {children}
           </main>
 
-          <Footer />
+          {/* Fixed Footer */}
+          <footer className="flex-shrink-0">
+            <Footer />
+          </footer>
         </div>
       </div>
     </div>
