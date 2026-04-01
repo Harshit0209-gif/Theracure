@@ -59,7 +59,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             sidebarCollapsed ? "w-16" : "w-64"
           } transition-all duration-300 ease-in-out flex-shrink-0 overflow-y-auto`}
         >
-          <Sidebar collapsed={sidebarCollapsed} userRole={user?.role} />
+          <Sidebar 
+            collapsed={sidebarCollapsed} 
+            userRole={user?.role} 
+            onExpand={() => setSidebarCollapsed(false)}
+          />
         </div>
 
         {/* Main Content Area */}
