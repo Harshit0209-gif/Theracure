@@ -18,8 +18,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedAppointments = appointments.map((appointment, index) => ({
+      ...appointment,
+      appointmentDate: normalizeDateOnly(appointment.appointmentDate),
+      appointmentStartTime: new Date(appointment.appointmentStartTime).toISOString(),
+      appointmentEndTime: new Date(appointment.appointmentEndTime).toISOString(),
+      __index: index,
+    }));
+
+    const duplicateOccurrences = findDuplicateRecurringOccurrences(normalizedAppointments);
+    if (duplicateOccurrences.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Recurring schedule contains duplicate appointment occurrences",
+          conflicts: duplicateOccurrences,
+        },
+        { status: 409 },
+      );
+    }
+
     const validationResults = await Promise.all(
-      appointments.map(async (appointment, index) => {
+      normalizedAppointments.map(async (appointment, index) => {
         try {
           const dateError = await validateAppointmentDate(appointment.appointmentDate);
           if (dateError) {
@@ -65,6 +84,17 @@ export async function POST(request: NextRequest) {
       }),
     );
 
+    const batchConflicts = findInternalBatchConflicts(normalizedAppointments);
+    if (batchConflicts.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Recurring schedule contains overlapping appointment entries",
+          conflicts: batchConflicts,
+        },
+        { status: 409 },
+      );
+    }
+
     // Check for conflicts - now based on cubicle availability, not therapist time
     const conflicts = validationResults.filter(
       (result) => !result.isAvailable || !result.hasAvailableCubicle,
@@ -89,10 +119,24 @@ export async function POST(request: NextRequest) {
     const createdAppointments = await prisma.$transaction(
       async (tx) => {
         const results = [];
+        const reservedCubicles = new Map<string, Set<string>>();
 
-        for (let i = 0; i < appointments.length; i++) {
-          const appointment = appointments[i];
+        for (let i = 0; i < normalizedAppointments.length; i++) {
+          const appointment = normalizedAppointments[i];
           const validationResult = validationResults[i];
+
+          const assignedCubicle = selectAvailableCubicleForBatch(
+            validationResult.availableCubicles ?? [],
+            appointment.appointmentStartTime,
+            appointment.appointmentEndTime,
+            reservedCubicles,
+          );
+
+          if (!assignedCubicle) {
+            throw new Error(
+              `No cubicles available for ${appointment.appointmentDate} after batching recurring appointments`,
+            );
+          }
 
           const createdAppointment = await tx.appointment.create({
             data: {
@@ -112,8 +156,7 @@ export async function POST(request: NextRequest) {
                 ? new Date(recurringInfo.endDate).toISOString()
                 : null,
               recurringCount: recurringInfo.count,
-              // Assign cubicle from validation result
-              cubicleId: validationResult.assignedCubicle?.id || null,
+              cubicleId: assignedCubicle.id,
             },
             include: {
               patient: {
@@ -173,6 +216,132 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+function normalizeDateOnly(date: string) {
+  return new Date(date).toISOString().split("T")[0];
+}
+
+function occurrenceKey(appointment: {
+  patientId: string;
+  therapistId: string;
+  appointmentStartTime: string;
+  appointmentEndTime: string;
+}) {
+  return [
+    appointment.patientId,
+    appointment.therapistId,
+    appointment.appointmentStartTime,
+    appointment.appointmentEndTime,
+  ].join("|");
+}
+
+function findDuplicateRecurringOccurrences(
+  appointments: Array<{
+    patientId: string;
+    therapistId: string;
+    appointmentDate: string;
+    appointmentStartTime: string;
+    appointmentEndTime: string;
+  }>,
+) {
+  const seen = new Set<string>();
+
+  return appointments.reduce<
+    Array<{ date: string; reason: string }>
+  >((duplicates, appointment) => {
+    const key = occurrenceKey(appointment);
+    if (seen.has(key)) {
+      duplicates.push({
+        date: appointment.appointmentDate,
+        reason: "Duplicate recurring occurrence generated for the same patient and time slot",
+      });
+      return duplicates;
+    }
+
+    seen.add(key);
+    return duplicates;
+  }, []);
+}
+
+function hasTimeOverlap(
+  startA: string,
+  endA: string,
+  startB: string,
+  endB: string,
+) {
+  const aStart = new Date(startA).getTime();
+  const aEnd = new Date(endA).getTime();
+  const bStart = new Date(startB).getTime();
+  const bEnd = new Date(endB).getTime();
+
+  return aStart < bEnd && bStart < aEnd;
+}
+
+function findInternalBatchConflicts(
+  appointments: Array<{
+    patientId: string;
+    therapistId: string;
+    appointmentDate: string;
+    appointmentStartTime: string;
+    appointmentEndTime: string;
+  }>,
+) {
+  const conflicts: Array<{ date: string; reason: string }> = [];
+
+  for (let i = 0; i < appointments.length; i++) {
+    for (let j = i + 1; j < appointments.length; j++) {
+      const first = appointments[i];
+      const second = appointments[j];
+
+      if (first.therapistId !== second.therapistId) {
+        continue;
+      }
+
+      if (
+        hasTimeOverlap(
+          first.appointmentStartTime,
+          first.appointmentEndTime,
+          second.appointmentStartTime,
+          second.appointmentEndTime,
+        )
+      ) {
+        conflicts.push({
+          date: second.appointmentDate,
+          reason: "Recurring schedule overlaps with another generated appointment for the same therapist",
+        });
+      }
+    }
+  }
+
+  return conflicts;
+}
+
+function slotKey(startTime: string, endTime: string) {
+  return `${startTime}|${endTime}`;
+}
+
+function selectAvailableCubicleForBatch(
+  availableCubicles: Array<{ id: string }>,
+  startTime: string,
+  endTime: string,
+  reservedCubicles: Map<string, Set<string>>,
+) {
+  const key = slotKey(startTime, endTime);
+  const reservedForSlot = reservedCubicles.get(key) ?? new Set<string>();
+
+  const cubicle = availableCubicles.find(
+    (candidate) => !reservedForSlot.has(candidate.id),
+  );
+
+  if (!cubicle) {
+    return null;
+  }
+
+  reservedForSlot.add(cubicle.id);
+  reservedCubicles.set(key, reservedForSlot);
+
+  return cubicle;
 }
 
 // Helper function to check therapist availability

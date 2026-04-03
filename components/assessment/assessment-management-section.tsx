@@ -115,7 +115,7 @@ export function PrescriptionManagementSection() {
       setLoading(true);
       try {
         const params = new URLSearchParams({
-          currentPage: String(serverPage),
+          page: String(serverPage),
           limit: String(CACHE_LIMIT),
           ...(search ? { search } : {}),
           ...(user?.role === UserRole.THERAPIST && user.id

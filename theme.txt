@@ -1,0 +1,90 @@
+ # row number column — absolute number across pages (e.g. row 21 on page 2)
+  - Invoice ID — monospace indigo badge, no border
+  - Patient — name + email stacked, — when null
+  - Date — Indian format (25 Mar 2026), removed the redundant "Due on" duplicate
+  - Status badges — borderless, soft colors (emerald/red/gray)
+  - Pagination — smart ellipsis, icon-only prev/next, Showing 1–20 of 85 invoices
+  - Empty/loading states — match patient table style
+
+
+  appointment-table.tsx
+  - # row number column added
+  - Loading state now uses Loader2 spinner inside the table (removed the old blue box)
+  - Empty state with calendar icon + descriptive message
+  - bg-white removed from every TableCell — inherits cleanly
+  - Cubicle room + location merged on one line with · separator
+  - Pagination matches patient/invoice style: icon-only prev/next, Showing X–Y of Z
+
+
+The app uses Inter (defined in globals.css) throughout — that hasn't changed.
+                                                                                                                                                                                      
+  Here's everything that actually changed across all sessions:
+                                                                                                                                                                                      
+  Styling / theme:                                                                                                                                                                  
+                                                                                                                                                                                      
+  ┌────────────────────────┬─────────────────────────────────────────────────────────────┬───────────────────────────────────────────────────────┐                                    
+  │          What          │                           Before                            │                         After                         │                                  
+  ├────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────┤                                    
+  │ Section wrappers       │ bg-gray-200 / bg-gray-50 rounded-lg                         │ bg-indigo-50/30 rounded-xl                            │                                  
+  ├────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────┤                                  
+  │ Table container        │ flat bg-white rounded-lg                                    │ bg-white rounded-xl shadow-sm border border-gray-100  │                                    
+  ├────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────┤                                    
+  │ Table header row       │ bg-indigo-700 (same)                                        │ bg-indigo-700 hover:bg-indigo-700 (no flash on hover) │                                    
+  ├────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────┤                                    
+  │ Table row hover        │ hover:bg-gray-50                                            │ hover:bg-indigo-50/40                                 │                                  
+  ├────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────┤                                    
+  │ Status badges          │ bordered variants                                           │ borderless soft-color (border-0)                      │                                  
+  ├────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────┤                                    
+  │ Pagination buttons     │ border-indigo-600 text-indigo-700 bulky prev/next with text │ icon-only h-8 w-8, border-gray-200 neutral style      │                                  
+  ├────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────┤                                    
+  │ Empty / loading states │ plain text or separate div                                  │ centered icon + message inside table                  │                                  
+  └────────────────────────┴─────────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────┘                                    
+                                                                                                                                                                                    
+  New UI elements added:                                                                                                                                                              
+  - # row number column in all three tables                                                                                                                                         
+  - Search clear ✕ button                                                                                                                                                             
+  - Rows-per-page <Select> dropdown
+  - Smart ellipsis pagination (1 … 4 5 6 … 20)                                                                                                                                        
+  - Showing X–Y of Z count in footer                                                                                                                                                
+  - Loading spinner (Loader2) inside table body                                                                                                                                       
+                                                                                                                                                                                      
+  Font — no changes. Still Inter, same weights, same sizes as before.   
+
+
+  The table follows this design pattern:                                                                                                                                            
+                                                                                                                                                                                      
+  Structure                                                                                                                                                                           
+  - White card container (bg-white rounded-xl shadow-sm border border-gray-100)                                                                                                       
+  - 3 sections: count bar → table → pagination footer                                                                                                                                 
+                                                                                                                                                                                    
+  Count Bar (top)                                                                                                                                                                     
+  - Light gray background (bg-gray-50/50)                                                                                                                                           
+  - Left: icon + bold count + label                                                                                                                                                   
+  - Right: "Rows per page" + compact Select dropdown                                                                                                                                
+                                                                                                                                                                                      
+  Table Header                                                                                                                                                                      
+  - Solid indigo background (bg-indigo-700) with white text                                                                                                                           
+  - First column # for row numbers, centered                                                                                                                                        
+  - Last column "Actions" right-aligned                                                                                                                                               
+                                                                                                                                                                                      
+  Table Rows
+  - White background, subtle indigo hover (hover:bg-indigo-50/40)                                                                                                                     
+  - Light bottom border (border-gray-50)                                                                                                                                              
+  - Row number in gray (text-gray-400)                                                                                                                                                
+  - Primary data in bold dark gray (text-gray-800)                                                                                                                                    
+  - Secondary data below in small light gray (text-xs text-gray-400)                                                                                                                  
+  - Status badges: borderless soft colors (bg-blue-50 text-blue-700 border-0)                                                                                                         
+                                                                                                                                                                                      
+  Pagination Footer (bottom)                                                                                                                                                          
+  - Same light gray background as count bar                                                                                                                                           
+  - Left: Showing X–Y of Z appointments in small text                                                                                                                                 
+  - Right: prev/next chevron buttons + numbered page buttons                                                                                                                        
+  - Active page: filled indigo (bg-indigo-600 text-white)                                                                                                                             
+  - Other pages: outlined with indigo hover                                                                                                                                           
+  - Smart ellipsis: only shows first, last, current±1 with ... in between                                                                                                             
+                                                                                                                                                                                      
+  Overall color palette                                                                                                                                                               
+  - Brand: indigo-600/700                                                                                                                                                             
+  - Text: gray-800 (primary), gray-500/400 (secondary)                                                                                                                                
+  - Backgrounds: white, gray-50/50, indigo-50/40 (hover)                                                                                                                              
+  - Borders: gray-100, gray-200     

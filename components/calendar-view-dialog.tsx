@@ -89,8 +89,22 @@ export function CalendarViewDialog({
     return result;
   }, [currentMonth, currentYear]);
 
+  const uniqueAppointments = useMemo(() => {
+    const byId = new Map<string, Appointment>();
+
+    for (const appointment of appointments) {
+      byId.set(appointment.id, appointment);
+    }
+
+    return Array.from(byId.values()).sort(
+      (a, b) =>
+        new Date(a.appointmentStartTime).getTime() -
+        new Date(b.appointmentStartTime).getTime(),
+    );
+  }, [appointments]);
+
   const appointmentsByDate = useMemo(() => {
-    return appointments.reduce(
+    return uniqueAppointments.reduce(
       (acc, appt) => {
         const raw = appt.assignedDate || appt.appointmentStartTime;
         if (!raw) return acc;
@@ -103,7 +117,7 @@ export function CalendarViewDialog({
       },
       {} as Record<string, Appointment[]>,
     );
-  }, [appointments]);
+  }, [uniqueAppointments]);
 
   const navigateMonth = (dir: number) => {
     setCurrentDate((prev) => {
@@ -163,7 +177,7 @@ export function CalendarViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden flex flex-col">
+      <DialogContent className="w-[96vw] max-w-5xl h-[82vh] max-h-[82vh] bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-gray-100">
           <DialogTitle className="text-lg font-semibold text-gray-900">
             Appointment Calendar
@@ -172,7 +186,7 @@ export function CalendarViewDialog({
 
         <div className="flex divide-x divide-gray-100 flex-1 min-h-0">
           {/* ── Left: calendar ── */}
-          <div className="w-72 flex-shrink-0 p-5">
+          <div className="w-72 md:w-80 flex-shrink-0 p-5 overflow-y-auto">
             {/* Month navigation */}
             <div className="flex items-center justify-between mb-4">
               <button
@@ -291,8 +305,8 @@ export function CalendarViewDialog({
           </div>
 
           {/* ── Right: day detail panel ── */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-5 pt-5 pb-3 border-b border-gray-100 flex items-center gap-2">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="px-5 pt-5 pb-3 border-b border-gray-100 flex items-center gap-2 flex-shrink-0">
               <CalendarDays className="h-4 w-4 text-indigo-500 flex-shrink-0" />
               <span className="text-sm font-semibold text-gray-800 truncate">
                 {selectedDateKey
@@ -307,7 +321,7 @@ export function CalendarViewDialog({
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 min-h-0">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2.5">
               {sortedSelected.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-10 text-center">
                   <CalendarDays className="h-8 w-8 text-gray-200 mb-2" />

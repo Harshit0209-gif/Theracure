@@ -14,6 +14,26 @@ import { ServiceCategory } from "@/lib/generated/serviceEnums";
 
 const CACHE_LIMIT = 100;
 
+const mergeAppointmentsById = (
+  existing: Appointment[],
+  incoming: Appointment[],
+) => {
+  const merged = new Map<string, Appointment>();
+
+  for (const appointment of existing) {
+    merged.set(appointment.id, appointment);
+  }
+
+  for (const appointment of incoming) {
+    merged.set(appointment.id, appointment);
+  }
+
+  return Array.from(merged.values()).sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+};
+
 const AppointmentPage = () => {
   const { user } = useAuth();
 
@@ -73,7 +93,9 @@ const AppointmentPage = () => {
         const data = await response.json();
         if (data.success) {
           setCachedAppointments((prev) =>
-            append ? [...prev, ...data.appointments] : data.appointments
+            append
+              ? mergeAppointmentsById(prev, data.appointments)
+              : mergeAppointmentsById([], data.appointments)
           );
           setTotalServerCount(data.pagination?.totalCount ?? data.appointments.length);
         }
@@ -147,7 +169,7 @@ const AppointmentPage = () => {
         <CalendarViewDialog
           open={calendarDialogOpen}
           onOpenChange={setCalendarDialogOpen}
-          appointments={appointments}
+          appointments={cachedAppointments}
         />
       </div>
     </DashboardLayout>
