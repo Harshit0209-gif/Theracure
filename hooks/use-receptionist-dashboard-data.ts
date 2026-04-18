@@ -1,17 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
-
-interface TodayAppointment {
-  id: string;
-  patientName: string;
-  therapistName: string;
-  startTime: string;
-  endTime: string;
-  status: "scheduled" | "confirmed" | "in-progress" | "completed" | "cancelled";
-  patientId: string;
-  therapistId: string;
-  appointmentDuration: number;
-}
+import { TodayAppointment } from "@/types/appointments";
 
 interface ReceptionistStats {
   totalPatients: {
@@ -60,7 +49,7 @@ export const useReceptionistDashboardData = () => {
     isLoading: appointmentsLoading,
     mutate: mutateAppointments,
   } = useSWR<TodayAppointment[]>("/api/appointments/today", fetcher, {
-    refreshInterval: 30000, // 30 seconds for real-time updates
+    refreshInterval: 30000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     onSuccess: () => setLastUpdated(new Date()),
@@ -72,7 +61,7 @@ export const useReceptionistDashboardData = () => {
     isLoading: statsLoading,
     mutate: mutateStats,
   } = useSWR<ReceptionistStats>("/api/receptionist/stats", fetcher, {
-    refreshInterval: 60000, // 1 minute
+    refreshInterval: 60000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     onSuccess: () => setLastUpdated(new Date()),

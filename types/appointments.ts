@@ -2,6 +2,14 @@ import { AppointmentStatus } from "@/lib/generated/bookingEnums";
 import { ServiceCategory } from "@/lib/generated/serviceEnums";
 import { Service } from "@/types/service";
 
+export interface TodayAppointment {
+  id: string;
+  patientName: string;
+  therapistName: string;
+  time: string;
+  status: AppointmentStatus;
+}
+
 export interface Appointment {
   id: string;
   therapistId: string;

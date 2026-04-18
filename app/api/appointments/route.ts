@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getDay } from "date-fns";
 import { AppointmentStatus, CubicleStatus } from "@prisma/client";
 import { sendSMSNotification } from "@/config/smsConfig";
 import { validateAppointmentDate } from "@/lib/utils/appointmentDateValidation";
+import {
+  formatTimeInClinicTimeZone,
+  getClinicWeekDayFromDateTime,
+} from "@/lib/utils/clinicDateTime";
+import { getSession } from "@/lib/auth/session-provider";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,9 +23,13 @@ export async function GET(req: NextRequest) {
     if (therapistId) where.therapistId = therapistId;
     if (search) {
       where.OR = [
-        { patient: { patientName: { contains: search, mode: "insensitive" as const } } },
+        {
+          patient: {
+            patientName: { contains: search, mode: "insensitive" as const },
+          },
+        },
         { patient: { id: { contains: search, mode: "insensitive" as const } } },
-        { patientId: null }, // include orphaned appointments (patient deleted)
+        { patientId: null },
       ];
     }
 
@@ -32,11 +40,19 @@ export async function GET(req: NextRequest) {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          patient: { select: { id: true, patientName: true, phone: true, email: true } },
-          therapist: { select: { id: true, name: true, email: true, phone: true } },
+          patient: {
+            select: { id: true, patientName: true, phone: true, email: true },
+          },
+          therapist: {
+            select: { id: true, name: true, email: true, phone: true },
+          },
           createdBy: { select: { id: true, name: true, email: true } },
-          service: { select: { id: true, name: true, category: true, price: true } },
-          cubicle: { select: { id: true, name: true, roomNumber: true, location: true } },
+          service: {
+            select: { id: true, name: true, category: true, price: true },
+          },
+          cubicle: {
+            select: { id: true, name: true, roomNumber: true, location: true },
+          },
         },
       }),
       prisma.appointment.count({ where }),
@@ -45,7 +61,12 @@ export async function GET(req: NextRequest) {
     // Normalize deleted patients so frontend never receives null patient
     const appointments = rawAppointments.map((appt) => ({
       ...appt,
-      patient: appt.patient ?? { id: "", patientName: "Deleted Patient", phone: null, email: null },
+      patient: appt.patient ?? {
+        id: "",
+        patientName: "Deleted Patient",
+        phone: null,
+        email: null,
+      },
     }));
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -65,13 +86,22 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch appointments" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getSession(req);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+    const createdById = session.user.id;
+
     const body = await req.json();
     const {
       patientId,
@@ -79,7 +109,6 @@ export async function POST(req: NextRequest) {
       appointmentStartTime,
       appointmentEndTime,
       notes,
-      createdById,
       serviceId,
       appointmentDate,
       cubicleId,
@@ -90,13 +119,12 @@ export async function POST(req: NextRequest) {
       !therapistId ||
       !appointmentStartTime ||
       !appointmentEndTime ||
-      !createdById ||
       !serviceId ||
       !appointmentDate
     ) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -106,7 +134,7 @@ export async function POST(req: NextRequest) {
     if (startTime >= endTime) {
       return NextResponse.json(
         { success: false, error: "End time must be after start time" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -115,24 +143,21 @@ export async function POST(req: NextRequest) {
     if (dateError) {
       return NextResponse.json(
         { success: false, error: dateError },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const startTimeStr = startTime.toLocaleTimeString("en-IN", {
-      hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata",
-    });
-    const endTimeStr = endTime.toLocaleTimeString("en-IN", {
-      hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata",
-    });
+    const startTimeStr = formatTimeInClinicTimeZone(startTime);
+    const endTimeStr = formatTimeInClinicTimeZone(endTime);
+    const weekDay = getClinicWeekDayFromDateTime(startTime);
 
-    const weekDay = getDay(startTime);
-
-    const therapist = await prisma.therapist.findUnique({ where: { id: therapistId } });
+    const therapist = await prisma.therapist.findUnique({
+      where: { id: therapistId },
+    });
     if (!therapist) {
       return NextResponse.json(
         { success: false, error: "Therapist not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -148,8 +173,49 @@ export async function POST(req: NextRequest) {
 
     if (!therapistAvailability) {
       return NextResponse.json(
-        { success: false, error: "Therapist is not available during this time slot" },
-        { status: 400 }
+        {
+          success: false,
+          error: "Therapist is not available during this time slot",
+        },
+        { status: 400 },
+      );
+    }
+
+    const therapistConflicts = await prisma.appointment.findFirst({
+      where: {
+        therapistId,
+        status: AppointmentStatus.CONFIRMED,
+        OR: [
+          {
+            AND: [
+              { appointmentStartTime: { lte: startTime } },
+              { appointmentEndTime: { gt: startTime } },
+            ],
+          },
+          {
+            AND: [
+              { appointmentStartTime: { lt: endTime } },
+              { appointmentEndTime: { gte: endTime } },
+            ],
+          },
+          {
+            AND: [
+              { appointmentStartTime: { gte: startTime } },
+              { appointmentEndTime: { lte: endTime } },
+            ],
+          },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (therapistConflicts) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Therapist already has an appointment during this time slot",
+        },
+        { status: 400 },
       );
     }
 
@@ -160,8 +226,11 @@ export async function POST(req: NextRequest) {
 
     if (allCubicles.length === 0) {
       return NextResponse.json(
-        { success: false, error: "No active cubicles available. Please contact administrator." },
-        { status: 400 }
+        {
+          success: false,
+          error: "No active cubicles available. Please contact administrator.",
+        },
+        { status: 400 },
       );
     }
 
@@ -169,9 +238,24 @@ export async function POST(req: NextRequest) {
       where: {
         status: AppointmentStatus.CONFIRMED,
         OR: [
-          { AND: [{ appointmentStartTime: { lte: startTime } }, { appointmentEndTime: { gt: startTime } }] },
-          { AND: [{ appointmentStartTime: { lt: endTime } }, { appointmentEndTime: { gte: endTime } }] },
-          { AND: [{ appointmentStartTime: { gte: startTime } }, { appointmentEndTime: { lte: endTime } }] },
+          {
+            AND: [
+              { appointmentStartTime: { lte: startTime } },
+              { appointmentEndTime: { gt: startTime } },
+            ],
+          },
+          {
+            AND: [
+              { appointmentStartTime: { lt: endTime } },
+              { appointmentEndTime: { gte: endTime } },
+            ],
+          },
+          {
+            AND: [
+              { appointmentStartTime: { gte: startTime } },
+              { appointmentEndTime: { lte: endTime } },
+            ],
+          },
         ],
       },
       select: { cubicleId: true },
@@ -188,25 +272,34 @@ export async function POST(req: NextRequest) {
       if (!selectedCubicle) {
         return NextResponse.json(
           { success: false, error: "Selected cubicle not found or inactive" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       if (occupiedCubicleIds.includes(cubicleId)) {
         return NextResponse.json(
-          { success: false, error: "Selected cubicle is not available during this time slot." },
-          { status: 400 }
+          {
+            success: false,
+            error: "Selected cubicle is not available during this time slot.",
+          },
+          { status: 400 },
         );
       }
     } else {
-      selectedCubicle = allCubicles.find((c) => !occupiedCubicleIds.includes(c.id));
+      selectedCubicle = allCubicles.find(
+        (c) => !occupiedCubicleIds.includes(c.id),
+      );
       if (!selectedCubicle) {
         return NextResponse.json(
           {
             success: false,
-            error: "No cubicles available during this time. All rooms are occupied.",
-            details: { totalCubicles: allCubicles.length, occupiedCubicles: occupiedCubicleIds.length },
+            error:
+              "No cubicles available during this time. All rooms are occupied.",
+            details: {
+              totalCubicles: allCubicles.length,
+              occupiedCubicles: occupiedCubicleIds.length,
+            },
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -231,7 +324,9 @@ export async function POST(req: NextRequest) {
     const [patient, therapistUser, service] = await Promise.all([
       prisma.patient.findUnique({ where: { id: patientId } }),
       prisma.user.findUnique({ where: { id: therapistId } }),
-      serviceId ? prisma.service.findUnique({ where: { id: serviceId } }) : null,
+      serviceId
+        ? prisma.service.findUnique({ where: { id: serviceId } })
+        : null,
     ]);
 
     if (patient?.phone) {
@@ -257,7 +352,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to create appointment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

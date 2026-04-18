@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { AppointmentStatus, Prisma } from "@prisma/client";
-import { getDay } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
 import { sendSMSNotification } from "@/config/smsConfig";
 import { validateAppointmentDate } from "@/lib/utils/appointmentDateValidation";
+import {
+  formatTimeInClinicTimeZone,
+  getClinicWeekDayFromDateTime,
+} from "@/lib/utils/clinicDateTime";
 
 export async function PATCH(
   req: NextRequest,
@@ -56,7 +59,7 @@ export async function PATCH(
       );
     }
 
-    const weekDay = getDay(startTime);
+    const weekDay = getClinicWeekDayFromDateTime(startTime);
 
     // 1. Find therapist
     const therapistAssignment = await prisma.appointment.findUnique({
@@ -76,8 +79,8 @@ export async function PATCH(
         therapistId: therapistAssignment.therapistId,
         weekDay,
         isAvailable: true,
-        startTime: { lte: startTime.toTimeString().slice(0, 5) },
-        endTime: { gte: endTime.toTimeString().slice(0, 5) },
+        startTime: { lte: formatTimeInClinicTimeZone(startTime) },
+        endTime: { gte: formatTimeInClinicTimeZone(endTime) },
       },
     });
 

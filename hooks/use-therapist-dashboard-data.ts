@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/contexts/auth-context";
+import { TodayAppointment } from "@/types/appointments";
 
 interface TherapistStats {
   assignedPatients: number;
@@ -29,7 +30,6 @@ const fetcher = async (url: string) => {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   const data = await response.json();
-  console.log("API Response:", data);
   if (!data.success) {
     throw new Error(data.error || "API request failed");
   }
@@ -53,7 +53,7 @@ export const useTherapistDashboardData = () => {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       onSuccess: () => setLastUpdated(new Date()),
-    }
+    },
   );
 
   const {
@@ -69,36 +69,54 @@ export const useTherapistDashboardData = () => {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       onSuccess: () => setLastUpdated(new Date()),
-    }
+    },
   );
 
-  // Manual refresh function
+  const {
+    data: todayAppointments,
+    error: todayError,
+    isLoading: todayLoading,
+    mutate: mutateToday,
+  } = useSWR<TodayAppointment[]>(
+    user?.id ? "/api/appointments/today" : null,
+    fetcher,
+    {
+      refreshInterval: 30000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      onSuccess: () => setLastUpdated(new Date()),
+    },
+  );
+
   const refreshAll = useCallback(async () => {
     if (user?.id) {
-      await Promise.all([mutateStats(), mutatePatients()]);
+      await Promise.all([mutateStats(), mutatePatients(), mutateToday()]);
       setLastUpdated(new Date());
     }
-  }, [user?.id, mutateStats, mutatePatients]);
+  }, [user?.id, mutateStats, mutatePatients, mutateToday]);
 
   useEffect(() => {
-    if (!lastUpdated && (stats || assignedPatients)) {
+    if (!lastUpdated && (stats || assignedPatients || todayAppointments)) {
       setLastUpdated(new Date());
     }
-  }, [stats, assignedPatients, lastUpdated]);
+  }, [stats, assignedPatients, todayAppointments, lastUpdated]);
 
   return {
     stats,
     assignedPatients,
+    todayAppointments,
 
     isLoading: {
       stats: statsLoading,
       patients: patientsLoading,
-      refreshing: statsLoading || patientsLoading,
+      today: todayLoading,
+      refreshing: statsLoading || patientsLoading || todayLoading,
     },
 
     error: {
       stats: !!statsError,
       patients: !!patientsError,
+      today: !!todayError,
     },
 
     lastUpdated,

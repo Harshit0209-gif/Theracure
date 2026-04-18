@@ -4,86 +4,30 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import {
   RefreshCw,
-  AlertCircle,
-  Clock,
   Calendar,
   Users,
-  CheckCircle,
-  XCircle,
   Handshake,
   DollarSign,
   TrendingUp,
   TrendingDown,
+  CalendarClock,
 } from "lucide-react";
 import { useReceptionistDashboardData } from "@/hooks/use-receptionist-dashboard-data";
-import { getGreeting } from "@/lib/utils/utils";
-
-interface TodayAppointment {
-  id: string;
-  patientName: string;
-  therapistName: string;
-  startTime: string;
-  endTime: string;
-  status:
-    | "scheduled"
-    | "confirmed"
-    | "in-progress"
-    | "completed"
-    | "cancelled"
-    | "no-show";
-  patientId: string;
-  therapistId: string;
-  appointmentDuration: number;
-}
-
-interface ReceptionistStats {
-  totalPatients: {
-    count: number;
-    growthPercentage: number;
-    isGrowthPositive: boolean;
-  };
-  todayConsultations: {
-    total: number;
-    newThisWeek: number;
-  };
-  todaySessions: {
-    total: number;
-    pending: number;
-  };
-  pendingPayments: {
-    amount: number;
-    invoiceCount: number;
-  };
-  todayAppointments: number;
-  completedToday: number;
-  pendingToday: number;
-  cancelledToday: number;
-  totalPatientsToday: number;
-}
-
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+import {
+  formatCurrency,
+  formatTimeToIST,
+  getGreeting,
+} from "@/lib/utils/utils";
+import { StatsCard } from "@/components/stats/stats-section";
+import { statusStyles, statusLabels } from "@/lib/appointment";
+import { TodayAppointment } from "@/types/appointments";
 
 const formatGrowthPercentage = (
   percentage: number,
-  isPositive: boolean
+  isPositive: boolean,
 ): React.ReactNode => {
   const Icon = isPositive ? TrendingUp : TrendingDown;
   const color = isPositive ? "text-green-500" : "text-red-500";
@@ -97,219 +41,35 @@ const formatGrowthPercentage = (
   );
 };
 
-const formatDateTime = (dateTimeString: string): string => {
-  return new Date(dateTimeString).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-const getStatusConfig = (status: string) => {
-  const configs = {
-    scheduled: { bg: "bg-blue-100", text: "text-blue-700", label: "Scheduled" },
-    confirmed: {
-      bg: "bg-green-100",
-      text: "text-green-700",
-      label: "Confirmed",
+const appointmentColumns = [
+  {
+    header: "Patient's Name",
+    cell: (row: TodayAppointment) => (
+      <span className="font-medium">{row.patientName}</span>
+    ),
+  },
+  {
+    header: "Assigned Therapist",
+    cell: (row: TodayAppointment) => row.therapistName,
+  },
+  {
+    header: "Time",
+    cell: (row: TodayAppointment) =>
+      row.time ? formatTimeToIST(row.time) : "—",
+  },
+  {
+    header: "Status",
+    cell: (row: TodayAppointment) => {
+      const style = statusStyles[row.status];
+      const label = statusLabels[row.status];
+      return (
+        <span className={`text-xs px-2 py-1 rounded-md inline-block ${style ?? "bg-gray-50 text-gray-700"}`}>
+          {label ?? row.status}
+        </span>
+      );
     },
-    "in-progress": {
-      bg: "bg-yellow-100",
-      text: "text-yellow-700",
-      label: "In Progress",
-    },
-    completed: { bg: "bg-gray-100", text: "text-gray-700", label: "Completed" },
-    cancelled: { bg: "bg-red-100", text: "text-red-700", label: "Cancelled" },
-    "no-show": {
-      bg: "bg-orange-100",
-      text: "text-orange-700",
-      label: "No Show",
-    },
-  };
-  return configs[status as keyof typeof configs] || configs.scheduled;
-};
-
-// ====================================================================
-// COMPONENTS
-// ====================================================================
-const StatsCard: React.FC<{
-  title: string;
-  value: string | number;
-  subtitle: React.ReactNode;
-  icon: React.ReactNode;
-  bgColor: string;
-  isLoading?: boolean;
-  error?: boolean;
-}> = ({
-  title,
-  value,
-  subtitle,
-  icon,
-  bgColor,
-  isLoading = false,
-  error = false,
-}) => {
-  if (isLoading) {
-    return (
-      <Card className="bg-white shadow-sm animate-pulse">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2 mb-1"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-            </div>
-            <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="bg-red-50 border-red-200 shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-red-500">{title}</p>
-              <h3 className="text-2xl font-bold mt-1 text-red-700">--</h3>
-              <p className="text-xs text-red-500 mt-1">Error loading data</p>
-            </div>
-            <div
-              className={`h-12 w-12 ${bgColor} rounded-full flex items-center justify-center opacity-50`}
-            >
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="bg-white shadow-sm">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <h3 className="text-2xl font-bold mt-1">
-              {typeof value === "number"
-                ? value.toLocaleString("en-IN")
-                : value}
-            </h3>
-            <div className="mt-1">{subtitle}</div>
-          </div>
-          <div
-            className={`h-12 w-12 ${bgColor} rounded-full flex items-center justify-center`}
-          >
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const LoadingTable: React.FC = () => (
-  <div className="space-y-4">
-    {[...Array(3)].map((_, i) => (
-      <div key={i} className="animate-pulse">
-        <div className="flex items-center space-x-4 p-4">
-          <div className="h-4 bg-gray-200 rounded flex-1"></div>
-          <div className="h-4 bg-gray-200 rounded w-32"></div>
-          <div className="h-4 bg-gray-200 rounded w-20"></div>
-          <div className="h-4 bg-gray-200 rounded w-20"></div>
-          <div className="h-6 bg-gray-200 rounded w-20"></div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
-const ErrorTable: React.FC<{ message: string; onRetry: () => void }> = ({
-  message,
-  onRetry,
-}) => (
-  <div className="text-center py-8">
-    <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-    <p className="text-red-600 mb-4">{message}</p>
-    <Button onClick={onRetry} variant="outline" size="sm">
-      <RefreshCw className="h-4 w-4 mr-2" />
-      Retry
-    </Button>
-  </div>
-);
-
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  const config = getStatusConfig(status);
-  return (
-    <Badge className={`${config.bg} ${config.text} hover:${config.bg}`}>
-      {config.label}
-    </Badge>
-  );
-};
-
-const AppointmentsTable: React.FC<{
-  appointments: TodayAppointment[];
-  isLoading: boolean;
-  error: boolean;
-  onRetry: () => void;
-}> = ({ appointments, isLoading, error, onRetry }) => {
-  if (isLoading) return <LoadingTable />;
-  if (error)
-    return (
-      <ErrorTable
-        message="Failed to load today's appointments"
-        onRetry={onRetry}
-      />
-    );
-
-  return (
-    <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-indigo-700">
-            <TableHead className="font-semibold text-white">
-              Patient's Name
-            </TableHead>
-            <TableHead className="font-semibold text-white">
-              Assigned Therapist
-            </TableHead>
-            <TableHead className="font-semibold text-white">Time</TableHead>
-            <TableHead className="font-semibold text-white">
-              Tentative Exit Time
-            </TableHead>
-            <TableHead className="font-semibold text-white">Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {appointments && appointments.length > 0 ? (
-            appointments.map((appointment) => (
-              <TableRow key={appointment.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium">
-                  {appointment.patientName}
-                </TableCell>
-                <TableCell>{appointment.therapistName}</TableCell>
-                <TableCell>{formatDateTime(appointment.startTime)}</TableCell>
-                <TableCell>{formatDateTime(appointment.endTime)}</TableCell>
-                <TableCell>
-                  <StatusBadge status={appointment.status} />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                No appointments scheduled for today
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
-};
+  },
+];
 
 export default function ReceptionistDashboard() {
   const { user } = useAuth();
@@ -322,28 +82,30 @@ export default function ReceptionistDashboard() {
     refreshAll,
   } = useReceptionistDashboardData();
 
+  const appointments: TodayAppointment[] = todayAppointments || [];
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-800">
-              {getGreeting()}, {user?.name || "User"}
+            <h1 className="text-2xl font-bold text-gray-800">
+              {getGreeting()}, {user?.name?.split(" ")[0] || "User"}!
             </h1>
             <p className="text-sm text-gray-600 mt-1">
-              Receptionist Dashboard -{" "}
-              {new Date().toLocaleDateString("en-US", {
+              {new Date().toLocaleDateString("en-IN", {
                 weekday: "long",
                 year: "numeric",
                 month: "long",
                 day: "numeric",
+                timeZone: "Asia/Kolkata",
               })}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-xs text-gray-600">Live Updates</span>
             </div>
             <Button
@@ -371,7 +133,7 @@ export default function ReceptionistDashboard() {
               receptionistStats
                 ? formatGrowthPercentage(
                     receptionistStats.totalPatients.growthPercentage,
-                    receptionistStats.totalPatients.isGrowthPositive
+                    receptionistStats.totalPatients.isGrowthPositive,
                   )
                 : "Loading..."
             }
@@ -419,8 +181,8 @@ export default function ReceptionistDashboard() {
             }
             subtitle={
               <p className="text-xs text-red-500 mt-1">
-                {receptionistStats?.pendingPayments.invoiceCount || 0} Invoices
-                pending completion
+                {receptionistStats?.pendingPayments.invoiceCount || 0} invoices
+                pending
               </p>
             }
             icon={<DollarSign className="h-6 w-6 text-orange-600" />}
@@ -436,30 +198,37 @@ export default function ReceptionistDashboard() {
             <CardTitle className="text-lg font-semibold">
               Appointments Today
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-indigo-600">
-                {todayAppointments?.length || 0} appointments
-              </Badge>
-              <Button variant="ghost" size="sm">
-                View All
-              </Button>
-            </div>
           </CardHeader>
-          <CardContent>
-            <AppointmentsTable
-              appointments={todayAppointments || []}
-              isLoading={isLoading.appointments}
-              error={error.appointments}
-              onRetry={refreshAll}
+          <CardContent className="p-0">
+            <DataTable
+              columns={appointmentColumns}
+              data={appointments}
+              rowKey={(row) => row.id}
+              page={1}
+              pageSize={appointments.length || 10}
+              totalPages={1}
+              totalCount={appointments.length}
+              setPage={() => {}}
+              setPageSize={() => {}}
+              loading={isLoading.appointments}
+              countIcon={<CalendarClock className="h-4 w-4" />}
+              countLabel=""
+              emptyIcon={<CalendarClock className="h-12 w-12" />}
+              emptyTitle="No appointments today"
+              emptyDescription="No appointments are scheduled for today"
             />
           </CardContent>
         </Card>
 
         {/* Status Footer */}
-        <div className="text-center text-xs text-gray-500">
+        <p className="text-center text-xs text-gray-500">
           Last updated:{" "}
-          {lastUpdated ? lastUpdated.toLocaleString("en-IN") : "Never"}
-        </div>
+          {lastUpdated
+            ? lastUpdated.toLocaleString("en-IN", {
+                timeZone: "Asia/Kolkata",
+              })
+            : "Never"}
+        </p>
       </div>
     </DashboardLayout>
   );

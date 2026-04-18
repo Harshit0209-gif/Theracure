@@ -67,7 +67,7 @@ export async function GET(
     // Get this month's sessions
     const thisMonthSessions = await prisma.therapySession.count({
       where: {
-        id,
+        therapistId: id,
         sessionDate: {
           gte: startOfMonth,
         },

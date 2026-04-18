@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDay } from "date-fns";
 import { generateAvailablePeriods } from "@/lib/utils/AppointmentAvailableTimeSlotGenerator";
 import { AppointmentStatus } from "@prisma/client";
+import {
+  formatTimeInClinicTimeZone,
+  getClinicDayBounds,
+  getClinicWeekDayFromDate,
+} from "@/lib/utils/clinicDateTime";
 
 export async function GET(
   req: NextRequest,
@@ -23,8 +27,7 @@ export async function GET(
       );
     }
 
-    // Convert date to weekday (0-6)
-    const weekDay = getDay(new Date(date));
+    const weekDay = getClinicWeekDayFromDate(date);
 
     // 1. Get therapist's working schedule for this weekday
     const therapistSchedule = await prisma.therapistTimeSlot.findMany({
@@ -47,8 +50,7 @@ export async function GET(
     }
 
     // 2. Get all existing appointments for the date
-    const startOfDay = new Date(`${date}T00:00:00`);
-    const endOfDay = new Date(`${date}T23:59:59`);
+    const { startOfDay, endOfDay } = getClinicDayBounds(date);
 
     const existingAppointments = await prisma.appointment.findMany({
       where: {
@@ -72,8 +74,7 @@ export async function GET(
     // 3. Generate available periods by splitting schedule around appointments
     const availablePeriods = generateAvailablePeriods(
       therapistSchedule,
-      existingAppointments,
-      date
+      existingAppointments
     );
 
     return NextResponse.json({
@@ -85,8 +86,8 @@ export async function GET(
         weekDay: slot.weekDay,
       })),
       existingAppointments: existingAppointments.map((apt) => ({
-        startTime: apt.appointmentStartTime.toTimeString().slice(0, 5),
-        endTime: apt.appointmentEndTime.toTimeString().slice(0, 5),
+        startTime: formatTimeInClinicTimeZone(apt.appointmentStartTime),
+        endTime: formatTimeInClinicTimeZone(apt.appointmentEndTime),
         status: apt.status,
       })),
     });

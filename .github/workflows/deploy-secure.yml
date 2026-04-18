@@ -73,7 +73,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
-          username: deploy
+          username: root
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -e
@@ -97,6 +97,13 @@ jobs:
             echo "Building production bundle..."
             pnpm build
 
+            echo "Preparing standalone runtime assets..."
+            cp -r .next/static .next/standalone/.next/static
+            cp -r public .next/standalone/public
+
+            echo "Current service file:"
+            cat theracure-dashboard.service
+
             echo "Running server-side security checks..."
 
             echo "1) Checking for suspicious runtime processes..."
@@ -116,6 +123,7 @@ jobs:
             sleep 10
 
             echo "Verifying service status..."
+            sudo systemctl status $SERVICE_NAME --no-pager
             sudo systemctl is-active $SERVICE_NAME
 
             echo "Verifying port binding..."

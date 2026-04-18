@@ -1,3 +1,5 @@
+import { formatTimeInClinicTimeZone } from "@/lib/utils/clinicDateTime";
+
 interface AvailablePeriod {
   startTime: string;
   endTime: string;
@@ -20,21 +22,15 @@ interface ExistingAppointment {
 
 export function generateAvailablePeriods(
   therapistSchedule: TherapistSchedule[],
-  existingAppointments: ExistingAppointment[],
-  date: string
+  existingAppointments: ExistingAppointment[]
 ): AvailablePeriod[] {
   const periods: AvailablePeriod[] = [];
 
-  console.log("Therapist Schedule:", therapistSchedule);
-  console.log("Existing Appointments:", existingAppointments);
-  console.log("Date:", date, "periods: ", periods);
-
   therapistSchedule.forEach((schedule) => {
-    // Convert appointment times to time strings for comparison
     const appointmentsInPeriod = existingAppointments
       .map((apt) => ({
-        startTime: apt.appointmentStartTime.toTimeString().slice(0, 5),
-        endTime: apt.appointmentEndTime.toTimeString().slice(0, 5),
+        startTime: formatTimeInClinicTimeZone(apt.appointmentStartTime),
+        endTime: formatTimeInClinicTimeZone(apt.appointmentEndTime),
         status: apt.status,
       }))
       .filter(
@@ -112,7 +108,11 @@ export function generateStartTimes(
       let current = new Date(start);
       while (current.getTime() < end.getTime() - 15 * 60000) {
         // Leave at least 15 minutes
-        const timeString = current.toTimeString().slice(0, 5);
+        const timeString = current.toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
         startTimes.push(timeString);
         current = new Date(current.getTime() + 15 * 60000);
       }
