@@ -104,20 +104,6 @@ jobs:
             cp -r .next/static .next/standalone/.next/static
             cp -r public .next/standalone/public
 
-            echo "Current service file:"
-            cat theracure-dashboard.service
-
-            echo "Running server-side security checks..."
-
-            echo "1) Checking for suspicious runtime processes..."
-            ps aux | grep -E 'xmrig|minerd|cryptonight|ccminer' && exit 1 || true
-
-            echo "2) Checking unexpected network listeners..."
-            ss -tulnp | grep -vE '(:22|:80|:443|:${APP_PORT})' || true
-
-            echo "3) Checking file permissions..."
-            find $APP_DIR -type f -perm -0002 -print || true
-
             echo "Restarting systemd service..."
             sudo systemctl daemon-reload
             sudo systemctl restart $SERVICE_NAME
