@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { AppointmentStatus, CubicleStatus } from "@prisma/client";
+import { AppointmentStatus, Prisma } from "@prisma/client";
 import { sendSMSNotification } from "@/config/smsConfig";
 import { validateAppointmentDate } from "@/lib/utils/appointmentDateValidation";
-import {
-  formatTimeInClinicTimeZone,
-  getClinicWeekDayFromDateTime,
-} from "@/lib/utils/clinicDateTime";
 import { getSession } from "@/lib/auth/session-provider";
+import {
+  getClinicDateKey,
+  getCubicleAvailabilityForSlot,
+  isValidDate,
+  isTherapistWorkingDuringSlot,
+} from "@/lib/utils/appointmentScheduling";
 
 export async function GET(req: NextRequest) {
   try {
@@ -130,6 +132,12 @@ export async function POST(req: NextRequest) {
 
     const startTime = new Date(appointmentStartTime);
     const endTime = new Date(appointmentEndTime);
+    if (!isValidDate(startTime) || !isValidDate(endTime)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid appointment date/time format" },
+        { status: 400 },
+      );
+    }
 
     if (startTime >= endTime) {
       return NextResponse.json(
@@ -147,30 +155,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const startTimeStr = formatTimeInClinicTimeZone(startTime);
-    const endTimeStr = formatTimeInClinicTimeZone(endTime);
-    const weekDay = getClinicWeekDayFromDateTime(startTime);
+    if (getClinicDateKey(startTime) !== appointmentDate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Appointment date must match appointment start time in clinic timezone",
+        },
+        { status: 400 },
+      );
+    }
 
-    const therapist = await prisma.therapist.findUnique({
-      where: { id: therapistId },
-    });
+    const [patient, therapist, service] = await Promise.all([
+      prisma.patient.findUnique({ where: { id: patientId }, select: { id: true } }),
+      prisma.therapist.findUnique({ where: { id: therapistId }, select: { id: true } }),
+      prisma.service.findUnique({ where: { id: serviceId }, select: { id: true } }),
+    ]);
+
+    if (!patient) {
+      return NextResponse.json(
+        { success: false, error: "Patient not found" },
+        { status: 404 },
+      );
+    }
     if (!therapist) {
       return NextResponse.json(
         { success: false, error: "Therapist not found" },
         { status: 404 },
       );
     }
+    if (!service) {
+      return NextResponse.json(
+        { success: false, error: "Service not found" },
+        { status: 404 },
+      );
+    }
 
-    const therapistAvailability = await prisma.therapistTimeSlot.findFirst({
-      where: {
-        therapistId,
-        weekDay,
-        isAvailable: true,
-        startTime: { lte: startTimeStr },
-        endTime: { gte: endTimeStr },
-      },
-    });
-
+    const therapistAvailability = await isTherapistWorkingDuringSlot(
+      prisma,
+      therapistId,
+      startTime,
+      endTime,
+    );
     if (!therapistAvailability) {
       return NextResponse.json(
         {
@@ -181,161 +206,82 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const therapistConflicts = await prisma.appointment.findFirst({
-      where: {
-        therapistId,
-        status: AppointmentStatus.CONFIRMED,
-        OR: [
-          {
-            AND: [
-              { appointmentStartTime: { lte: startTime } },
-              { appointmentEndTime: { gt: startTime } },
-            ],
-          },
-          {
-            AND: [
-              { appointmentStartTime: { lt: endTime } },
-              { appointmentEndTime: { gte: endTime } },
-            ],
-          },
-          {
-            AND: [
-              { appointmentStartTime: { gte: startTime } },
-              { appointmentEndTime: { lte: endTime } },
-            ],
-          },
-        ],
-      },
-      select: { id: true },
-    });
+    let appointment;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        appointment = await prisma.$transaction(
+          async (tx) => {
+            const cubicleAvailability = await getCubicleAvailabilityForSlot(
+              tx,
+              startTime,
+              endTime,
+              cubicleId,
+            );
+            const allCubicles = cubicleAvailability.allCubicles;
 
-    if (therapistConflicts) {
+            if (allCubicles.length === 0) {
+              throw new Error("NO_CUBICLE");
+            }
+
+            if (!cubicleAvailability.hasAvailableCubicle || !cubicleAvailability.selectedCubicle) {
+              throw new Error("NO_CUBICLE");
+            }
+
+            return tx.appointment.create({
+              data: {
+                appointmentStartTime: startTime,
+                appointmentEndTime: endTime,
+                notes,
+                status: AppointmentStatus.CONFIRMED,
+                assignedDate: new Date(appointmentDate),
+                patient: { connect: { id: patientId } },
+                therapist: { connect: { id: therapistId } },
+                therapistInfo: { connect: { id: therapistId } },
+                createdBy: { connect: { id: createdById } },
+                service: { connect: { id: serviceId } },
+                cubicle: { connect: { id: cubicleAvailability.selectedCubicle.id } },
+              },
+              include: { cubicle: true },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        break;
+      } catch (error) {
+        if (error instanceof Error && error.message === "NO_CUBICLE") {
+          break;
+        }
+        const code = (error as { code?: string })?.code;
+        if (code === "P2034" && attempt < 2) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    if (!appointment) {
       return NextResponse.json(
         {
           success: false,
-          error: "Therapist already has an appointment during this time slot",
+          error: "Unable to allocate cubicle for this slot",
         },
-        { status: 400 },
+        { status: 409 },
       );
     }
 
-    const allCubicles = await prisma.cubicle.findMany({
-      where: { status: CubicleStatus.ACTIVE },
-      orderBy: { name: "asc" },
-    });
-
-    if (allCubicles.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "No active cubicles available. Please contact administrator.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const overlappingAppointments = await prisma.appointment.findMany({
-      where: {
-        status: AppointmentStatus.CONFIRMED,
-        OR: [
-          {
-            AND: [
-              { appointmentStartTime: { lte: startTime } },
-              { appointmentEndTime: { gt: startTime } },
-            ],
-          },
-          {
-            AND: [
-              { appointmentStartTime: { lt: endTime } },
-              { appointmentEndTime: { gte: endTime } },
-            ],
-          },
-          {
-            AND: [
-              { appointmentStartTime: { gte: startTime } },
-              { appointmentEndTime: { lte: endTime } },
-            ],
-          },
-        ],
-      },
-      select: { cubicleId: true },
-    });
-
-    const occupiedCubicleIds = overlappingAppointments
-      .map((apt) => apt.cubicleId)
-      .filter((id): id is string => id !== null);
-
-    let selectedCubicle;
-
-    if (cubicleId) {
-      selectedCubicle = allCubicles.find((c) => c.id === cubicleId);
-      if (!selectedCubicle) {
-        return NextResponse.json(
-          { success: false, error: "Selected cubicle not found or inactive" },
-          { status: 400 },
-        );
-      }
-      if (occupiedCubicleIds.includes(cubicleId)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Selected cubicle is not available during this time slot.",
-          },
-          { status: 400 },
-        );
-      }
-    } else {
-      selectedCubicle = allCubicles.find(
-        (c) => !occupiedCubicleIds.includes(c.id),
-      );
-      if (!selectedCubicle) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "No cubicles available during this time. All rooms are occupied.",
-            details: {
-              totalCubicles: allCubicles.length,
-              occupiedCubicles: occupiedCubicleIds.length,
-            },
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    const appointment = await prisma.appointment.create({
-      data: {
-        appointmentStartTime: startTime,
-        appointmentEndTime: endTime,
-        notes,
-        status: AppointmentStatus.CONFIRMED,
-        assignedDate: new Date(appointmentDate),
-        patient: { connect: { id: patientId } },
-        therapist: { connect: { id: therapistId } },
-        therapistInfo: { connect: { id: therapistId } },
-        createdBy: { connect: { id: createdById } },
-        service: serviceId ? { connect: { id: serviceId } } : undefined,
-        cubicle: { connect: { id: selectedCubicle.id } },
-      },
-      include: { cubicle: true },
-    });
-
-    const [patient, therapistUser, service] = await Promise.all([
+    const [patientDetails, therapistUser, serviceDetails] = await Promise.all([
       prisma.patient.findUnique({ where: { id: patientId } }),
       prisma.user.findUnique({ where: { id: therapistId } }),
-      serviceId
-        ? prisma.service.findUnique({ where: { id: serviceId } })
-        : null,
+      prisma.service.findUnique({ where: { id: serviceId } }),
     ]);
 
-    if (patient?.phone) {
+    if (patientDetails?.phone) {
       try {
         await sendSMSNotification("APPOINTMENT_CONFIRMATION", {
-          phone: patient.phone,
-          patientName: patient.patientName,
+          phone: patientDetails.phone,
+          patientName: patientDetails.patientName,
           therapistName: therapistUser?.name || "Doctor",
-          serviceName: service?.name || "Therapy",
+          serviceName: serviceDetails?.name || "Therapy",
           date: appointment.assignedDate,
           startTime: appointment.appointmentStartTime,
           endTime: appointment.appointmentEndTime,

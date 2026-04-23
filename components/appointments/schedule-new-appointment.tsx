@@ -233,7 +233,8 @@ export function ScheduleNewDialog({
     if (
       watchedValues.appointmentDate &&
       watchedValues.startTime &&
-      watchedValues.endTime
+      watchedValues.endTime &&
+      watchedValues.endTime > watchedValues.startTime
     ) {
       checkCubicleAvailability(
         watchedValues.appointmentDate,
@@ -350,6 +351,11 @@ export function ScheduleNewDialog({
     startTime: string,
     endTime: string,
   ) => {
+    if (!date || !startTime || !endTime || endTime <= startTime) {
+      setCubicleAvailability(null);
+      return;
+    }
+
     setIsCheckingCubicles(true);
     try {
       const startDateTime = new Date(`${date}T${startTime}`).toISOString();
@@ -363,7 +369,9 @@ export function ScheduleNewDialog({
       if (data.success) {
         setCubicleAvailability(data.availability);
       } else {
-        console.error("Error checking cubicle availability:", data.error);
+        if (data?.error !== "endTime must be after startTime") {
+          console.error("Error checking cubicle availability:", data.error);
+        }
         setCubicleAvailability(null);
       }
     } catch (error) {

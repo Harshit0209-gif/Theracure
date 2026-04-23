@@ -1,30 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { AppointmentStatus, CubicleStatus } from "@prisma/client";
+import { AppointmentStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { validateAppointmentDate } from "@/lib/utils/appointmentDateValidation";
+import {
+  getClinicDateKey,
+  isValidDate,
+  isTherapistWorkingDuringSlot,
+} from "@/lib/utils/appointmentScheduling";
+import {
+  assignCubiclesForRecurringBatch,
+  findDuplicateRecurringOccurrences,
+  normalizeAndValidateRecurringAppointments,
+  RecurringConflict,
+  validateRecurringInfo,
+} from "@/lib/utils/recurringAppointmentScheduler";
 
 export async function POST(request: NextRequest) {
   try {
     const { appointments, recurringInfo } = await request.json();
-    if (
-      !appointments ||
-      !Array.isArray(appointments) ||
-      appointments.length === 0
-    ) {
+
+    const recurringInfoError = validateRecurringInfo(recurringInfo);
+    if (recurringInfoError) {
       return NextResponse.json(
-        { error: "Invalid appointments data" },
+        { error: recurringInfoError },
         { status: 400 },
       );
     }
 
-    const normalizedAppointments = appointments.map((appointment, index) => ({
-      ...appointment,
-      appointmentDate: normalizeDateOnly(appointment.appointmentDate),
-      appointmentStartTime: new Date(appointment.appointmentStartTime).toISOString(),
-      appointmentEndTime: new Date(appointment.appointmentEndTime).toISOString(),
-      __index: index,
-    }));
+    const parsed = normalizeAndValidateRecurringAppointments(appointments);
+    if (parsed.conflicts.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Some appointments have invalid input",
+          conflicts: parsed.conflicts.map((conflict) => ({
+            date: conflict.date,
+            reason: conflict.reason,
+          })),
+        },
+        { status: 400 },
+      );
+    }
+    const normalizedAppointments = parsed.appointments;
 
     const duplicateOccurrences = findDuplicateRecurringOccurrences(normalizedAppointments);
     if (duplicateOccurrences.length > 0) {
@@ -37,104 +54,115 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validationResults = await Promise.all(
-      normalizedAppointments.map(async (appointment, index) => {
-        try {
-          const dateError = await validateAppointmentDate(appointment.appointmentDate);
-          if (dateError) {
-            return {
-              index,
-              appointment,
-              isAvailable: false,
-              hasAvailableCubicle: false,
-              error: dateError,
-            };
-          }
+    const conflicts: Array<{ date: string; reason: string }> = [];
 
-          const isAvailable = await checkTherapistAvailability(
-            appointment.therapistId,
-            appointment.appointmentDate,
-            appointment.appointmentStartTime,
-            appointment.appointmentEndTime,
-          );
+    const patientIds = [...new Set(normalizedAppointments.map((a) => a.patientId))];
+    const therapistIds = [...new Set(normalizedAppointments.map((a) => a.therapistId))];
+    const serviceIds = [...new Set(normalizedAppointments.map((a) => a.serviceId))];
+    const createdByIds = [...new Set(normalizedAppointments.map((a) => a.createdById))];
 
-          // NEW LOGIC: Check cubicle availability instead of therapist time conflicts
-          const cubicleCheck = await checkCubicleAvailability(
-            appointment.appointmentStartTime,
-            appointment.appointmentEndTime,
-          );
+    const [patients, therapists, services, creators] = await Promise.all([
+      prisma.patient.findMany({ where: { id: { in: patientIds } }, select: { id: true } }),
+      prisma.therapist.findMany({ where: { id: { in: therapistIds } }, select: { id: true } }),
+      prisma.service.findMany({ where: { id: { in: serviceIds } }, select: { id: true } }),
+      prisma.user.findMany({ where: { id: { in: createdByIds } }, select: { id: true } }),
+    ]);
 
-          return {
-            index,
-            appointment,
-            isAvailable,
-            hasAvailableCubicle: cubicleCheck.hasAvailableCubicle,
-            assignedCubicle: cubicleCheck.assignedCubicle,
-            availableCubicles: cubicleCheck.availableCubicles,
-          };
-        } catch (error) {
-          return {
-            index,
-            appointment,
-            isAvailable: false,
-            hasAvailableCubicle: false,
-            error: (error as Error).message,
-          };
-        }
-      }),
-    );
+    const existingPatientIds = new Set(patients.map((item) => item.id));
+    const existingTherapistIds = new Set(therapists.map((item) => item.id));
+    const existingServiceIds = new Set(services.map((item) => item.id));
+    const existingCreatorIds = new Set(creators.map((item) => item.id));
 
-    const batchConflicts = findInternalBatchConflicts(normalizedAppointments);
-    if (batchConflicts.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Recurring schedule contains overlapping appointment entries",
-          conflicts: batchConflicts,
-        },
-        { status: 409 },
+    for (const appointment of normalizedAppointments) {
+      if (!isValidDate(appointment._slotStart) || !isValidDate(appointment._slotEnd)) {
+        conflicts.push({
+          date: appointment.appointmentDate,
+          reason: "Invalid appointment date/time format",
+        });
+        continue;
+      }
+
+      if (getClinicDateKey(appointment._slotStart) !== appointment.appointmentDate) {
+        conflicts.push({
+          date: appointment.appointmentDate,
+          reason: "Appointment date must match appointment start time in clinic timezone",
+        });
+        continue;
+      }
+
+      if (!existingPatientIds.has(appointment.patientId)) {
+        conflicts.push({ date: appointment.appointmentDate, reason: "Patient not found" });
+        continue;
+      }
+      if (!existingTherapistIds.has(appointment.therapistId)) {
+        conflicts.push({ date: appointment.appointmentDate, reason: "Therapist not found" });
+        continue;
+      }
+      if (!existingServiceIds.has(appointment.serviceId)) {
+        conflicts.push({ date: appointment.appointmentDate, reason: "Service not found" });
+        continue;
+      }
+      if (!existingCreatorIds.has(appointment.createdById)) {
+        conflicts.push({ date: appointment.appointmentDate, reason: "Creator user not found" });
+        continue;
+      }
+
+      const dateError = await validateAppointmentDate(appointment.appointmentDate);
+      if (dateError) {
+        conflicts.push({
+          date: appointment.appointmentDate,
+          reason: dateError,
+        });
+        continue;
+      }
+
+      const therapistAvailable = await isTherapistWorkingDuringSlot(
+        prisma,
+        appointment.therapistId,
+        appointment._slotStart,
+        appointment._slotEnd,
       );
+      if (!therapistAvailable) {
+        conflicts.push({
+          date: appointment.appointmentDate,
+          reason: "Therapist not available during this time slot",
+        });
+      }
     }
-
-    // Check for conflicts - now based on cubicle availability, not therapist time
-    const conflicts = validationResults.filter(
-      (result) => !result.isAvailable || !result.hasAvailableCubicle,
-    );
 
     if (conflicts.length > 0) {
       return NextResponse.json(
         {
           error: "Some appointments have conflicts",
-          conflicts: conflicts.map((conflict) => ({
-            date: conflict.appointment.appointmentDate,
-            reason: conflict.error || (!conflict.isAvailable
-              ? "Therapist not available"
-              : "No cubicles available - all rooms are occupied"),
-          })),
+          conflicts,
         },
         { status: 409 },
       );
     }
 
-    // Create all appointments in a transaction with extended timeout
-    const createdAppointments = await prisma.$transaction(
-      async (tx) => {
+    let createdAppointments;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        createdAppointments = await prisma.$transaction(
+          async (tx) => {
         const results = [];
-        const reservedCubicles = new Map<string, Set<string>>();
-
-        for (let i = 0; i < normalizedAppointments.length; i++) {
-          const appointment = normalizedAppointments[i];
-          const validationResult = validationResults[i];
-
-          const assignedCubicle = selectAvailableCubicleForBatch(
-            validationResult.availableCubicles ?? [],
-            appointment.appointmentStartTime,
-            appointment.appointmentEndTime,
-            reservedCubicles,
+        const assignmentResult = await assignCubiclesForRecurringBatch(
+          tx,
+          normalizedAppointments,
+        );
+        if (assignmentResult.conflicts.length > 0) {
+          throw new Error(
+            `RECURRING_CONFLICT:${JSON.stringify(assignmentResult.conflicts)}`,
           );
+        }
 
-          if (!assignedCubicle) {
+        for (const appointment of normalizedAppointments) {
+          const assignedCubicleId = assignmentResult.assignments.get(
+            appointment._index,
+          );
+          if (!assignedCubicleId) {
             throw new Error(
-              `No cubicles available for ${appointment.appointmentDate} after batching recurring appointments`,
+              `No cubicle assigned for ${appointment.appointmentDate} (${appointment.appointmentStartTime})`,
             );
           }
 
@@ -156,7 +184,7 @@ export async function POST(request: NextRequest) {
                 ? new Date(recurringInfo.endDate).toISOString()
                 : null,
               recurringCount: recurringInfo.count,
-              cubicleId: assignedCubicle.id,
+              cubicleId: assignedCubicleId,
             },
             include: {
               patient: {
@@ -199,8 +227,25 @@ export async function POST(request: NextRequest) {
       },
       {
         timeout: 30000,
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
       },
-    );
+        );
+        break;
+      } catch (error) {
+        const code = (error as { code?: string })?.code;
+        if (code === "P2034" && attempt < 2) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    if (!createdAppointments) {
+      return NextResponse.json(
+        { error: "Unable to create recurring appointments due to concurrent booking conflicts" },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -208,6 +253,25 @@ export async function POST(request: NextRequest) {
       message: `Successfully created ${createdAppointments.length} recurring appointments`,
     });
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("RECURRING_CONFLICT:")) {
+      try {
+        const serialized = error.message.replace("RECURRING_CONFLICT:", "");
+        const conflictList = JSON.parse(serialized) as RecurringConflict[];
+        return NextResponse.json(
+          {
+            error: "Some appointments have conflicts",
+            conflicts: conflictList.map((conflict) => ({
+              date: conflict.date,
+              reason: conflict.reason,
+            })),
+          },
+          { status: 409 },
+        );
+      } catch {
+        // Fall through to generic handler on parse failure.
+      }
+    }
+
     console.error("Error creating recurring appointments:", error);
     return NextResponse.json(
       {
@@ -215,294 +279,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 },
     );
-  }
-}
-
-function normalizeDateOnly(date: string) {
-  return new Date(date).toISOString().split("T")[0];
-}
-
-function occurrenceKey(appointment: {
-  patientId: string;
-  therapistId: string;
-  appointmentStartTime: string;
-  appointmentEndTime: string;
-}) {
-  return [
-    appointment.patientId,
-    appointment.therapistId,
-    appointment.appointmentStartTime,
-    appointment.appointmentEndTime,
-  ].join("|");
-}
-
-function findDuplicateRecurringOccurrences(
-  appointments: Array<{
-    patientId: string;
-    therapistId: string;
-    appointmentDate: string;
-    appointmentStartTime: string;
-    appointmentEndTime: string;
-  }>,
-) {
-  const seen = new Set<string>();
-
-  return appointments.reduce<
-    Array<{ date: string; reason: string }>
-  >((duplicates, appointment) => {
-    const key = occurrenceKey(appointment);
-    if (seen.has(key)) {
-      duplicates.push({
-        date: appointment.appointmentDate,
-        reason: "Duplicate recurring occurrence generated for the same patient and time slot",
-      });
-      return duplicates;
-    }
-
-    seen.add(key);
-    return duplicates;
-  }, []);
-}
-
-function hasTimeOverlap(
-  startA: string,
-  endA: string,
-  startB: string,
-  endB: string,
-) {
-  const aStart = new Date(startA).getTime();
-  const aEnd = new Date(endA).getTime();
-  const bStart = new Date(startB).getTime();
-  const bEnd = new Date(endB).getTime();
-
-  return aStart < bEnd && bStart < aEnd;
-}
-
-function findInternalBatchConflicts(
-  appointments: Array<{
-    patientId: string;
-    therapistId: string;
-    appointmentDate: string;
-    appointmentStartTime: string;
-    appointmentEndTime: string;
-  }>,
-) {
-  const conflicts: Array<{ date: string; reason: string }> = [];
-
-  for (let i = 0; i < appointments.length; i++) {
-    for (let j = i + 1; j < appointments.length; j++) {
-      const first = appointments[i];
-      const second = appointments[j];
-
-      if (first.therapistId !== second.therapistId) {
-        continue;
-      }
-
-      if (
-        hasTimeOverlap(
-          first.appointmentStartTime,
-          first.appointmentEndTime,
-          second.appointmentStartTime,
-          second.appointmentEndTime,
-        )
-      ) {
-        conflicts.push({
-          date: second.appointmentDate,
-          reason: "Recurring schedule overlaps with another generated appointment for the same therapist",
-        });
-      }
-    }
-  }
-
-  return conflicts;
-}
-
-function slotKey(startTime: string, endTime: string) {
-  return `${startTime}|${endTime}`;
-}
-
-function selectAvailableCubicleForBatch(
-  availableCubicles: Array<{ id: string }>,
-  startTime: string,
-  endTime: string,
-  reservedCubicles: Map<string, Set<string>>,
-) {
-  const key = slotKey(startTime, endTime);
-  const reservedForSlot = reservedCubicles.get(key) ?? new Set<string>();
-
-  const cubicle = availableCubicles.find(
-    (candidate) => !reservedForSlot.has(candidate.id),
-  );
-
-  if (!cubicle) {
-    return null;
-  }
-
-  reservedForSlot.add(cubicle.id);
-  reservedCubicles.set(key, reservedForSlot);
-
-  return cubicle;
-}
-
-// Helper function to check therapist availability
-async function checkTherapistAvailability(
-  therapistId: string,
-  date: string,
-  startTime: string,
-  endTime: string,
-) {
-  try {
-    // Get therapist's schedule for the day of the week
-    const dayOfWeek = new Date(date).getDay();
-
-    const therapistSchedule = await prisma.therapistTimeSlot.findFirst({
-      where: {
-        therapistId,
-        weekDay: dayOfWeek,
-        isAvailable: true,
-      },
-    });
-
-    if (!therapistSchedule) {
-      return false; // Therapist doesn't work on this day
-    }
-
-    const startDateTime = new Date(startTime);
-    const endDateTime = new Date(endTime);
-
-    const requestedStartStr = startDateTime.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Kolkata",
-    });
-    const requestedEndStr = endDateTime.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Kolkata",
-    });
-
-    const requestedStart = new Date(`2000-01-01T${requestedStartStr}:00`);
-    const requestedEnd = new Date(`2000-01-01T${requestedEndStr}:00`);
-    const scheduleStart = new Date(
-      `2000-01-01T${therapistSchedule.startTime}:00`,
-    );
-    const scheduleEnd = new Date(`2000-01-01T${therapistSchedule.endTime}:00`);
-
-    if (requestedStart < scheduleStart || requestedEnd > scheduleEnd) {
-      return false;
-    }
-
-    const breaks = await prisma.therapistTimeSlot.findMany({
-      where: {
-        therapistId,
-        weekDay: dayOfWeek,
-        isAvailable: false,
-      },
-    });
-
-    for (const breakPeriod of breaks) {
-      const breakStart = new Date(`2000-01-01T${breakPeriod.startTime}:00`);
-      const breakEnd = new Date(`2000-01-01T${breakPeriod.endTime}:00`);
-
-      if (
-        (requestedStart < breakEnd && requestedEnd > breakStart) ||
-        (requestedStart >= breakStart && requestedStart < breakEnd) ||
-        (requestedEnd > breakStart && requestedEnd <= breakEnd)
-      ) {
-        return false;
-      }
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error checking therapist availability:", error);
-    return false;
-  }
-}
-
-// NEW: Helper function to check cubicle availability and auto-assign
-async function checkCubicleAvailability(
-  startTime: string,
-  endTime: string,
-) {
-  try {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-
-    // Get all active cubicles
-    const allCubicles = await prisma.cubicle.findMany({
-      where: {
-        status: CubicleStatus.ACTIVE,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    if (allCubicles.length === 0) {
-      return {
-        hasAvailableCubicle: false,
-        assignedCubicle: null,
-        availableCubicles: [],
-      };
-    }
-
-    // Find overlapping appointments
-    const overlappingAppointments = await prisma.appointment.findMany({
-      where: {
-        status: AppointmentStatus.CONFIRMED,
-        OR: [
-          {
-            AND: [
-              { appointmentStartTime: { lte: start } },
-              { appointmentEndTime: { gt: start } },
-            ],
-          },
-          {
-            AND: [
-              { appointmentStartTime: { lt: end } },
-              { appointmentEndTime: { gte: end } },
-            ],
-          },
-          {
-            AND: [
-              { appointmentStartTime: { gte: start } },
-              { appointmentEndTime: { lte: end } },
-            ],
-          },
-        ],
-      },
-      select: {
-        cubicleId: true,
-      },
-    });
-
-    // Get occupied cubicle IDs
-    const occupiedCubicleIds = overlappingAppointments
-      .map((apt) => apt.cubicleId)
-      .filter((id): id is string => id !== null);
-
-    // Find available cubicles
-    const availableCubicles = allCubicles.filter(
-      (cubicle) => !occupiedCubicleIds.includes(cubicle.id)
-    );
-
-    // Auto-assign first available cubicle
-    const assignedCubicle = availableCubicles.length > 0 ? availableCubicles[0] : null;
-
-    return {
-      hasAvailableCubicle: availableCubicles.length > 0,
-      assignedCubicle,
-      availableCubicles,
-    };
-  } catch (error) {
-    console.error("Error checking cubicle availability:", error);
-    return {
-      hasAvailableCubicle: false,
-      assignedCubicle: null,
-      availableCubicles: [],
-    };
   }
 }
