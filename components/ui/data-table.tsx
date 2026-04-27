@@ -114,7 +114,7 @@ export function DataTable<T>({
   return (
     <div className={`bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 ${className}`}>
       {/* ── Count bar ── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50 gap-3 sm:gap-0">
         <div className="flex items-center gap-2">
           {countIcon && <span className="text-indigo-500">{countIcon}</span>}
           <span className="text-sm font-semibold text-indigo-700">{totalCount}</span>
@@ -143,7 +143,7 @@ export function DataTable<T>({
               {columns.map((col, i) => (
                 <TableHead
                   key={i}
-                  className={`text-white font-semibold ${col.headerClassName ?? ""}`}
+                  className={`text-white font-semibold whitespace-nowrap ${col.headerClassName ?? ""}`}
                 >
                   {col.header}
                 </TableHead>
@@ -191,8 +191,8 @@ export function DataTable<T>({
 
       {/* ── Pagination footer ── */}
       {!loading && totalCount > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
-          <span className="text-sm text-gray-500">
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50 gap-4 md:gap-0">
+          <span className="text-sm text-gray-500 text-center md:text-left">
             Showing{" "}
             <span className="font-medium text-gray-700">{rowStart}–{rowEnd}</span>
             {" "}of{" "}
@@ -200,7 +200,7 @@ export function DataTable<T>({
             {countLabel}
           </span>
 
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-1">
             <Button
               size="sm"
               variant="outline"

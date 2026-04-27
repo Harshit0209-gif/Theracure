@@ -193,7 +193,7 @@ export function AppointmentDetailsDialog({
             </div>
 
             {/* Patient + Therapist */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Patient</p>
                 <p className="font-medium">

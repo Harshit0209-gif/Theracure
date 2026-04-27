@@ -281,7 +281,7 @@ export function AddAssessmentDialog({
     isActive: boolean
   ): React.ReactElement => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {NEUROLOGICAL_FIELDS.map((field) => (
           <div key={field.key}>
             <Label className="text-xs">{field.label}</Label>
@@ -298,7 +298,7 @@ export function AddAssessmentDialog({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label className="text-xs">Other Findings</Label>
           <Textarea
@@ -425,7 +425,7 @@ export function AddAssessmentDialog({
         </div>
 
         {/* Basic Info Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
           <div>
             <span className="font-medium text-gray-600">Name:</span>
             <p className="text-gray-900">{patientInfo.patientName}</p>

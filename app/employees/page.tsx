@@ -130,7 +130,7 @@ export default function EmployeePage() {
     <DashboardLayout>
       <div className="bg-indigo-50/30 rounded-xl p-6 mb-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">
               Employee Management
@@ -147,7 +147,7 @@ export default function EmployeePage() {
         <EmployeeStats stats={stats} />
 
         {/* Search + filter toolbar */}
-        <div className="flex items-center justify-end gap-3 mb-4 mt-6">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 mb-4 mt-6 w-full md:w-auto">
           <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger className="w-40 h-9 text-sm bg-white border-gray-200">
               <SelectValue placeholder="Filter by role" />

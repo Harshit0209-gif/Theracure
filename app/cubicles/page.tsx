@@ -108,7 +108,7 @@ function CubicleForm({
             className="border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="grid gap-1.5">
             <Label
               htmlFor="cub-room"
@@ -355,7 +355,7 @@ function StatsBar({ cubicles }: { cubicles: Cubicle[] }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-3 mb-8">
       {stats.map(({ label, value, icon: Icon, color, bg }) => (
         <div
           key={label}

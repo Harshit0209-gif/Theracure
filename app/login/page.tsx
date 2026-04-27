@@ -176,7 +176,7 @@ export default function LoginPage() {
                   <RadioGroup
                     value={role}
                     onValueChange={(value) => setRole(value as UserRole)}
-                    className="grid grid-cols-2 gap-2"
+                    className="grid grid-cols-1 md:grid-cols-2 gap-2"
                   >
                     {AllRoles.map((roleOption) => {
                       const IconComponent = RoleOptionsMap[roleOption].icon;

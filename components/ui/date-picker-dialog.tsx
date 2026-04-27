@@ -147,7 +147,7 @@ export function DatePickerDialog({
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1 text-center text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-1 text-center text-sm">
             {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
               <div key={day} className="font-semibold text-gray-500 pb-1">
                 {day}

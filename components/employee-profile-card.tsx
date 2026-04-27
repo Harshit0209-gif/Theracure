@@ -190,7 +190,7 @@ export function EmployeeProfileCard({
     <>
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-3">
               <Avatar className="h-16 w-16">
                 <AvatarFallback className="text-lg capitalize">
@@ -358,7 +358,7 @@ export function EmployeeProfileCard({
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 Quick Stats
               </h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <p className="text-2xl font-bold text-blue-600">
                     {loadingStats ? "..." : stats?.assignedPatients ?? 0}
@@ -395,7 +395,7 @@ export function EmployeeProfileCard({
           </DialogHeader>
           <form onSubmit={handleEditSubmit}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
                   Name
                 </Label>
@@ -409,7 +409,7 @@ export function EmployeeProfileCard({
                   required
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
                 <Label htmlFor="email" className="text-right">
                   Email
                 </Label>
@@ -424,7 +424,7 @@ export function EmployeeProfileCard({
                   required
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
                 <Label htmlFor="phone" className="text-right">
                   Phone
                 </Label>
@@ -437,7 +437,7 @@ export function EmployeeProfileCard({
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
                 <Label htmlFor="role" className="text-right">
                   Role
                 </Label>

@@ -75,7 +75,7 @@ export const ObservationSection: React.FC<ObservationSectionProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {OBSERVATION_FIELDS.map((field) => (
         <div key={field.key}>
           <Label className="text-xs">{field.label}</Label>

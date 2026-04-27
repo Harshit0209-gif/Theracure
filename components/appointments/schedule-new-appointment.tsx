@@ -1056,7 +1056,7 @@ export function ScheduleNewDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <TimeInput
                     id="startTime"
                     label="Start Time"
@@ -1084,7 +1084,7 @@ export function ScheduleNewDialog({
                 <div
                   className={`p-5 rounded-2xl border transition-all duration-300 ${watchedValues.isRecurring ? "bg-indigo-50/30 border-indigo-200 shadow-inner" : "bg-slate-50/50 border-slate-200"}`}
                 >
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                     <div className="flex items-center gap-3">
                       <div
                         className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${watchedValues.isRecurring ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"}`}
@@ -1495,7 +1495,7 @@ export function ScheduleNewDialog({
                           </div>
                         ) : cubicleAvailability ? (
                           <div className="space-y-5">
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                               {cubicleAvailability.availableCubicles.map(
                                 (cubicle: any) => (
                                   <button
@@ -1754,7 +1754,7 @@ export function ScheduleNewDialog({
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-1 text-center text-sm">
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                 <div key={day} className="font-semibold text-gray-500">
                   {day}
@@ -1798,7 +1798,7 @@ export function ScheduleNewDialog({
             {/* Selected Dates Summary */}
             {customDates.length > 0 && (
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <Label>
                     {customDates.length}{" "}
                     {customDates.length === 1 ? "date" : "dates"} selected
@@ -1927,7 +1927,7 @@ export function ScheduleNewDialog({
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-1 text-center text-sm">
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                 <div key={day} className="font-semibold text-gray-500">
                   {day}

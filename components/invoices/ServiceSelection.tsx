@@ -177,7 +177,7 @@ const ServiceCategory: React.FC<{
           {services.length}
         </Badge>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {services.map((service) => {
           const selectedService = selectedServices.find(
             (s) => s.id === service.id,

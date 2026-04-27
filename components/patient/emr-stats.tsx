@@ -159,7 +159,7 @@ export function EMRStats({ patientId, refreshTrigger }: EMRStatsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {Object.entries(stats.documentTypeBreakdown).map(
                 ([type, count]) => (
                   <div

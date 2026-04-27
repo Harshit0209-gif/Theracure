@@ -391,7 +391,7 @@ export function PrescriptionManagementSection() {
   return (
     <div className="bg-indigo-50/30 rounded-xl p-6 mb-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">
             Assessment Records

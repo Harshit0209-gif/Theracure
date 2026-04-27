@@ -228,7 +228,7 @@ export const InvoiceDetailsModal = ({
                 icon={<Activity className="h-4 w-4" />}
                 title="Services & Items"
               />
-              <div className="rounded-xl overflow-hidden border border-gray-100">
+              <div className="rounded-xl overflow-hidden overflow-x-auto border border-gray-100">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-indigo-700 text-white">
@@ -302,7 +302,7 @@ export const InvoiceDetailsModal = ({
                     icon={<CreditCard className="h-4 w-4" />}
                     title="Transaction History"
                   />
-                  <div className="rounded-xl overflow-hidden border border-gray-100">
+                  <div className="rounded-xl overflow-hidden overflow-x-auto border border-gray-100">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-indigo-700 text-white">

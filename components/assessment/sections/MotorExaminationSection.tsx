@@ -61,7 +61,7 @@ export const MotorExaminationSection: React.FC<
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {MOTOR_FIELDS.map((field) => (
           <div key={field.key}>
             <Label className="text-xs">{field.label}</Label>
@@ -76,7 +76,7 @@ export const MotorExaminationSection: React.FC<
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label className="text-xs">Muscle Tone</Label>
           <Input

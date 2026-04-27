@@ -188,7 +188,7 @@ export function CalendarViewDialog({
           {/* ── Left: calendar ── */}
           <div className="w-72 md:w-80 flex-shrink-0 p-5 overflow-y-auto">
             {/* Month navigation */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
               <button
                 onClick={() => navigateMonth(-1)}
                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
@@ -207,7 +207,7 @@ export function CalendarViewDialog({
             </div>
 
             {/* Day headers */}
-            <div className="grid grid-cols-7 mb-1">
+            <div className="grid grid-cols-1 md:grid-cols-7 mb-1">
               {DAYS_OF_WEEK.map((d, i) => (
                 <div key={d} className="text-center">
                   <span
@@ -220,7 +220,7 @@ export function CalendarViewDialog({
             </div>
 
             {/* Day grid */}
-            <div className="grid grid-cols-7 gap-0.5">
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-0.5">
               {days.map((day, i) => {
                 if (!day) return <div key={i} />;
                 const status = getDayStatus(day);

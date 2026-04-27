@@ -75,7 +75,7 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label className="text-xs">Pain Location</Label>
           <Input
@@ -154,7 +154,7 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3 items-start">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
                     <div>
                       <Label className="text-xs">Location</Label>
                       <Input
@@ -254,7 +254,7 @@ export const PainHistorySection: React.FC<PainHistorySectionProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label className="text-xs">Aggravating Factors</Label>
           <Textarea

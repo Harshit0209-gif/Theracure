@@ -7,21 +7,19 @@ import {
 import { ServiceCategory } from "../generated/serviceEnums";
 
 export const appointmentFields = {
-  therapistId: z.string().uuid("Invalid therapist ID format"),
+  therapistId: z.string(),
   patientId: z.string().min(1, "Patient ID is required"),
   appointmentStartTime: z
     .string()
-    .datetime("Invalid start time format (use ISO 8601)"),
+    .datetime({ message: "Invalid start time format (use ISO 8601)" }),
   appointmentEndTime: z
     .string()
-    .datetime("Invalid end time format (use ISO 8601)"),
+    .datetime({ message: "Invalid end time format (use ISO 8601)" }),
 
   notes: z.string().optional(),
   assignmentId: z.string().uuid("Invalid assignment ID format"),
-  status: z.nativeEnum(AppointmentStatus, {
-    errorMap: () => ({
-      message: "Status must be one of: confirmed, completed, cancelled",
-    }),
+  status: z.enum(AppointmentStatus, {
+    message: "Status must be one of: confirmed, completed, cancelled",
   }),
   duration: z
     .number()
@@ -36,18 +34,15 @@ export const appointmentFields = {
 
   isRecurring: z.boolean(),
   recurringType: z
-    .nativeEnum(RecurringType, {
-      errorMap: () => ({
-        message: "Recurring type must be one of: daily, weekly, biweekly, monthly, custom",
-      }),
+    .enum(RecurringType, {
+      message:
+        "Recurring type must be one of: daily, weekly, biweekly, monthly, custom",
     })
     .optional(),
 
   recurringEndType: z
-    .nativeEnum(RecurringEndType, {
-      errorMap: () => ({
-        message: "Recurring end type must be one of: count, date",
-      }),
+    .enum(RecurringEndType, {
+      message: "Recurring end type must be one of: count, date",
     })
     .optional(),
   recurringCount: z
@@ -60,12 +55,16 @@ export const appointmentFields = {
     .string()
     .regex(
       /^\d{4}-\d{2}-\d{2}$/,
-      "Recurring end date must be in YYYY-MM-DD format"
+      "Recurring end date must be in YYYY-MM-DD format",
     )
     .optional()
     .nullable(),
   customDates: z
-    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"))
+    .array(
+      z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+    )
     .optional(),
   isRecurringParent: z.boolean().default(false),
   recurringParentId: z
@@ -74,30 +73,28 @@ export const appointmentFields = {
     .optional(),
 
   serviceId: z.string(),
-  serviceCategory: z.nativeEnum(ServiceCategory, {
-    errorMap: () => ({
-      message:
-        "Service category must be one of: manual_therapy, exercise_therapy, consultation, electrotherapy, combo_treatment",
-    }),
+  serviceCategory: z.enum(ServiceCategory, {
+    message:
+      "Service category must be one of: manual_therapy, exercise_therapy, consultation, electrotherapy, combo_treatment",
   }),
 
   appointmentDate: z
     .string()
     .regex(
       /^\d{4}-\d{2}-\d{2}$/,
-      "Appointment date must be in YYYY-MM-DD format"
+      "Appointment date must be in YYYY-MM-DD format",
     ),
   startTime: z
     .string()
     .regex(
       /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
-      "Start time must be in HH:MM format"
+      "Start time must be in HH:MM format",
     ),
   endTime: z
     .string()
     .regex(
       /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
-      "End time must be in HH:MM format"
+      "End time must be in HH:MM format",
     ),
 
   createdById: z.string().uuid("Invalid creator ID format"),
@@ -122,28 +119,10 @@ export const customValidations = {
     return appointmentTime > now;
   },
 
-  // Validates appointment is during working hours (9 AM - 7 PM)
-  workingHours: (data: {
-    appointmentStartTime: string;
-    appointmentEndTime: string;
-  }) => {
-    const startTime = new Date(data.appointmentStartTime);
-    const endTime = new Date(data.appointmentEndTime);
-
-    const startHour = startTime.getHours();
-    const endHour = endTime.getHours();
-    const endMinute = endTime.getMinutes();
-
-    // 9 AM to 7 PM (19:00)
-    return (
-      startHour >= 9 && (endHour < 19 || (endHour === 19 && endMinute === 0))
-    );
-  },
-
   // Validates maximum appointment duration
   maxDuration: (
     data: { appointmentStartTime: string; appointmentEndTime: string },
-    maxMinutes: number = 240
+    maxMinutes: number = 240,
   ) => {
     const startTime = new Date(data.appointmentStartTime);
     const endTime = new Date(data.appointmentEndTime);
@@ -174,10 +153,8 @@ export const customValidations = {
       // Validate all dates are in the future
       const now = new Date();
       now.setHours(0, 0, 0, 0);
-      return data.customDates.every(date => new Date(date) >= now);
+      return data.customDates.every((date) => new Date(date) >= now);
     }
-
-    // For DAILY, WEEKLY, BIWEEKLY, MONTHLY - need end type
     if (!data.recurringEndType) return false;
 
     if (
@@ -204,7 +181,7 @@ export const customValidations = {
     appointmentDate: string;
   }) => {
     const startDateTime = new Date(
-      `${data.appointmentDate}T${data.startTime}:00`
+      `${data.appointmentDate}T${data.startTime}:00`,
     );
     const endDateTime = new Date(`${data.appointmentDate}T${data.endTime}:00`);
     return endDateTime > startDateTime;
@@ -226,10 +203,6 @@ export const conflictCheckSchema = z
   .refine(customValidations.timeSequence, {
     message: "End time must be after start time",
     path: ["appointmentEndTime"],
-  })
-  .refine((data) => customValidations.workingHours(data), {
-    message: "Appointment must be between 9 AM and 7 PM",
-    path: ["appointmentStartTime"],
   });
 
 // 2. Enhanced Create Appointment Schema
@@ -255,10 +228,6 @@ export const createAppointmentSchema = z
   })
   .refine((data) => customValidations.notInPast(data.appointmentStartTime), {
     message: "Cannot schedule appointments in the past",
-    path: ["appointmentStartTime"],
-  })
-  .refine((data) => customValidations.workingHours(data), {
-    message: "Appointment must be between 9 AM and 7 PM",
     path: ["appointmentStartTime"],
   })
   .refine((data) => customValidations.maxDuration(data, 240), {
@@ -296,23 +265,12 @@ export const appointmentFormSchema = z
   .refine(
     (data) =>
       customValidations.notInPast(
-        `${data.appointmentDate}T${data.startTime}:00`
+        `${data.appointmentDate}T${data.startTime}:00`,
       ),
     {
       message: "Cannot schedule appointments in the past",
       path: ["appointmentDate"],
-    }
-  )
-  .refine(
-    (data) =>
-      customValidations.workingHours({
-        appointmentStartTime: `${data.appointmentDate}T${data.startTime}:00`,
-        appointmentEndTime: `${data.appointmentDate}T${data.endTime}:00`,
-      }),
-    {
-      message: "Appointment must be between 9 AM and 7 PM",
-      path: ["startTime"],
-    }
+    },
   )
   .refine(
     (data) =>
@@ -321,12 +279,12 @@ export const appointmentFormSchema = z
           appointmentStartTime: `${data.appointmentDate}T${data.startTime}:00`,
           appointmentEndTime: `${data.appointmentDate}T${data.endTime}:00`,
         },
-        240
+        240,
       ),
     {
       message: "Appointment duration cannot exceed 4 hours",
       path: ["endTime"],
-    }
+    },
   )
   .refine((data) => customValidations.recurringSettings(data), {
     message:
@@ -358,9 +316,7 @@ export const updateAppointmentSchema = z
 
     updateRecurringType: z
       .enum(["single", "this_and_future", "all"], {
-        errorMap: () => ({
-          message: "Update type must be one of: single, this_and_future, all",
-        }),
+        message: "Update type must be one of: single, this_and_future, all",
       })
       .optional(),
 
@@ -383,7 +339,7 @@ export const updateAppointmentSchema = z
     {
       message: "End time must be after start time",
       path: ["appointmentEndTime"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -401,7 +357,7 @@ export const updateAppointmentSchema = z
     {
       message: "Invalid recurring appointment settings",
       path: ["isRecurring"],
-    }
+    },
   );
 
 // 6. Enhanced Get Appointments Query Schema
@@ -410,12 +366,12 @@ export const getAppointmentsSchema = z.object({
     .string()
     .transform((val) => parseInt(val))
     .pipe(z.number().min(1))
-    .default("1"),
+    .default(1),
   limit: z
     .string()
     .transform((val) => parseInt(val))
     .pipe(z.number().min(1).max(100))
-    .default("10"),
+    .default(10),
   search: z.string().optional(),
   status: appointmentFields.status.optional(),
   therapistId: appointmentFields.therapistId.optional(),
@@ -433,7 +389,7 @@ export const getAppointmentsSchema = z.object({
     .string()
     .transform((val) => val === "true")
     .pipe(z.boolean())
-    .default("true"),
+    .default(true),
 });
 
 // 7. Therapist Availability Schema (unchanged)
@@ -454,7 +410,7 @@ export const therapistAvailabilitySchema = z
     {
       message: "Start date must be before or equal to end date",
       path: ["endDate"],
-    }
+    },
   );
 
 // 8. Create Availability Schema
@@ -477,7 +433,7 @@ export const createAvailabilitySchema = z
     {
       message: "End time must be after start time",
       path: ["endTime"],
-    }
+    },
   );
 
 // 10. Recurring Appointment Management Schema
@@ -486,11 +442,9 @@ export const recurringManagementSchema = z
     action: z.enum(
       ["cancel_all", "cancel_future", "update_all", "update_future"],
       {
-        errorMap: () => ({
-          message:
-            "Action must be one of: cancel_all, cancel_future, update_all, update_future",
-        }),
-      }
+        message:
+          "Action must be one of: cancel_all, cancel_future, update_all, update_future",
+      },
     ),
     fromDate: appointmentFields.date.optional(),
     updateData: z
@@ -516,7 +470,7 @@ export const recurringManagementSchema = z
     {
       message: "Invalid recurring management parameters",
       path: ["action"],
-    }
+    },
   );
 
 // ====================================================================
@@ -552,7 +506,7 @@ export const generateRecurringDates = (
   recurringType: RecurringType,
   endType: RecurringEndType,
   endValue: number | string,
-  customDates?: string[]
+  customDates?: string[],
 ): string[] => {
   // For CUSTOM type, return the custom dates directly
   if (recurringType === RecurringType.CUSTOM && customDates) {
@@ -567,10 +521,10 @@ export const generateRecurringDates = (
     recurringType === RecurringType.DAILY
       ? 1
       : recurringType === RecurringType.WEEKLY
-      ? 7
-      : recurringType === RecurringType.BIWEEKLY
-      ? 14
-      : 28; // MONTHLY
+        ? 7
+        : recurringType === RecurringType.BIWEEKLY
+          ? 14
+          : 28; // MONTHLY
 
   let endDate: Date;
   if (endType === RecurringEndType.DATE) {

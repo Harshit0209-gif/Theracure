@@ -334,7 +334,7 @@ export const PrescriptionDetailsView: React.FC<
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Name</span>
                 <p className="font-medium">
@@ -418,7 +418,7 @@ export const PrescriptionDetailsView: React.FC<
                     <Activity className="h-4 w-4 text-red-500" />
                     Vital Signs
                   </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     {assessmentData.vitals.bloodPressure?.systolic && (
                       <div>
                         <span className="text-gray-600">BP</span>

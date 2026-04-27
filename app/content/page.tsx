@@ -232,7 +232,7 @@ export default function ContentDashboard() {
                 <h2 className="text-xl font-semibold text-gray-800 mb-6">Content Performance Analytics</h2>
 
                 <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-4 mb-6">
+                  <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 mb-6">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="blogs">Blogs Performance</TabsTrigger>
                     <TabsTrigger value="notifications">Notifications Performance</TabsTrigger>

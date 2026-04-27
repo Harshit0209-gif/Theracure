@@ -453,7 +453,7 @@ export function InvoicesSection() {
     <>
       <div className="bg-indigo-50/30 rounded-xl p-6 mb-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-800">
@@ -654,7 +654,7 @@ export function InvoicesSection() {
                               </button>
                             ))}
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div className="relative">
                               <input
                                 type="text"
@@ -907,7 +907,7 @@ export function InvoicesSection() {
 
         {/* Recent Invoices Section */}
         <div className="mt-8">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
             <h3 className="text-xl font-bold text-gray-800">Recent Invoices</h3>
             <div className="flex items-center gap-3">
               <div className="relative group">
@@ -916,7 +916,7 @@ export function InvoicesSection() {
                   placeholder="Search invoice ID, patient name or ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-white pl-9 pr-8 w-80 border-gray-200 focus:border-indigo-400 focus:ring-indigo-400 rounded-lg shadow-sm"
+                  className="bg-white pl-9 pr-8 w-full md:w-80 border-gray-200 focus:border-indigo-400 focus:ring-indigo-400 rounded-lg shadow-sm"
                 />
                 {searchQuery && (
                   <button

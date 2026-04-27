@@ -86,7 +86,7 @@ export const VitalsSection: React.FC<VitalsSectionProps> = ({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4">
       <div>
         <Label className="text-xs">Blood Pressure</Label>
         <div className="flex items-center gap-2">

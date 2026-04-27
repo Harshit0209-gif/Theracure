@@ -134,7 +134,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4 py-4"
           >
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Full Name
               </Label>
@@ -151,7 +151,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               )}
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
                 Role
               </Label>
@@ -172,7 +172,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               </Select>
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="text-right">
                 Email
               </Label>
@@ -190,7 +190,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               )}
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
               <Label htmlFor="phone" className="text-right">
                 Phone
               </Label>
@@ -209,7 +209,7 @@ export function AddEmployeeDialog({ onUserCreated }: AddEmployeeDialogProps) {
               )}
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
               <Label htmlFor="password" className="text-right">
                 Password
               </Label>

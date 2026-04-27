@@ -87,7 +87,7 @@ export default function AdminDashboard() {
 
               {/* Manage Existing Blogs Section */}
               <div className="bg-gray-200 rounded-lg p-6 mb-8">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                 <h2 className="text-xl font-semibold text-gray-800">Manage Existing Blogs</h2>
                   <div className="flex items-center justify-between space-x-2">
                     <div className="relative flex-1">

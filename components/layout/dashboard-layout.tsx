@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Menu,
   Bell,
@@ -39,6 +39,17 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [mobileMenuOpen]);
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -46,23 +57,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   useSessionManager();
 
   const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setMobileMenuOpen(!mobileMenuOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
   };
 
   return (
     <div className="flex h-screen bg-gray-100 flex-col">
       <Toaster />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Mobile Backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+        
         {/* Fixed Sidebar */}
         <div
           className={`${
             sidebarCollapsed ? "w-16" : "w-64"
-          } transition-all duration-300 ease-in-out flex-shrink-0 overflow-y-auto`}
+          } transition-all duration-300 ease-in-out flex-shrink-0 overflow-y-auto 
+          fixed md:static z-50 h-full md:h-auto
+          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          bg-indigo-900 md:bg-transparent shadow-2xl md:shadow-none`}
         >
           <Sidebar 
-            collapsed={sidebarCollapsed} 
+            collapsed={sidebarCollapsed && !mobileMenuOpen} 
             userRole={user?.role} 
-            onExpand={() => setSidebarCollapsed(false)}
+            onExpand={() => {
+              if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                setSidebarCollapsed(false)
+              }
+            }}
           />
         </div>
 
@@ -90,7 +120,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     >
                       <div className="flex items-center space-x-3">
                         <div className="relative">
-                          <Avatar className="h-10 w-10 ring-2 ring-white shadow-md">
+                          <Avatar className="h-9 w-9 md:h-10 md:w-10 ring-2 ring-white shadow-md">
                             <AvatarImage
                               src={
                                 user?.avatar ||
@@ -109,9 +139,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                 .slice(0, 2) || "U"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
+                          <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 md:h-3 md:w-3 bg-green-500 border-2 border-white rounded-full"></div>
                         </div>
-                        <div className="hidden md:block text-left">
+                        <div className="hidden sm:block text-left">
                           <p className="text-sm font-semibold text-gray-800 leading-tight">
                             {user?.name || "User Name"}
                           </p>
@@ -121,7 +151,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                               : "Administrator"}
                           </p>
                         </div>
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 hidden sm:block" />
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -176,7 +206,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </header>
 
           {/* Scrollable Main Content */}
-          <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
             {children}
           </main>
 

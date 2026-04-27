@@ -57,14 +57,14 @@ export function AppointmentHeader({
         <p className="text-sm text-gray-500 mt-0.5">Manage patient appointments and schedules</p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 justify-end">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-end w-full md:w-auto">
         {/* Search */}
-        <div className="relative group">
+        <div className="relative group w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
           <Input
             type="text"
             placeholder="Search by patient name..."
-            className="bg-white pl-9 pr-8 w-64 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
+            className="bg-white pl-9 pr-8 w-full sm:w-64 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -81,7 +81,7 @@ export function AppointmentHeader({
 
         {/* Therapy filter */}
         <Select value={therapyTypeFilter} onValueChange={setTherapyTypeFilter}>
-          <SelectTrigger className="w-44 bg-white border-gray-200 shadow-sm text-sm">
+          <SelectTrigger className="w-full sm:w-44 bg-white border-gray-200 shadow-sm text-sm">
             <div className="flex items-center gap-2">
               <Filter className="h-3.5 w-3.5 text-gray-400" />
               <SelectValue placeholder="All therapies" />
@@ -100,7 +100,7 @@ export function AppointmentHeader({
         {user?.role !== UserRole.THERAPIST && (
           <Button
             onClick={onScheduleNew}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             Schedule New
@@ -110,7 +110,7 @@ export function AppointmentHeader({
         <Button
           onClick={onViewCalendar}
           variant="outline"
-          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex items-center gap-2"
+          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex items-center justify-center gap-2 w-full sm:w-auto"
         >
           <CalendarDays className="h-4 w-4" />
           View Calendar

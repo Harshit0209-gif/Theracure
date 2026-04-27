@@ -172,7 +172,7 @@ export const PatientInfoSection: React.FC<PatientInfoSectionProps> = ({
             </div>
 
             {/* Editable fields */}
-            <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 bg-white">
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 bg-white">
               {[
                 { field: "patientName" as keyof Patient, label: "Full Name", icon: User, value: patientInfo.patientName },
                 { field: "phone" as keyof Patient, label: "Phone", icon: Phone, value: patientInfo.phone },

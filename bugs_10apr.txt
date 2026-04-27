@@ -1,0 +1,80 @@
+Bug Summary
+
+  1. Appointment Module – Daily Sequence
+     Problem:
+     The therapist availability check is wrong. The system is marking therapists as unavailable even when they actually have a valid schedule and open time.
+
+  What this likely means:
+
+  - Assigned therapist schedules are not being read correctly.
+  - Existing appointments may be blocking full availability instead of only overlapping slots.
+  - Time-slot overlap validation is too broad or incorrect.
+  - Real-time schedule and booking data may not be syncing properly.
+
+  Impact:
+
+  - Valid therapists do not appear available.
+  - Appointment allocation becomes inaccurate.
+  - Daily sequence planning is unreliable.
+
+  2. Automated SMS Reminder – Pre-Appointment
+     Problem:
+     Patients are not getting the reminder SMS 30 minutes before their appointment.
+
+  What this likely means:
+
+  - No scheduled cron/queue job is running, or it is misconfigured.
+  - Appointment time and current time comparison may be failing.
+  - Time-zone conversion may be incorrect.
+  - Patient mobile numbers may not be fetched properly.
+  - SMS failures may happen silently without retry.
+
+  Impact:
+
+  - Patients miss reminders.
+  - Higher chance of no-shows or delayed attendance.
+  - Reminder automation is not functioning as expected.
+
+  3. Therapy Completion – Bulk Auto-Marking
+     Problem:
+     When one patient is marked as completed, multiple other patients are also getting marked completed by mistake.
+
+  What this likely means:
+
+  - The completion action is affecting a list instead of one selected record.
+  - There may be a loop or bulk update running unintentionally.
+  - Patient/session IDs may be mixed up or not uniquely scoped.
+  - UI selection or event binding may be targeting multiple rows.
+
+  Impact:
+
+  - Incorrect therapy records are updated.
+  - Patient treatment status becomes unreliable.
+  - Risk of serious data integrity issues.
+
+  4. Appointment Notification Message Failure
+     Problem:
+     The system is not sending confirmation/notification messages when an appointment is created.
+
+  What this likely means:
+
+  - SMS gateway/API integration may be broken or misconfigured.
+  - Notification trigger may not be firing after successful appointment creation.
+  - API request/response handling may be failing.
+  - There may be no proper logging for failures.
+
+  Impact:
+
+  - Patients do not receive booking confirmations.
+  - Communication flow after appointment creation is broken.
+  - Troubleshooting is difficult without logs.
+
+  Overall Pattern
+  The main problems fall into 3 categories:
+
+  - Incorrect business logic: therapist availability and therapy completion
+  - Automation failure: pre-appointment reminder job not running properly
+  - Notification integration failure: booking confirmation SMS not being triggered or delivered
+
+
+   also check the logic is there any issue in creating appoint for receptinist   

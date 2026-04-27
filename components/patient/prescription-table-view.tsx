@@ -344,7 +344,7 @@ export function PrescriptionTableView({
 
       {/* Pagination */}
       {!loading && prescriptions.length > 0 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-sm text-gray-700">
             Showing {(currentPage - 1) * pageSize + 1} to{" "}
             {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
