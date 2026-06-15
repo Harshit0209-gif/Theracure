@@ -5,7 +5,7 @@ import { sendSMSNotification } from "@/config/smsConfig";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -40,7 +40,8 @@ export async function PATCH(
           phone: appointment.patient.phone,
           patientName: appointment.patient.patientName,
           therapistName: appointment.therapist.name,
-          date: appointment.assignedDate,
+          date: appointment.appointmentStartTime,
+          startTime: appointment.appointmentStartTime,
         });
       } catch (smsError) {
         console.error("Failed to queue SMS:", smsError);
@@ -55,7 +56,7 @@ export async function PATCH(
     console.error("Error cancel appointment:", error);
     return NextResponse.json(
       { success: false, error: "Failed to cancel appointment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

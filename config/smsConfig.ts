@@ -24,18 +24,19 @@ const formatLocalTime = (date: Date, formatStr: string): string => {
   return format(localDate, formatStr);
 };
 
+const CLINIC_PHONE = "(033) 3564 7255";
+const CLINIC_EMAIL = "contacts@mstheracure.com";
+
 export const SMS_CONFIG = {
   APPOINTMENT_CONFIRMATION: (data: SMSData) => ({
     type: "APPOINTMENT_CONFIRMATION" as TemplateKey,
     phone: data.phone,
     variables: {
       var1: data.patientName,
-      var2: data.therapistName,
-      var3: data.serviceName || "Therapy",
-      var4: `${formatLocalTime(data.date!, "do MMM yyyy")} at ${formatLocalTime(
-        data.startTime!,
-        "hh:mm a"
-      )} to ${formatLocalTime(data.endTime!, "hh:mm a")}${data.cubicleInfo ? `, Room: ${data.cubicleInfo}` : ""}`,
+      var2: formatLocalTime(data.date!, "do MMM yyyy"),
+      var3: formatLocalTime(data.startTime!, "hh:mm a"),
+      var4: CLINIC_PHONE,
+      var5: CLINIC_EMAIL,
     },
   }),
 
@@ -44,8 +45,10 @@ export const SMS_CONFIG = {
     phone: data.phone,
     variables: {
       var1: data.patientName,
-      var2: data.therapistName,
-      var3: formatLocalTime(data.date!, "do MMM yyyy"),
+      var2: formatLocalTime(data.date!, "do MMM yyyy"),
+      var3: formatLocalTime(data.startTime!, "hh:mm a"),
+      var4: CLINIC_PHONE,
+      var5: CLINIC_EMAIL,
     },
   }),
 
@@ -54,9 +57,10 @@ export const SMS_CONFIG = {
     phone: data.phone,
     variables: {
       var1: data.patientName,
-      var2: data.therapistName,
-      var3: formatLocalTime(data.date!, "do MMM yyyy"),
-      var4: formatLocalTime(data.startTime!, "hh:mm a"),
+      var2: formatLocalTime(data.date!, "do MMM yyyy"),
+      var3: formatLocalTime(data.startTime!, "hh:mm a"),
+      var4: CLINIC_PHONE,
+      var5: CLINIC_EMAIL,
     },
   }),
 

@@ -199,7 +199,10 @@ export async function POST(request: NextRequest) {
 
     let pdfPath = null;
     try {
-      const pdfBuffer = await generateInvoicePDF(body);
+      const pdfBuffer = await generateInvoicePDF({
+        ...body,
+        invoiceDetails: { ...body.invoiceDetails, status },
+      });
       const fileName = `invoices/${invoiceDetails.id}.pdf`;
       const bufferData = Buffer.isBuffer(pdfBuffer)
         ? pdfBuffer

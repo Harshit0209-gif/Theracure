@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
           patientName: patientDetails.patientName,
           therapistName: therapistUser?.name || "Doctor",
           serviceName: serviceDetails?.name || "Therapy",
-          date: appointment.assignedDate,
+          date: appointment.appointmentStartTime,
           startTime: appointment.appointmentStartTime,
           endTime: appointment.appointmentEndTime,
           cubicleInfo: appointment.cubicle

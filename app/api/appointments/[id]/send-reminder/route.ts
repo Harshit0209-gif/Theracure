@@ -63,7 +63,7 @@ export async function POST(
           patientName: appointment.patient.patientName,
           therapistName: appointment.therapist.name,
           serviceName: appointment.service?.name || "Therapy",
-          date: appointment.assignedDate,
+          date: appointment.appointmentStartTime,
           startTime: appointment.appointmentStartTime,
           endTime: appointment.appointmentEndTime,
           cubicleInfo: appointment.cubicle
@@ -78,7 +78,8 @@ export async function POST(
           phone: appointment.patient.phone,
           patientName: appointment.patient.patientName,
           therapistName: appointment.therapist.name,
-          date: appointment.assignedDate,
+          date: appointment.appointmentStartTime,
+          startTime: appointment.appointmentStartTime,
         });
         break;
 
@@ -88,7 +89,7 @@ export async function POST(
           phone: appointment.patient.phone,
           patientName: appointment.patient.patientName,
           therapistName: appointment.therapist.name,
-          date: appointment.assignedDate,
+          date: appointment.appointmentStartTime,
           startTime: appointment.appointmentStartTime,
         });
         break;

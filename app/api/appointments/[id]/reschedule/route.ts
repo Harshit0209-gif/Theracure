@@ -158,7 +158,7 @@ export async function PATCH(
           phone: appointment.patient.phone,
           patientName: appointment.patient.patientName,
           therapistName: appointment.therapist.name,
-          date: appointment.assignedDate,
+          date: startTime,
           startTime: appointment.appointmentStartTime,
         });
       } catch (smsError) {
