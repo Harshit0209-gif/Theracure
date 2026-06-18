@@ -61,16 +61,30 @@ export async function PATCH(
 
     const weekDay = getClinicWeekDayFromDateTime(startTime);
 
-    // 1. Find therapist
+    // 1. Find therapist and current status
     const therapistAssignment = await prisma.appointment.findUnique({
       where: { id },
-      select: { therapistId: true },
+      select: { therapistId: true, status: true },
     });
 
     if (!therapistAssignment?.therapistId) {
       return NextResponse.json(
         { success: false, message: "Appointment not found" },
         { status: 404 }
+      );
+    }
+
+    if (therapistAssignment.status === AppointmentStatus.COMPLETED) {
+      return NextResponse.json(
+        { success: false, message: "Cannot reschedule a completed appointment" },
+        { status: 400 }
+      );
+    }
+
+    if (therapistAssignment.status === AppointmentStatus.CANCELLED) {
+      return NextResponse.json(
+        { success: false, message: "Cannot reschedule a cancelled appointment" },
+        { status: 400 }
       );
     }
     // 2. Check if therapist has availability for this weekday

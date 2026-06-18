@@ -30,7 +30,7 @@ describe('SMS Worker Verification', () => {
   });
 
   it('should have sms_queue table accessible', async () => {
-    const count = await prisma.sms_queue.count();
+    const count = await prisma.smsQueue.count();
     expect(typeof count).toBe('number');
   });
 
@@ -56,7 +56,7 @@ describe('SMS Worker Verification', () => {
     // This indicates the worker is not running
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-    const stuckJobs = await prisma.sms_queue.count({
+    const stuckJobs = await prisma.smsQueue.count({
       where: {
         status: 'PENDING',
         createdAt: {
@@ -73,7 +73,7 @@ describe('SMS Worker Verification', () => {
   });
 
   it('should validate SMS queue schema', async () => {
-    const sampleQueue = await prisma.sms_queue.findFirst();
+    const sampleQueue = await prisma.smsQueue.findFirst();
 
     if (sampleQueue) {
       // Verify required fields exist
@@ -116,7 +116,7 @@ describe('SMS Worker Verification', () => {
     }
 
     // Create a test SMS job
-    const testJob = await prisma.sms_queue.create({
+    const testJob = await prisma.smsQueue.create({
       data: {
         type: 'TEST',
         phone: '919999999999',
@@ -129,7 +129,7 @@ describe('SMS Worker Verification', () => {
     expect(testJob.status).toBe('PENDING');
 
     // Clean up test job
-    await prisma.sms_queue.delete({
+    await prisma.smsQueue.delete({
       where: { id: testJob.id },
     });
   });

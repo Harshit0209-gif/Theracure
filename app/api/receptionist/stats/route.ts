@@ -21,6 +21,7 @@ export async function GET() {
       startOfDay.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000,
     );
 
+    const endOfWeek = new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
     const startOfLastWeek = new Date(
       startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000,
     );
@@ -69,7 +70,7 @@ export async function GET() {
 
       prisma.appointment.count({
         where: {
-          appointmentStartTime: { gte: startOfWeek },
+          appointmentStartTime: { gte: startOfWeek, lt: endOfWeek },
           status: { notIn: ["CANCELLED"] },
           service: { category: "CONSULTATION" },
         },
