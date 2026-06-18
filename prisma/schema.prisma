@@ -188,7 +188,7 @@ model Transaction {
   status          TransactionStatus @default(SUCCESS)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  invoice         Invoice           @relation("InvoiceToTransactions", fields: [invoiceId], references: [id])
+  invoice         Invoice           @relation("InvoiceToTransactions", fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
   @@index([transactionDate])
@@ -197,15 +197,15 @@ model Transaction {
 
 model InvoiceItem {
   id              String   @id @default(uuid())
-  invoiceId       String
-  serviceId       String
-  serviceName     String
-  priceAtPurchase Float
+  invoiceId       String   @map("invoice_id")
+  serviceId       String   @map("service_id")
+  serviceName     String   @map("service_name")
+  priceAtPurchase Float    @map("price_at_purchase")
   quantity        Int
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
   category        String?
   description     String?
-  invoice         Invoice  @relation("InvoiceToItems", fields: [invoiceId], references: [id])
+  invoice         Invoice  @relation("InvoiceToItems", fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("invoice_items")
 }

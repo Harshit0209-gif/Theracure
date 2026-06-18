@@ -44,6 +44,7 @@ interface EmployeeTableProps {
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
   onUserUpdated: () => void;
+  className?: string;
 }
 
 function initials(name: string) {
@@ -60,6 +61,7 @@ export function EmployeeTable({
   setPage,
   setPageSize,
   onUserUpdated,
+  className,
 }: EmployeeTableProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
@@ -245,6 +247,7 @@ export function EmployeeTable({
         emptyTitle="No employees found"
         emptyDescription="Try adjusting your search or role filter"
         onRowClick={handleViewProfile}
+        className={className}
       />
 
       {/* Profile Dialog */}

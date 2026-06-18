@@ -18,6 +18,7 @@ interface InvoiceListProps {
   onPaymentSuccess?: () => void;
   /** Optional icon shown in the count bar. Defaults to FileText. */
   icon?: LucideIcon;
+  className?: string;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -46,6 +47,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   handleDirectPrint,
   onPaymentSuccess,
   icon: Icon = FileText,
+  className,
 }) => {
   const columns: DataTableColumn<Invoice>[] = [
     {
@@ -137,6 +139,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       emptyIcon={<FileText className="h-10 w-10" />}
       emptyTitle="No invoices found"
       emptyDescription="Try adjusting your search or filters"
+      className={className}
     />
   );
 };

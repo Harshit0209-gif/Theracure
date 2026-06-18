@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth-context";
-import { generateInvoiceId } from "@/lib/utils/RandomIDGenerator";
 import {
   calculateSubtotal,
   calculateTotal,
@@ -182,7 +181,7 @@ export function InvoicesSection() {
     setPatientFound(false);
     setSelectedServices([]);
     setPaymentDetails(defaultPaymentDetails);
-    setInvoiceDetails({ ...defaultInvoice, id: generateInvoiceId() });
+    setInvoiceDetails({ ...defaultInvoice, id: "" });
     setDiscountPctInput("");
     setDiscountAmtInput("");
     setIsInvoiceDialogOpen(true);
@@ -491,8 +490,8 @@ export function InvoicesSection() {
                     </DialogTitle>
                     <DialogDescription className="text-xs text-gray-400 mt-0.5">
                       ID:{" "}
-                      <span className="font-semibold text-indigo-500">
-                        {invoiceDetails.id}
+                      <span className="font-semibold text-indigo-400 italic">
+                        {invoiceDetails.id || "Auto-assigned on save"}
                       </span>
                     </DialogDescription>
                   </div>
@@ -907,29 +906,30 @@ export function InvoicesSection() {
 
         {/* Recent Invoices Section */}
         <div className="mt-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-            <h3 className="text-xl font-bold text-gray-800">Recent Invoices</h3>
-            <div className="flex items-center gap-3">
-              <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
-                <Input
-                  placeholder="Search invoice ID, patient name or ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-white pl-9 pr-8 w-full md:w-80 border-gray-200 focus:border-indigo-400 focus:ring-indigo-400 rounded-lg shadow-sm"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Invoices</h3>
+
+          {/* Toolbar */}
+          <div className="flex items-center justify-center bg-white border border-b-0 border-gray-200 rounded-t-xl px-4 py-1.5 shadow-sm">
+            <div className="relative group w-80 focus-within:w-[480px] transition-all duration-300">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
+              <Input
+                placeholder="Search invoice ID, patient name or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-[36px] bg-white pl-9 pr-8 w-full border-gray-300 focus:border-indigo-400 rounded-md shadow-sm text-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
+
           <InvoiceList
             invoices={invoices}
             isLoading={isInvoicesLoading}
@@ -942,6 +942,7 @@ export function InvoicesSection() {
             handleViewDetails={handleViewDetails}
             handleDirectPrint={handleDirectPrint}
             onPaymentSuccess={() => fetchInvoices(1, debouncedSearch, false)}
+            className="rounded-t-none border-t-0"
           />
         </div>
       </div>

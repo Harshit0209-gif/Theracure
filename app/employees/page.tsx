@@ -31,6 +31,8 @@ export default function EmployeePage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [statsUsers, setStatsUsers] = useState<User[]>([]);
+  const [statsTotalCount, setStatsTotalCount] = useState(0);
 
   // Debounce search
   useEffect(() => {
@@ -38,7 +40,6 @@ export default function EmployeePage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reset to page 1 on search/filter/pageSize change
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, roleFilter, pageSize]);
@@ -100,6 +101,18 @@ export default function EmployeePage() {
     fetchUsers(1, debouncedSearch, roleFilter, false);
   }, [debouncedSearch, roleFilter]);
 
+  useEffect(() => {
+    fetch(`/api/users?page=1&limit=${CACHE_LIMIT}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setStatsUsers(data.users);
+          setStatsTotalCount(data.pagination?.totalCount ?? data.users.length);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Append next batch when user pages beyond cache
   useEffect(() => {
     const cachedEnd = cachedUsers.length;
@@ -111,16 +124,16 @@ export default function EmployeePage() {
   }, [page, pageSize]);
 
   const stats = {
-    total: totalServerCount,
-    therapists: cachedUsers.filter((u) => u.role === UserRole.THERAPIST).length,
-    admins: cachedUsers.filter((u) => u.role === UserRole.ADMIN).length,
-    receptionists: cachedUsers.filter((u) => u.role === UserRole.RECEPTIONIST)
+    total: statsTotalCount,
+    therapists: statsUsers.filter((u) => u.role === UserRole.THERAPIST).length,
+    admins: statsUsers.filter((u) => u.role === UserRole.ADMIN).length,
+    receptionists: statsUsers.filter((u) => u.role === UserRole.RECEPTIONIST)
       .length,
-    content_managers: cachedUsers.filter(
+    content_managers: statsUsers.filter(
       (u) => u.role === UserRole.CONTENT_MANAGER,
     ).length,
-    active: cachedUsers.filter((u) => u.status === UserStatus.ACTIVE).length,
-    support: cachedUsers.filter(
+    active: statsUsers.filter((u) => u.status === UserStatus.ACTIVE).length,
+    support: statsUsers.filter(
       (u) =>
         u.role === UserRole.RECEPTIONIST || u.role === UserRole.CONTENT_MANAGER,
     ).length,
@@ -137,47 +150,68 @@ export default function EmployeePage() {
             </h2>
           </div>
           <AddEmployeeDialog
-            onUserCreated={() =>
-              fetchUsers(1, debouncedSearch, roleFilter, false)
-            }
+            onUserCreated={() => {
+              fetchUsers(1, debouncedSearch, roleFilter, false);
+              fetch(`/api/users?page=1&limit=${CACHE_LIMIT}`)
+                .then((r) => r.json())
+                .then((data) => {
+                  if (data.success) {
+                    setStatsUsers(data.users);
+                    setStatsTotalCount(
+                      data.pagination?.totalCount ?? data.users.length,
+                    );
+                  }
+                })
+                .catch(() => {});
+            }}
           />
         </div>
 
         {/* Stats */}
         <EmployeeStats stats={stats} />
 
-        {/* Search + filter toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 mb-4 mt-6 w-full md:w-auto">
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-40 h-9 text-sm bg-white border-gray-200">
-              <SelectValue placeholder="Filter by role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {AllRoles.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {UserRoleLabel[role]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
-            <Input
-              placeholder="Search by name, email, or phone..."
-              className="bg-white pl-9 pr-8 w-72 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
+        {/* Toolbar */}
+        <div className="grid grid-cols-3 items-center bg-white border border-b-0 border-gray-200 rounded-t-xl px-4 py-2 shadow-sm mt-6">
+          {/* Left: intentionally empty for balance */}
+          <div />
+
+          {/* Center: expanding search */}
+          <div className="flex justify-center">
+            <div className="relative group w-80 focus-within:w-[480px] transition-all duration-300">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
+              <Input
+                placeholder="Search by name, email, or phone..."
+                className="h-[34px] bg-white pl-9 pr-8 w-full border-gray-300 focus:border-indigo-400 rounded-md shadow-sm text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right: role filter */}
+          <div className="flex items-center justify-end">
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="h-[34px] w-40 text-sm bg-white border-gray-300 shadow-sm rounded-md">
+                <SelectValue placeholder="Filter by role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {AllRoles.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {UserRoleLabel[role]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -194,6 +228,7 @@ export default function EmployeePage() {
           onUserUpdated={() =>
             fetchUsers(1, debouncedSearch, roleFilter, false)
           }
+          className="rounded-t-none border-t-0"
         />
       </div>
     </DashboardLayout>

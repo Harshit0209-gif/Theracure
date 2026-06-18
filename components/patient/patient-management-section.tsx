@@ -322,30 +322,31 @@ export function PatientManagementSection() {
             Patient Management
           </h2>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
-            <Input
-              placeholder="Search name, ID, phone, email..."
-              className="bg-white pl-9 pr-8 w-72 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          {!isTherapist && (
-            <AddPatientDialog
-              fetchPatients={() => fetchPatients(1, debouncedSearch, false)}
-            />
+        {!isTherapist && (
+          <AddPatientDialog
+            fetchPatients={() => fetchPatients(1, debouncedSearch, false)}
+          />
+        )}
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-center bg-white border border-b-0 border-gray-200 rounded-t-xl px-4 py-1.5 shadow-sm">
+        <div className="relative group w-80 focus-within:w-[480px] transition-all duration-300">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
+          <Input
+            placeholder="Search name, ID, phone, email..."
+            className="h-[36px] bg-white pl-9 pr-8 w-full border-gray-300 focus:border-indigo-400 rounded-md shadow-sm text-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
       </div>
@@ -370,6 +371,7 @@ export function PatientManagementSection() {
             ? `No results for "${searchQuery}"`
             : "Add your first patient to get started"
         }
+        className="rounded-t-none border-t-0"
       />
 
       {/* Patient Details Dialog */}

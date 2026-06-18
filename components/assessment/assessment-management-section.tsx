@@ -479,13 +479,13 @@ export function PrescriptionManagementSection() {
         </Card>
       </div>
 
-      {/* Search bar */}
-      <div className="flex justify-end mb-4">
-        <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+      {/* Toolbar */}
+      <div className="flex items-center justify-center bg-white border border-b-0 border-gray-200 rounded-t-xl px-4 py-1.5 shadow-sm">
+        <div className="relative group w-80 focus-within:w-[480px] transition-all duration-300">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
           <Input
             placeholder="Search by patient name, ID, or therapist..."
-            className="bg-white pl-9 pr-8 w-72 border-gray-200 focus:border-indigo-400 rounded-lg shadow-sm text-sm"
+            className="h-[36px] bg-white pl-9 pr-8 w-full border-gray-300 focus:border-indigo-400 rounded-md shadow-sm text-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -523,6 +523,7 @@ export function PrescriptionManagementSection() {
             : "Create your first assessment record to get started"
         }
         onRowClick={(p) => handleViewDetails(p.id)}
+        className="rounded-t-none border-t-0"
       />
 
       {/* View Details Dialog */}

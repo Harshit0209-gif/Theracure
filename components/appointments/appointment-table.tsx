@@ -440,9 +440,7 @@ export function AppointmentTable({
 
   return (
     <>
-      {/* ── Unified toolbar ── */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-white border border-b border-gray-200 rounded-t-xl px-4 py-2 shadow-sm">
-        {/* Left: view tabs */}
+      <div className="grid grid-cols-3 items-center bg-white border border-b-0 border-gray-200 rounded-t-xl px-4 py-2 shadow-sm">
         <div className="flex items-center">
           {VIEW_TABS.map((tab) => (
             <button
@@ -468,29 +466,31 @@ export function AppointmentTable({
           ))}
         </div>
 
-        {/* Right: search + therapy filter + date filter — all h-[34px] */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Search */}
-          <div className="relative group">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
+        {/* Center: expanding search */}
+        <div className="flex justify-center">
+          <div className="relative group w-80 focus-within:w-[480px] transition-all duration-300">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
             <Input
               type="text"
               placeholder="Search patient..."
               value={searchQuery ?? ""}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[34px] pl-8 pr-7 w-64 text-sm bg-white border-gray-300 focus:border-indigo-400 rounded-md shadow-sm"
+              className="h-[34px] pl-9 pr-8 w-full text-sm bg-white border-gray-300 focus:border-indigo-400 rounded-md shadow-sm"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
+        </div>
 
+        {/* Right: therapy filter + date filter */}
+        <div className="flex items-center justify-end gap-2">
           {/* Therapy filter */}
           <Select
             value={therapyTypeFilter}
