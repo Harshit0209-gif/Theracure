@@ -1,102 +1,104 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+function getTodayISTWindow(): { startOfDay: Date; endOfDay: Date } {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const nowUTC = Date.now();
+  const nowIST = nowUTC + IST_OFFSET_MS;
+  const startIST = nowIST - (nowIST % (24 * 60 * 60 * 1000));
+  const startOfDay = new Date(startIST - IST_OFFSET_MS);
+  const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+  return { startOfDay, endOfDay };
+}
+
 export async function GET() {
   try {
-    const now = new Date();
-    const startOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
+    const { startOfDay, endOfDay } = getTodayISTWindow();
+
+    const nowISTDate = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const daysSinceMonday = (nowISTDate.getUTCDay() + 6) % 7;
+    const startOfWeek = new Date(
+      startOfDay.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000,
     );
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(startOfDay.getDate() + 1);
 
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
+    const startOfLastWeek = new Date(
+      startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000,
+    );
+    const endOfLastWeek = new Date(startOfWeek);
 
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const istYear = nowISTDate.getUTCFullYear();
+    const istMonth = nowISTDate.getUTCMonth();
+    const startOfMonth = new Date(
+      Date.UTC(istYear, istMonth, 1) - 5.5 * 60 * 60 * 1000,
+    );
+    const startOfLastMonth = new Date(
+      Date.UTC(istYear, istMonth - 1, 1) - 5.5 * 60 * 60 * 1000,
+    );
+    const endOfLastMonth = new Date(
+      Date.UTC(istYear, istMonth, 1) - 5.5 * 60 * 60 * 1000,
+    );
 
-    // Parallel queries for better performance
+    const todayWhere = {
+      appointmentStartTime: { gte: startOfDay, lt: endOfDay },
+    };
+
     const [
       totalPatientsThisMonth,
       totalPatientsLastMonth,
       todayConsultations,
       weekConsultations,
-      todaySessions,
-      pendingSessions,
+      lastWeekConsultations,
+      todayCompleted,
+      todayPending,
       pendingInvoices,
     ] = await Promise.all([
-      // Total patients this month
       prisma.patient.count({
-        where: {
-          createdAt: {
-            gte: startOfMonth,
-          },
-        },
+        where: { createdAt: { gte: startOfMonth } },
+      }),
+      prisma.patient.count({
+        where: { createdAt: { gte: startOfLastMonth, lte: endOfLastMonth } },
       }),
 
-      // Total patients last month
-      prisma.patient.count({
-        where: {
-          createdAt: {
-            gte: startOfLastMonth,
-            lte: endOfLastMonth,
-          },
-        },
-      }),
-
-      // Today's consultations
       prisma.appointment.count({
         where: {
-          appointmentStartTime: {
-            gte: startOfDay,
-            lt: endOfDay,
-          },
+          ...todayWhere,
+          status: { notIn: ["CANCELLED"] },
+          service: { category: "CONSULTATION" },
         },
       }),
 
-      // This week's consultations
       prisma.appointment.count({
         where: {
-          appointmentStartTime: {
-            gte: startOfWeek,
-          },
+          appointmentStartTime: { gte: startOfWeek },
+          status: { notIn: ["CANCELLED"] },
+          service: { category: "CONSULTATION" },
         },
       }),
 
-      // Today's therapy sessions
-      prisma.therapySession.count({
+      prisma.appointment.count({
         where: {
-          sessionDate: {
-            gte: startOfDay,
-            lt: endOfDay,
-          },
+          appointmentStartTime: { gte: startOfLastWeek, lt: endOfLastWeek },
+          status: { notIn: ["CANCELLED"] },
+          service: { category: "CONSULTATION" },
         },
       }),
 
-      // Pending sessions
-      prisma.therapySession.count({
+      prisma.appointment.count({
+        where: { ...todayWhere, status: "COMPLETED" },
+      }),
+
+      prisma.appointment.count({
         where: {
-          completed: false,
+          ...todayWhere,
+          status: { in: ["CONFIRMED", "RESCHEDULED"] },
         },
       }),
 
-      // Pending invoices
+      // Pending invoices — only unpaid (DUE)
       prisma.invoice.aggregate({
-        where: {
-          status: {
-            in: ["DUE", "PAID"],
-          },
-        },
-        _sum: {
-          totalAmount: true,
-        },
-        _count: {
-          id: true,
-        },
+        where: { status: "DUE" },
+        _sum: { totalAmount: true },
+        _count: { id: true },
       }),
     ]);
 
@@ -107,8 +109,8 @@ export async function GET() {
             totalPatientsLastMonth) *
           100
         : totalPatientsThisMonth > 0
-        ? 100
-        : 0;
+          ? 100
+          : 0;
 
     const stats = {
       totalPatients: {
@@ -118,11 +120,21 @@ export async function GET() {
       },
       todayConsultations: {
         total: todayConsultations,
-        newThisWeek: weekConsultations - todayConsultations,
+        thisWeek: weekConsultations,
+        lastWeek: lastWeekConsultations,
+        weekGrowthPercentage:
+          lastWeekConsultations > 0
+            ? ((weekConsultations - lastWeekConsultations) /
+                lastWeekConsultations) *
+              100
+            : weekConsultations > 0
+              ? 100
+              : 0,
+        isWeekGrowthPositive: weekConsultations >= lastWeekConsultations,
       },
       todaySessions: {
-        total: todaySessions,
-        pending: pendingSessions,
+        total: todayCompleted,
+        pending: todayPending,
       },
       pendingPayments: {
         amount: pendingInvoices._sum.totalAmount || 0,
@@ -138,7 +150,7 @@ export async function GET() {
     console.error("Error fetching receptionist stats:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch receptionist statistics" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

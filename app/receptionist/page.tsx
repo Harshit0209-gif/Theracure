@@ -10,11 +10,13 @@ import {
   Calendar,
   Users,
   Handshake,
-  DollarSign,
   TrendingUp,
   TrendingDown,
   CalendarClock,
+  IndianRupee,
+  ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 import { useReceptionistDashboardData } from "@/hooks/use-receptionist-dashboard-data";
 import {
   formatCurrency,
@@ -63,7 +65,9 @@ const appointmentColumns = [
       const style = statusStyles[row.status];
       const label = statusLabels[row.status];
       return (
-        <span className={`text-xs px-2 py-1 rounded-md inline-block ${style ?? "bg-gray-50 text-gray-700"}`}>
+        <span
+          className={`text-xs px-2 py-1 rounded-md inline-block ${style ?? "bg-gray-50 text-gray-700"}`}
+        >
           {label ?? row.status}
         </span>
       );
@@ -147,10 +151,21 @@ export default function ReceptionistDashboard() {
             title="Today's Consultations"
             value={receptionistStats?.todayConsultations.total || 0}
             subtitle={
-              <p className="text-xs text-green-500 mt-1">
-                ↑ {receptionistStats?.todayConsultations.newThisWeek || 0} new
-                this week
-              </p>
+              receptionistStats ? (
+                <div className="mt-1 space-y-0.5">
+                  <p className="text-xs text-gray-500">
+                    <span className="font-medium text-gray-700">
+                      {receptionistStats.todayConsultations.thisWeek}
+                    </span>{" "}
+                    this week
+                  </p>
+                  <p className={`text-xs flex items-center gap-1 ${receptionistStats.todayConsultations.isWeekGrowthPositive ? "text-green-500" : "text-red-500"}`}>
+                    {receptionistStats.todayConsultations.isWeekGrowthPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {receptionistStats.todayConsultations.isWeekGrowthPositive ? "↑" : "↓"}{" "}
+                    {Math.abs(receptionistStats.todayConsultations.weekGrowthPercentage).toFixed(1)}% vs last week
+                  </p>
+                </div>
+              ) : "Loading..."
             }
             icon={<Handshake className="h-6 w-6 text-green-600" />}
             bgColor="bg-green-100"
@@ -159,11 +174,11 @@ export default function ReceptionistDashboard() {
           />
 
           <StatsCard
-            title="Today's Sessions"
+            title="Completed Today"
             value={receptionistStats?.todaySessions.total || 0}
             subtitle={
               <p className="text-xs text-blue-500 mt-1">
-                {receptionistStats?.todaySessions.pending || 0} pending
+                {receptionistStats?.todaySessions.pending || 0} still pending
               </p>
             }
             icon={<Calendar className="h-6 w-6 text-purple-600" />}
@@ -185,7 +200,7 @@ export default function ReceptionistDashboard() {
                 pending
               </p>
             }
-            icon={<DollarSign className="h-6 w-6 text-orange-600" />}
+            icon={<IndianRupee className="h-6 w-6 text-orange-600" />}
             bgColor="bg-orange-100"
             isLoading={isLoading.stats}
             error={error.stats}
@@ -198,6 +213,12 @@ export default function ReceptionistDashboard() {
             <CardTitle className="text-lg font-semibold">
               Appointments Today
             </CardTitle>
+            <Link href="/appointments">
+              <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 flex items-center gap-1.5">
+                View All
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable
@@ -211,8 +232,10 @@ export default function ReceptionistDashboard() {
               setPage={() => {}}
               setPageSize={() => {}}
               loading={isLoading.appointments}
+              hidePageSizeSelector
+              hidePaginationFooter
               countIcon={<CalendarClock className="h-4 w-4" />}
-              countLabel=""
+              countLabel="appointments today"
               emptyIcon={<CalendarClock className="h-12 w-12" />}
               emptyTitle="No appointments today"
               emptyDescription="No appointments are scheduled for today"

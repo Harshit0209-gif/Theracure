@@ -12,6 +12,8 @@ import { UserRole } from "@/lib/generated/userRoles";
 import { Appointment } from "@/types/appointments";
 import { ServiceCategory } from "@/lib/generated/serviceEnums";
 
+export type AppointmentView = "today" | "upcoming" | "all";
+
 const CACHE_LIMIT = 100;
 
 const mergeAppointmentsById = (
@@ -19,25 +21,24 @@ const mergeAppointmentsById = (
   incoming: Appointment[],
 ) => {
   const merged = new Map<string, Appointment>();
-
-  for (const appointment of existing) {
-    merged.set(appointment.id, appointment);
-  }
-
-  for (const appointment of incoming) {
-    merged.set(appointment.id, appointment);
-  }
-
-  return Array.from(merged.values()).sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  for (const a of existing) merged.set(a.id, a);
+  for (const a of incoming) merged.set(a.id, a);
+  return Array.from(merged.values()).sort((a, b) => {
+    const tA = new Date(a.appointmentStartTime).getTime();
+    const tB = new Date(b.appointmentStartTime).getTime();
+    if (tA !== tB) return tA - tB;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
 };
 
 const AppointmentPage = () => {
   const { user } = useAuth();
 
-  const [cachedAppointments, setCachedAppointments] = useState<Appointment[]>([]);
+  const [view, setView] = useState<AppointmentView>("today");
+  const [dateFilter, setDateFilter] = useState("");
+  const [cachedAppointments, setCachedAppointments] = useState<Appointment[]>(
+    [],
+  );
   const [totalServerCount, setTotalServerCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -47,23 +48,22 @@ const AppointmentPage = () => {
   const [pageSize, setPageSize] = useState(20);
 
   type TherapyTypeFilter = ServiceCategory | "all";
-  const [therapyTypeFilter, setTherapyTypeFilter] = useState<TherapyTypeFilter>("all");
+  const [therapyTypeFilter, setTherapyTypeFilter] =
+    useState<TherapyTypeFilter>("all");
 
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reset to page 1 on search or page size change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, pageSize]);
+    setCachedAppointments([]);
+  }, [debouncedSearch, pageSize, view, dateFilter, therapyTypeFilter]);
 
-  // Slice cache for current page
   const appointments = useMemo(() => {
     const start = (page - 1) * pageSize;
     return cachedAppointments.slice(start, start + pageSize);
@@ -71,7 +71,7 @@ const AppointmentPage = () => {
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalServerCount / pageSize)),
-    [totalServerCount, pageSize]
+    [totalServerCount, pageSize],
   );
 
   const fetchAppointments = useCallback(
@@ -81,7 +81,12 @@ const AppointmentPage = () => {
         const params = new URLSearchParams({
           page: String(serverPage),
           limit: String(CACHE_LIMIT),
+          view,
+          ...(dateFilter ? { date: dateFilter } : {}),
           ...(search ? { search } : {}),
+          ...(therapyTypeFilter !== "all"
+            ? { category: therapyTypeFilter }
+            : {}),
           ...(user?.role === UserRole.THERAPIST && user.id
             ? { therapistId: user.id }
             : {}),
@@ -95,9 +100,11 @@ const AppointmentPage = () => {
           setCachedAppointments((prev) =>
             append
               ? mergeAppointmentsById(prev, data.appointments)
-              : mergeAppointmentsById([], data.appointments)
+              : mergeAppointmentsById([], data.appointments),
           );
-          setTotalServerCount(data.pagination?.totalCount ?? data.appointments.length);
+          setTotalServerCount(
+            data.pagination?.totalCount ?? data.appointments.length,
+          );
         }
       } catch (error) {
         console.error("Error fetching appointments:", error);
@@ -110,15 +117,13 @@ const AppointmentPage = () => {
         setLoading(false);
       }
     },
-    [debouncedSearch, user]
+    [debouncedSearch, view, dateFilter, therapyTypeFilter, user],
   );
 
-  // Re-fetch (replace cache) when search changes
   useEffect(() => {
     fetchAppointments(1, debouncedSearch, false);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, view, dateFilter, therapyTypeFilter]);
 
-  // Append next batch when user pages beyond cached records
   useEffect(() => {
     const cachedEnd = cachedAppointments.length;
     const neededEnd = page * pageSize;
@@ -139,11 +144,6 @@ const AppointmentPage = () => {
           onScheduleNew={() => setScheduleDialogOpen(true)}
           onManageAppointments={() => {}}
           onViewCalendar={() => setCalendarDialogOpen(true)}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          appointments={appointments}
-          therapyTypeFilter={therapyTypeFilter}
-          setTherapyTypeFilter={setTherapyTypeFilter}
         />
 
         <AppointmentTable
@@ -153,11 +153,17 @@ const AppointmentPage = () => {
           pageSize={pageSize}
           totalPages={totalPages}
           totalCount={totalServerCount}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
           therapyTypeFilter={therapyTypeFilter}
           setTherapyTypeFilter={setTherapyTypeFilter}
           setPage={setPage}
           setPageSize={setPageSize}
           onAppointmentUpdated={handleAppointmentUpdated}
+          view={view}
+          onViewChange={setView}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
         />
 
         <ScheduleNewDialog
@@ -169,7 +175,6 @@ const AppointmentPage = () => {
         <CalendarViewDialog
           open={calendarDialogOpen}
           onOpenChange={setCalendarDialogOpen}
-          appointments={cachedAppointments}
         />
       </div>
     </DashboardLayout>

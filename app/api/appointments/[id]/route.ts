@@ -4,24 +4,30 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
     const appointment = await prisma.appointment.findUnique({
       where: { id },
       include: {
-        patient: { select: { id: true, patientName: true, phone: true, email: true } },
-        therapist: { select: { id: true, name: true, email: true, phone: true } },
+        patient: {
+          select: { id: true, patientName: true, phone: true, email: true },
+        },
+        therapist: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
         createdBy: { select: { name: true } },
-        cubicle: { select: { id: true, name: true, roomNumber: true, location: true } },
+        cubicle: {
+          select: { id: true, name: true, roomNumber: true, location: true },
+        },
       },
     });
 
     if (!appointment) {
       return NextResponse.json(
         { success: false, error: "Appointment not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -29,14 +35,14 @@ export async function GET(
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch appointment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -44,6 +50,54 @@ export async function PATCH(
     const { status, serviceId, notes, cubicleId } = body;
 
     const updateData: any = {};
+
+    if (status === AppointmentStatus.COMPLETED) {
+      const existing = await prisma.appointment.findUnique({
+        where: { id },
+        select: { appointmentStartTime: true, status: true },
+      });
+      if (!existing) {
+        return NextResponse.json(
+          { success: false, error: "Appointment not found" },
+          { status: 404 },
+        );
+      }
+      if (existing.status === AppointmentStatus.COMPLETED) {
+        return NextResponse.json(
+          { success: false, error: "Appointment is already completed" },
+          { status: 400 },
+        );
+      }
+      if (new Date(existing.appointmentStartTime) > new Date()) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Cannot mark an appointment as completed before its scheduled time",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (status === undefined || status !== AppointmentStatus.COMPLETED) {
+      if (
+        serviceId !== undefined ||
+        notes !== undefined ||
+        cubicleId !== undefined
+      ) {
+        const existing = await prisma.appointment.findUnique({
+          where: { id },
+          select: { status: true },
+        });
+        if (existing?.status === AppointmentStatus.COMPLETED) {
+          return NextResponse.json(
+            { success: false, error: "Cannot modify a completed appointment" },
+            { status: 400 },
+          );
+        }
+      }
+    }
 
     if (status !== undefined) updateData.status = status;
     if (serviceId !== undefined) updateData.serviceId = serviceId;
@@ -53,17 +107,19 @@ export async function PATCH(
       if (cubicleId === null || cubicleId === "") {
         updateData.cubicleId = null;
       } else {
-        const cubicle = await prisma.cubicle.findUnique({ where: { id: cubicleId } });
+        const cubicle = await prisma.cubicle.findUnique({
+          where: { id: cubicleId },
+        });
         if (!cubicle) {
           return NextResponse.json(
             { success: false, error: "Selected cubicle not found" },
-            { status: 404 }
+            { status: 404 },
           );
         }
         if (cubicle.status !== "ACTIVE") {
           return NextResponse.json(
             { success: false, error: "Selected cubicle is not available" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         updateData.cubicleId = cubicleId;
@@ -75,8 +131,12 @@ export async function PATCH(
       data: updateData,
       include: {
         patient: { select: { id: true, patientName: true } },
-        therapist: { select: { id: true, name: true, email: true, phone: true } },
-        cubicle: { select: { id: true, name: true, roomNumber: true, location: true } },
+        therapist: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        cubicle: {
+          select: { id: true, name: true, roomNumber: true, location: true },
+        },
       },
     });
 
@@ -88,14 +148,14 @@ export async function PATCH(
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to update appointment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -111,7 +171,7 @@ export async function DELETE(
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to cancel appointment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

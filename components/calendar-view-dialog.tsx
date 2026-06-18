@@ -1,11 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, CalendarDays, Clock } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  Clock,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Appointment } from "@/types/appointments";
 import { AppointmentStatus } from "@/lib/generated/bookingEnums";
 import { statusLabels } from "@/lib/appointment";
@@ -14,8 +22,9 @@ import { toISTDateKey } from "@/lib/utils/utils";
 interface CalendarViewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  appointments: Appointment[];
 }
+
+const FETCH_LIMIT = 500;
 
 const MONTHS = [
   "January",
@@ -48,12 +57,25 @@ const STATUS_PILL: Record<string, string> = {
   [AppointmentStatus.RESCHEDULED]: "bg-amber-50 text-amber-700",
 };
 
+const DAY_BG: Record<string, string> = {
+  [AppointmentStatus.CONFIRMED]:
+    "bg-blue-50 text-blue-800 border border-blue-200",
+  [AppointmentStatus.COMPLETED]:
+    "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  [AppointmentStatus.CANCELLED]: "bg-red-50 text-red-700 border border-red-200",
+  [AppointmentStatus.RESCHEDULED]:
+    "bg-amber-50 text-amber-800 border border-amber-200",
+  mixed: "bg-indigo-50 text-indigo-800 border border-indigo-200",
+};
 
 function formatTime(dateString: string) {
-  return new Date(dateString).toLocaleTimeString("en-US", {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: "Asia/Kolkata",
   });
 }
 
@@ -69,16 +91,49 @@ function formatDayHeading(dateKey: string) {
 export function CalendarViewDialog({
   open,
   onOpenChange,
-  appointments = [],
 }: CalendarViewDialogProps) {
   const today = useMemo(() => new Date(), []);
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateKey, setSelectedDateKey] = useState<string>(
     toISTDateKey(today),
   );
 
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
+
+  const fetchAllAppointments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        page: "1",
+        limit: String(FETCH_LIMIT),
+      });
+      const res = await fetch(`/api/appointments?${params}`);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      if (!data.success)
+        throw new Error(data.error || "Failed to load appointments");
+      setAppointments(data.appointments ?? []);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load appointments",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      fetchAllAppointments();
+    }
+  }, [open, fetchAllAppointments]);
 
   const days = useMemo(() => {
     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
@@ -89,35 +144,33 @@ export function CalendarViewDialog({
     return result;
   }, [currentMonth, currentYear]);
 
-  const uniqueAppointments = useMemo(() => {
+  const appointmentsByDate = useMemo(() => {
     const byId = new Map<string, Appointment>();
-
-    for (const appointment of appointments) {
-      byId.set(appointment.id, appointment);
+    for (const appt of appointments) {
+      byId.set(appt.id, appt);
     }
 
-    return Array.from(byId.values()).sort(
-      (a, b) =>
-        new Date(a.appointmentStartTime).getTime() -
-        new Date(b.appointmentStartTime).getTime(),
-    );
-  }, [appointments]);
+    const map: Record<string, Appointment[]> = {};
+    for (const appt of byId.values()) {
+      const raw = appt.appointmentStartTime;
+      if (!raw) continue;
+      const parsed = new Date(raw);
+      if (isNaN(parsed.getTime())) continue;
+      const key = toISTDateKey(parsed);
+      if (!map[key]) map[key] = [];
+      map[key].push(appt);
+    }
 
-  const appointmentsByDate = useMemo(() => {
-    return uniqueAppointments.reduce(
-      (acc, appt) => {
-        const raw = appt.assignedDate || appt.appointmentStartTime;
-        if (!raw) return acc;
-        const parsed = new Date(raw);
-        if (isNaN(parsed.getTime())) return acc;
-        const key = toISTDateKey(parsed);
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(appt);
-        return acc;
-      },
-      {} as Record<string, Appointment[]>,
-    );
-  }, [uniqueAppointments]);
+    for (const key of Object.keys(map)) {
+      map[key].sort(
+        (a, b) =>
+          new Date(a.appointmentStartTime).getTime() -
+          new Date(b.appointmentStartTime).getTime(),
+      );
+    }
+
+    return map;
+  }, [appointments]);
 
   const navigateMonth = (dir: number) => {
     setCurrentDate((prev) => {
@@ -147,51 +200,56 @@ export function CalendarViewDialog({
     return unique.length === 1 ? unique[0] : "mixed";
   };
 
-  const DAY_BG: Record<string, string> = {
-    [AppointmentStatus.CONFIRMED]:
-      "bg-blue-50 text-blue-800 border border-blue-200",
-    [AppointmentStatus.COMPLETED]:
-      "bg-emerald-50 text-emerald-800 border border-emerald-200",
-    [AppointmentStatus.CANCELLED]:
-      "bg-red-50 text-red-700 border border-red-200",
-    [AppointmentStatus.RESCHEDULED]:
-      "bg-amber-50 text-amber-800 border border-amber-200",
-    mixed: "bg-indigo-50 text-indigo-800 border border-indigo-200",
-  };
-
   const selectedAppointments = useMemo(
     () => (selectedDateKey ? (appointmentsByDate[selectedDateKey] ?? []) : []),
     [selectedDateKey, appointmentsByDate],
-  );
-
-  // Sort by start time
-  const sortedSelected = useMemo(
-    () =>
-      [...selectedAppointments].sort(
-        (a, b) =>
-          new Date(a.appointmentStartTime).getTime() -
-          new Date(b.appointmentStartTime).getTime(),
-      ),
-    [selectedAppointments],
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[96vw] max-w-5xl h-[82vh] max-h-[82vh] bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-gray-100">
-          <DialogTitle className="text-lg font-semibold text-gray-900">
-            Appointment Calendar
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Appointment Calendar
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchAllAppointments}
+              disabled={loading}
+              className="text-gray-500 hover:text-gray-700 h-8 px-2"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`}
+              />
+              {loading ? "Loading…" : "Refresh"}
+            </Button>
+          </div>
         </DialogHeader>
+
+        {error && (
+          <div className="mx-6 mt-3 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{error}</span>
+            <button
+              onClick={fetchAllAppointments}
+              className="ml-auto text-xs underline hover:no-underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         <div className="flex divide-x divide-gray-100 flex-1 min-h-0">
           {/* ── Left: calendar ── */}
           <div className="w-72 md:w-80 flex-shrink-0 p-5 overflow-y-auto">
             {/* Month navigation */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => navigateMonth(-1)}
                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Previous month"
               >
                 <ChevronLeft className="w-4 h-4 text-gray-600" />
               </button>
@@ -201,17 +259,20 @@ export function CalendarViewDialog({
               <button
                 onClick={() => navigateMonth(1)}
                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Next month"
               >
                 <ChevronRight className="w-4 h-4 text-gray-600" />
               </button>
             </div>
 
             {/* Day headers */}
-            <div className="grid grid-cols-1 md:grid-cols-7 mb-1">
+            <div className="grid grid-cols-7 mb-1">
               {DAYS_OF_WEEK.map((d, i) => (
                 <div key={d} className="text-center">
                   <span
-                    className={`text-[10px] font-medium uppercase tracking-wide ${i === OFF_DAY_COL ? "text-red-400" : "text-gray-400"}`}
+                    className={`text-[10px] font-medium uppercase tracking-wide ${
+                      i === OFF_DAY_COL ? "text-red-400" : "text-gray-400"
+                    }`}
                   >
                     {d}
                   </span>
@@ -220,18 +281,19 @@ export function CalendarViewDialog({
             </div>
 
             {/* Day grid */}
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-0.5">
+            <div
+              className={`grid grid-cols-7 gap-0.5 transition-opacity ${loading ? "opacity-50" : "opacity-100"}`}
+            >
               {days.map((day, i) => {
                 if (!day) return <div key={i} />;
                 const status = getDayStatus(day);
                 const hasAppt = !!status;
                 const todayCell = isToday(day);
                 const selectedCell = isSelected(day);
+                const sundayCell = isSunday(day);
 
                 let cellClass =
                   "w-full aspect-square flex flex-col items-center justify-center rounded-lg text-sm font-medium cursor-pointer transition-all select-none ";
-
-                const sundayCell = isSunday(day);
 
                 if (selectedCell && !todayCell) {
                   cellClass += "ring-2 ring-indigo-500 ring-offset-1 ";
@@ -247,6 +309,8 @@ export function CalendarViewDialog({
                 } else {
                   cellClass += "text-gray-700 hover:bg-gray-50 ";
                 }
+
+                const dayAppts = appointmentsByDate[getDayKey(day)] ?? [];
 
                 return (
                   <div key={i} className="p-0.5">
@@ -264,19 +328,16 @@ export function CalendarViewDialog({
                       )}
                       {!sundayCell && hasAppt && (
                         <div className="flex gap-0.5 mt-0.5">
-                          {/* up to 3 dots for different statuses */}
-                          {[
-                            ...new Set(
-                              (appointmentsByDate[getDayKey(day)] ?? []).map(
-                                (a) => a.status,
-                              ),
-                            ),
-                          ]
+                          {[...new Set(dayAppts.map((a) => a.status))]
                             .slice(0, 3)
                             .map((s) => (
                               <div
                                 key={s}
-                                className={`w-1 h-1 rounded-full ${todayCell ? "bg-white/80" : (STATUS_DOT[s] ?? "bg-gray-400")}`}
+                                className={`w-1 h-1 rounded-full ${
+                                  todayCell
+                                    ? "bg-white/80"
+                                    : (STATUS_DOT[s] ?? "bg-gray-400")
+                                }`}
                               />
                             ))}
                         </div>
@@ -302,6 +363,14 @@ export function CalendarViewDialog({
                 </div>
               ))}
             </div>
+
+            {/* appointment count footer */}
+            {!loading && !error && (
+              <p className="mt-3 text-[10px] text-gray-400 text-center">
+                {appointments.length} appointment
+                {appointments.length !== 1 ? "s" : ""} loaded
+              </p>
+            )}
           </div>
 
           {/* ── Right: day detail panel ── */}
@@ -313,23 +382,28 @@ export function CalendarViewDialog({
                   ? formatDayHeading(selectedDateKey)
                   : "Select a date"}
               </span>
-              {sortedSelected.length > 0 && (
+              {selectedAppointments.length > 0 && (
                 <span className="ml-auto flex-shrink-0 text-xs font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
-                  {sortedSelected.length} appt
-                  {sortedSelected.length > 1 ? "s" : ""}
+                  {selectedAppointments.length} appt
+                  {selectedAppointments.length > 1 ? "s" : ""}
                 </span>
               )}
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2.5">
-              {sortedSelected.length === 0 ? (
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-full py-10 text-center">
+                  <RefreshCw className="h-7 w-7 text-indigo-300 animate-spin mb-2" />
+                  <p className="text-sm text-gray-400">Loading appointments…</p>
+                </div>
+              ) : selectedAppointments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-10 text-center">
                   <CalendarDays className="h-8 w-8 text-gray-200 mb-2" />
                   <p className="text-sm text-gray-400">No appointments</p>
                   <p className="text-xs text-gray-300 mt-0.5">on this day</p>
                 </div>
               ) : (
-                sortedSelected.map((appt) => (
+                selectedAppointments.map((appt) => (
                   <div
                     key={appt.id}
                     className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-indigo-50/50 transition-colors group"

@@ -10,7 +10,10 @@ interface ReceptionistStats {
   };
   todayConsultations: {
     total: number;
-    newThisWeek: number;
+    thisWeek: number;
+    lastWeek: number;
+    weekGrowthPercentage: number;
+    isWeekGrowthPositive: boolean;
   };
   todaySessions: {
     total: number;

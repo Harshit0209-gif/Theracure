@@ -11,6 +11,18 @@ import {
   isTherapistWorkingDuringSlot,
 } from "@/lib/utils/appointmentScheduling";
 
+function getTodayISTWindow(): { start: Date; end: Date } {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const nowUTC = Date.now();
+  const nowIST = nowUTC + IST_OFFSET_MS;
+  const startOfDayIST = nowIST - (nowIST % (24 * 60 * 60 * 1000));
+  const start = new Date(startOfDayIST - IST_OFFSET_MS);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
+}
+
+type AppointmentView = "today" | "upcoming" | "all";
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -19,10 +31,17 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(url.searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
     const therapistId = url.searchParams.get("therapistId");
+    const view = (url.searchParams.get("view") ||
+      "upcoming") as AppointmentView;
+
+    const category = url.searchParams.get("category");
 
     const where: any = {};
 
     if (therapistId) where.therapistId = therapistId;
+    if (category) {
+      where.service = { category };
+    }
     if (search) {
       where.OR = [
         {
@@ -35,32 +54,62 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    const date = url.searchParams.get("date");
+
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const start = new Date(`${date}T00:00:00+05:30`);
+      const end = new Date(`${date}T23:59:59.999+05:30`);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        where.appointmentStartTime = { gte: start, lte: end };
+      }
+    } else {
+      if (view === "today") {
+        const { start, end } = getTodayISTWindow();
+        where.appointmentStartTime = { gte: start, lt: end };
+      } else if (view === "upcoming") {
+        const { end } = getTodayISTWindow();
+        where.appointmentStartTime = { gte: end };
+      }
+    }
+
+    const orderBy =
+      view === "all" && !date
+        ? [
+            { appointmentStartTime: "desc" as const },
+            { createdAt: "desc" as const },
+          ]
+        : [
+            { appointmentStartTime: "asc" as const },
+            { createdAt: "asc" as const },
+          ];
+
+    const include = {
+      patient: {
+        select: { id: true, patientName: true, phone: true, email: true },
+      },
+      therapist: {
+        select: { id: true, name: true, email: true, phone: true },
+      },
+      createdBy: { select: { id: true, name: true, email: true } },
+      service: {
+        select: { id: true, name: true, category: true, price: true },
+      },
+      cubicle: {
+        select: { id: true, name: true, roomNumber: true, location: true },
+      },
+    };
+
     const [rawAppointments, totalCount] = await Promise.all([
       prisma.appointment.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          patient: {
-            select: { id: true, patientName: true, phone: true, email: true },
-          },
-          therapist: {
-            select: { id: true, name: true, email: true, phone: true },
-          },
-          createdBy: { select: { id: true, name: true, email: true } },
-          service: {
-            select: { id: true, name: true, category: true, price: true },
-          },
-          cubicle: {
-            select: { id: true, name: true, roomNumber: true, location: true },
-          },
-        },
+        orderBy,
+        include,
       }),
       prisma.appointment.count({ where }),
     ]);
 
-    // Normalize deleted patients so frontend never receives null patient
     const appointments = rawAppointments.map((appt) => ({
       ...appt,
       patient: appt.patient ?? {
@@ -71,7 +120,7 @@ export async function GET(req: NextRequest) {
       },
     }));
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
     return NextResponse.json({
       success: true,
@@ -159,16 +208,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Appointment date must match appointment start time in clinic timezone",
+          error:
+            "Appointment date must match appointment start time in clinic timezone",
         },
         { status: 400 },
       );
     }
 
     const [patient, therapist, service] = await Promise.all([
-      prisma.patient.findUnique({ where: { id: patientId }, select: { id: true } }),
-      prisma.therapist.findUnique({ where: { id: therapistId }, select: { id: true } }),
-      prisma.service.findUnique({ where: { id: serviceId }, select: { id: true } }),
+      prisma.patient.findUnique({
+        where: { id: patientId },
+        select: { id: true },
+      }),
+      prisma.therapist.findUnique({
+        where: { id: therapistId },
+        select: { id: true },
+      }),
+      prisma.service.findUnique({
+        where: { id: serviceId },
+        select: { id: true },
+      }),
     ]);
 
     if (!patient) {
@@ -223,7 +282,10 @@ export async function POST(req: NextRequest) {
               throw new Error("NO_CUBICLE");
             }
 
-            if (!cubicleAvailability.hasAvailableCubicle || !cubicleAvailability.selectedCubicle) {
+            if (
+              !cubicleAvailability.hasAvailableCubicle ||
+              !cubicleAvailability.selectedCubicle
+            ) {
               throw new Error("NO_CUBICLE");
             }
 
@@ -239,7 +301,9 @@ export async function POST(req: NextRequest) {
                 therapistInfo: { connect: { id: therapistId } },
                 createdBy: { connect: { id: createdById } },
                 service: { connect: { id: serviceId } },
-                cubicle: { connect: { id: cubicleAvailability.selectedCubicle.id } },
+                cubicle: {
+                  connect: { id: cubicleAvailability.selectedCubicle.id },
+                },
               },
               include: { cubicle: true },
             });

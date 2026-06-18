@@ -59,11 +59,17 @@ export interface AppointmentTableProps {
   pageSize: number;
   totalPages: number;
   totalCount: number;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
   therapyTypeFilter: string;
   setTherapyTypeFilter: (type: ServiceCategory) => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
   onAppointmentUpdated: () => void;
+  view: "today" | "upcoming" | "all";
+  onViewChange: (view: "today" | "upcoming" | "all") => void;
+  dateFilter: string;
+  onDateFilterChange: (date: string) => void;
 }
 
 export interface EditAppointmentData {

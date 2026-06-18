@@ -1,7 +1,16 @@
 import { prisma, withRetry } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session-provider";
-import { toISTDateKey } from "@/lib/utils/utils";
+
+function getTodayISTWindow(): { start: Date; end: Date } {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const nowUTC = Date.now();
+  const nowIST = nowUTC + IST_OFFSET_MS;
+  const startOfDayIST = nowIST - (nowIST % (24 * 60 * 60 * 1000));
+  const start = new Date(startOfDayIST - IST_OFFSET_MS);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,14 +23,13 @@ export async function GET(req: NextRequest) {
     }
 
     const { role, id: userId } = session.user;
-
-    const todayIST = toISTDateKey(new Date());
-    const todayDate = new Date(`${todayIST}T00:00:00.000Z`);
+    const { start, end } = getTodayISTWindow();
 
     const appointments = await withRetry(() =>
       prisma.appointment.findMany({
         where: {
-          assignedDate: todayDate,
+          // Use appointmentStartTime (always current) not assignedDate (stale on reschedule)
+          appointmentStartTime: { gte: start, lt: end },
           ...(role === "THERAPIST" && { therapistId: userId }),
         },
         include: {
@@ -36,13 +44,13 @@ export async function GET(req: NextRequest) {
       success: true,
       data: appointments.map((apt) => ({
         id: apt.id,
-        patientName: apt.patient?.patientName || "Unknown Patient",
-        therapistName: apt.therapist.name,
+        patientName: apt.patient?.patientName ?? "Unknown Patient",
+        therapistName: apt.therapist?.name ?? "Unassigned",
         time: apt.appointmentStartTime.toISOString(),
         status: apt.status,
       })),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch today's appointments" },
       { status: 500 },
