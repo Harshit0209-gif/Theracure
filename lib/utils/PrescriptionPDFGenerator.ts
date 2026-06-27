@@ -628,7 +628,7 @@ const generateAssessmentPDF = async (assessment: any) => {
       .patient-grid {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 14px;
+        margin-bottom: 8px;
         font-size: 9pt;
         background: #f9fafb;
         padding: 10px 12px;
@@ -674,36 +674,39 @@ const generateAssessmentPDF = async (assessment: any) => {
       .main-container {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 6px;
         width: 100%;
       }
       .history-section-wrapper {
         display: flex;
         gap: 15px;
         width: 100%;
+        align-items: flex-start;
       }
       .history-text-col {
-        width: 70%;
-        max-width: 70%;
+        flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 8px;
       }
       .history-img-col {
-        width: 30%;
-        max-width: 30%;
+        width: 28%;
+        flex-shrink: 0;
+        align-self: flex-start;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        padding-top: 10px;
+        padding-top: 2px;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
 
       /* Section Blocks - Standardized */
       .section-block {
         margin-bottom: 12px;
         width: 100%;
-        page-break-inside: avoid;
       }
       .sec-title {
         color: #0066cc;
@@ -956,11 +959,11 @@ const generateAssessmentPDF = async (assessment: any) => {
 
         .header-wrapper,
         .patient-grid,
-        .section-block,
         .exam-sub-group,
         .bmi-container,
         .vas-section-wrapper,
-        .vas-table-container {
+        .vas-table-container,
+        .final-signature-container {
           page-break-inside: avoid;
         }
 
