@@ -154,7 +154,7 @@ model Prescription {
 }
 
 model Invoice {
-  id            String        @id @map("invoice_id")
+  id            String        @id @default(dbgenerated("generate_invoice_id()")) @map("invoice_id")
   patientId     String?       @map("patient_id")
   date          DateTime      @default(now())
   subTotal      Float         @map("sub_total")

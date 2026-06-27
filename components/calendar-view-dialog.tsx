@@ -113,6 +113,7 @@ export function CalendarViewDialog({
       const params = new URLSearchParams({
         page: "1",
         limit: String(FETCH_LIMIT),
+        view: "all",
       });
       const res = await fetch(`/api/appointments?${params}`);
       if (!res.ok) throw new Error(`Server error: ${res.status}`);

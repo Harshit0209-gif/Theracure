@@ -1,25 +1,3 @@
-export async function generateSequentialInvoiceId(
-  tx: Parameters<
-    Parameters<import("@prisma/client").PrismaClient["$transaction"]>[0]
-  >[0],
-): Promise<string> {
-  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-  const nowIST = new Date(Date.now() + IST_OFFSET_MS);
-  const year = nowIST.getUTCFullYear();
-  const month = String(nowIST.getUTCMonth() + 1).padStart(2, "0");
-  const prefix = `TC${year}${month}`;
-
-  const latest = await tx.invoice.findFirst({
-    where: { id: { startsWith: prefix } },
-    orderBy: { id: "desc" },
-    select: { id: true },
-  });
-
-  const lastSerial = latest ? parseInt(latest.id.slice(prefix.length), 10) : 0;
-  const nextSerial = String(lastSerial + 1).padStart(3, "0");
-  return `${prefix}${nextSerial}`;
-}
-
 export const generateUniqueFileName = (
   originalFileName: string,
   patientId: string,

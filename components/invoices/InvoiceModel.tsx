@@ -114,9 +114,11 @@ export const InvoiceDetailsModal = ({
                   <DialogTitle className="text-base font-bold text-gray-800 leading-tight">
                     Invoice
                   </DialogTitle>
-                  <p className="text-xs font-mono text-gray-400 mt-0.5">
-                    {invoiceDetails.id || "Auto-assigned on save"}
-                  </p>
+                  {invoiceDetails.id && (
+                    <p className="text-xs font-mono text-gray-400 mt-0.5">
+                      {invoiceDetails.id}
+                    </p>
+                  )}
                 </div>
               </div>
               <Badge

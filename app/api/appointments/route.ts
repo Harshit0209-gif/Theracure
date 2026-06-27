@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
     const therapistId = url.searchParams.get("therapistId");
     const view = (url.searchParams.get("view") ||
-      "upcoming") as AppointmentView;
+      "today") as AppointmentView;
 
     const category = url.searchParams.get("category");
 

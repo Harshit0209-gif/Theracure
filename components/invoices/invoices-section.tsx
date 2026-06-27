@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
   Minus,
@@ -100,6 +100,7 @@ export function InvoicesSection() {
   );
   const [printPayload, setPrintPayload] = useState<InvoicePayload | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
 
   const [patientInfo, setPatientInfo] = useState<Patient>(defaultPatient);
 
@@ -205,6 +206,7 @@ export function InvoicesSection() {
   };
 
   const handleSaveInvoice = async () => {
+    if (isSavingRef.current) return;
     const isValid = validateInvoice({
       patientInfo,
       selectedServices,
@@ -215,6 +217,7 @@ export function InvoicesSection() {
     });
     if (!isValid) return;
 
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       const result = await saveInvoice(invoicePayload);
@@ -241,6 +244,7 @@ export function InvoicesSection() {
         });
       }
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -489,10 +493,7 @@ export function InvoicesSection() {
                       New Invoice
                     </DialogTitle>
                     <DialogDescription className="text-xs text-gray-400 mt-0.5">
-                      ID:{" "}
-                      <span className="font-semibold text-indigo-400 italic">
-                        {invoiceDetails.id || "Auto-assigned on save"}
-                      </span>
+                      Fill in the details below to create a new invoice.
                     </DialogDescription>
                   </div>
                   <button

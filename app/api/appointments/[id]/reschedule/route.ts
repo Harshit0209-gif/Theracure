@@ -145,6 +145,7 @@ export async function PATCH(
         appointmentStartTime: startTime,
         appointmentEndTime: endTime,
         notes: reason,
+        status: AppointmentStatus.RESCHEDULED,
       },
       include: {
         patient: {

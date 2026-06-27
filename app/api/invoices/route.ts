@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, withRetry } from "@/lib/prisma";
 import { z } from "zod";
-import { InvoiceStatus, TransactionStatus } from "@prisma/client";
+import { InvoiceStatus, TransactionStatus, Prisma } from "@prisma/client";
 import { storageService } from "@/lib/services/storage-factory";
 import generateInvoicePDF from "@/lib/utils/InvoicePDFGenerator";
 import { sendSMSNotification } from "@/config/smsConfig";
 import { getSession } from "@/lib/auth/session-provider";
-import { withRetry } from "@/lib/prisma";
-import { generateSequentialInvoiceId } from "@/lib/utils/RandomIDGenerator";
-import { Prisma } from "@prisma/client";
 
 const ALLOWED_SORT_FIELDS = [
   "date",
@@ -160,80 +157,63 @@ export async function POST(request: NextRequest) {
         };
       };
     }>;
-    let invoice!: InvoiceWithPatient;
-    let invoiceId!: string;
 
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        const result = await prisma.$transaction(
-          async (tx) => {
-            const newId = await generateSequentialInvoiceId(tx);
-
-            const inv = await tx.invoice.create({
-              data: {
-                id: newId,
-                patientId: patientInfo?.id,
-                status,
-                totalAmount,
-                subTotal,
-                offer: paymentDetails?.offer || 0,
-                amountPaid,
-                paymentMethod: invoiceDetails?.paymentMethod || "CASH",
-                createdBy: session?.user?.email || createdBy,
-                notes: invoiceDetails.notes || "",
-              },
-              include: {
-                patient: {
-                  select: {
-                    id: true,
-                    patientName: true,
-                    email: true,
-                    phone: true,
-                  },
-                },
-              },
-            });
-
-            if (selectedServices && selectedServices.length > 0) {
-              await tx.invoiceItem.createMany({
-                data: selectedServices.map((service: any) => ({
-                  invoiceId: inv.id,
-                  serviceId: service.id,
-                  serviceName: service.name,
-                  priceAtPurchase: parseFloat((service.price || 0).toFixed(2)),
-                  quantity: service.quantity || 1,
-                  description: service.description || "",
-                  category: service.category || "General",
-                })),
-              });
-            }
-
-            if (amountPaid > 0) {
-              await tx.transaction.create({
-                data: {
-                  invoiceId: inv.id,
-                  amount: amountPaid,
-                  paymentMethod: invoiceDetails.paymentMethod || "Cash",
-                  transactionDate: new Date().toISOString(),
-                  status: TransactionStatus.SUCCESS,
-                },
-              });
-            }
-
-            return inv;
+    const result = await prisma.$transaction(async (tx) => {
+      const inv = await tx.invoice.create({
+        data: {
+          patientId: patientInfo?.id,
+          status,
+          totalAmount,
+          subTotal,
+          offer: paymentDetails?.offer || 0,
+          amountPaid,
+          paymentMethod: invoiceDetails?.paymentMethod || "CASH",
+          createdBy: session?.user?.email || createdBy,
+          notes: invoiceDetails.notes || "",
+        },
+        include: {
+          patient: {
+            select: {
+              id: true,
+              patientName: true,
+              email: true,
+              phone: true,
+            },
           },
-          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-        );
+        },
+      });
 
-        invoice = result as InvoiceWithPatient;
-        invoiceId = result.id;
-        break;
-      } catch (err) {
-        if ((err as { code?: string })?.code === "P2034" && attempt < 4)
-          continue;
-        throw err;
+      if (selectedServices && selectedServices.length > 0) {
+        await tx.invoiceItem.createMany({
+          data: selectedServices.map((service: any) => ({
+            invoiceId: inv.id,
+            serviceId: service.id,
+            serviceName: service.name,
+            priceAtPurchase: parseFloat((service.price || 0).toFixed(2)),
+            quantity: service.quantity || 1,
+            description: service.description || "",
+            category: service.category || "General",
+          })),
+        });
       }
-    }
+
+      if (amountPaid > 0) {
+        await tx.transaction.create({
+          data: {
+            invoiceId: inv.id,
+            amount: amountPaid,
+            paymentMethod: invoiceDetails.paymentMethod || "Cash",
+            transactionDate: new Date().toISOString(),
+            status: TransactionStatus.SUCCESS,
+          },
+        });
+      }
+
+      return inv;
+    });
+
+    const invoice = result as InvoiceWithPatient;
+    const invoiceId = result.id;
 
     const fullInvoice = {
       ...invoice,
