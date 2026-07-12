@@ -150,6 +150,17 @@ export async function POST(request: NextRequest) {
 
     const amountPaid = rawAmountPaid;
 
+    const parsedDate = invoiceDetails?.date
+      ? new Date(invoiceDetails.date)
+      : null;
+    if (parsedDate && isNaN(parsedDate.getTime())) {
+      return NextResponse.json(
+        { success: false, error: "Invalid invoice date" },
+        { status: 400 },
+      );
+    }
+    const invoiceDate = parsedDate ?? new Date();
+
     type InvoiceWithPatient = Prisma.InvoiceGetPayload<{
       include: {
         patient: {
@@ -162,6 +173,7 @@ export async function POST(request: NextRequest) {
       const inv = await tx.invoice.create({
         data: {
           patientId: patientInfo?.id,
+          date: invoiceDate,
           status,
           totalAmount,
           subTotal,
@@ -203,7 +215,7 @@ export async function POST(request: NextRequest) {
             invoiceId: inv.id,
             amount: amountPaid,
             paymentMethod: invoiceDetails.paymentMethod || "Cash",
-            transactionDate: new Date().toISOString(),
+            transactionDate: invoiceDate.toISOString(),
             status: TransactionStatus.SUCCESS,
           },
         });
@@ -234,7 +246,7 @@ export async function POST(request: NextRequest) {
                 invoiceId: invoiceId!,
                 amount: amountPaid,
                 paymentMethod: invoiceDetails.paymentMethod || "Cash",
-                transactionDate: new Date().toISOString(),
+                transactionDate: invoiceDate.toISOString(),
                 status: TransactionStatus.SUCCESS,
               },
             ]

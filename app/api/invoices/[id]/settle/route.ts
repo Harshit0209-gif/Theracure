@@ -151,16 +151,15 @@ export async function PATCH(
       },
     });
 
-    // When fully paid: upload PDF to R2 and SMS the download link
-    if (newBalance <= 0 && updatedInvoice.patient?.phone) {
+    Promise.resolve().then(async () => {
       try {
         const invoicePayload: InvoicePayload = {
           patientInfo: {
-            id: updatedInvoice.patient.id,
-            patientName: updatedInvoice.patient.patientName,
-            email: updatedInvoice.patient.email || "",
-            phone: updatedInvoice.patient.phone || "",
-            address: updatedInvoice.patient.address || "",
+            id: updatedInvoice.patient?.id || "",
+            patientName: updatedInvoice.patient?.patientName || "",
+            email: updatedInvoice.patient?.email || "",
+            phone: updatedInvoice.patient?.phone || "",
+            address: updatedInvoice.patient?.address || "",
             age: 0,
             gender: "",
             createdBy: "",
@@ -171,22 +170,31 @@ export async function PATCH(
             id: updatedInvoice.id,
             patientId: invoiceId,
             patient: {
-              id: updatedInvoice.patient.id,
-              patientName: updatedInvoice.patient.patientName,
+              id: updatedInvoice.patient?.id || "",
+              patientName: updatedInvoice.patient?.patientName || "",
               age: 0,
               gender: "",
               createdBy: "",
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             },
-            date: updatedInvoice.date instanceof Date ? updatedInvoice.date.toISOString() : updatedInvoice.date,
+            date:
+              updatedInvoice.date instanceof Date
+                ? updatedInvoice.date.toISOString()
+                : updatedInvoice.date,
             status: updatedInvoice.status as unknown as AppInvoiceStatus,
             subTotal: updatedInvoice.subTotal,
             totalAmount: updatedInvoice.totalAmount,
             amountPaid: newTotalPaid,
             offer: updatedInvoice.offer || 0,
-            createdAt: updatedInvoice.createdAt instanceof Date ? updatedInvoice.createdAt.toISOString() : String(updatedInvoice.createdAt),
-            updatedAt: updatedInvoice.updatedAt instanceof Date ? updatedInvoice.updatedAt.toISOString() : String(updatedInvoice.updatedAt),
+            createdAt:
+              updatedInvoice.createdAt instanceof Date
+                ? updatedInvoice.createdAt.toISOString()
+                : String(updatedInvoice.createdAt),
+            updatedAt:
+              updatedInvoice.updatedAt instanceof Date
+                ? updatedInvoice.updatedAt.toISOString()
+                : String(updatedInvoice.updatedAt),
             createdBy: "",
             invoiceItems: updatedInvoice.invoiceItems.map((item) => ({
               invoiceId: item.invoiceId,
@@ -202,20 +210,31 @@ export async function PATCH(
               invoiceId: t.invoiceId,
               amount: t.amount,
               paymentMethod: t.paymentMethod,
-              transactionDate: t.transactionDate instanceof Date ? t.transactionDate.toISOString() : String(t.transactionDate),
+              transactionDate:
+                t.transactionDate instanceof Date
+                  ? t.transactionDate.toISOString()
+                  : String(t.transactionDate),
               status: t.status as unknown as AppTransactionStatus,
-              createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
-              updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt),
+              createdAt:
+                t.createdAt instanceof Date
+                  ? t.createdAt.toISOString()
+                  : String(t.createdAt),
+              updatedAt:
+                t.updatedAt instanceof Date
+                  ? t.updatedAt.toISOString()
+                  : String(t.updatedAt),
             })),
           },
           paymentDetails: {
             subTotal: updatedInvoice.subTotal,
             totalAmount: updatedInvoice.totalAmount,
             amountPaid: newTotalPaid,
-            balance: 0,
+            balance: newBalance,
             offer: updatedInvoice.offer || 0,
-            discount: (updatedInvoice.subTotal * (updatedInvoice.offer || 0)) / 100,
-            status: PaymentStatus.PAID,
+            discount:
+              (updatedInvoice.subTotal * (updatedInvoice.offer || 0)) / 100,
+            status:
+              newBalance <= 0 ? PaymentStatus.PAID : PaymentStatus.PENDING,
           },
           selectedServices: [],
           type: "invoice",
@@ -224,32 +243,47 @@ export async function PATCH(
         const pdfBuffer = await generateInvoicePDF(invoicePayload);
         const filePath = `invoices/${invoiceId}.pdf`;
 
-        // Upload to R2
-        await storageService.uploadFile(filePath, Buffer.from(pdfBuffer), "application/pdf");
+        const uploadResult = await storageService.uploadFile(
+          filePath,
+          Buffer.from(pdfBuffer),
+          "application/pdf",
+        );
+        if (!uploadResult.success) {
+          console.error(
+            "Failed to upload settled invoice PDF:",
+            uploadResult.error,
+          );
+          return;
+        }
 
-        // Generate presigned URL valid for 7 days
-        const SEVEN_DAYS = 7 * 24 * 60 * 60; // 604800 seconds
-        const downloadUrl = await storageService.generatePresignedUrl(filePath, SEVEN_DAYS);
-
-        // Save URL to invoice
         await prisma.invoice.update({
           where: { id: invoiceId },
-          data: { pdfUrl: downloadUrl },
+          data: { pdfUrl: filePath },
         });
 
-        // SMS the download link to patient
-        await sendSMSNotification("INVOICE_NOTIFICATION", {
-          phone: updatedInvoice.patient.phone,
-          patientName: updatedInvoice.patient.patientName,
-          therapistName: "",
-          amount: updatedInvoice.totalAmount,
-          link: downloadUrl,
-        });
-      } catch (smsOrUploadError) {
+        if (newBalance <= 0 && updatedInvoice.patient?.phone) {
+          const SEVEN_DAYS = 7 * 24 * 60 * 60;
+          const downloadUrl = await storageService.generatePresignedUrl(
+            filePath,
+            SEVEN_DAYS,
+          );
+
+          await sendSMSNotification("INVOICE_NOTIFICATION", {
+            phone: updatedInvoice.patient.phone,
+            patientName: updatedInvoice.patient.patientName,
+            therapistName: "",
+            amount: updatedInvoice.totalAmount,
+            link: downloadUrl,
+          });
+        }
+      } catch (pdfOrSmsError) {
         // Non-fatal — log and continue
-        console.error("Failed to upload PDF or send invoice SMS:", smsOrUploadError);
+        console.error(
+          "Failed to regenerate invoice PDF or send SMS:",
+          pdfOrSmsError,
+        );
       }
-    }
+    });
 
     return NextResponse.json(
       {

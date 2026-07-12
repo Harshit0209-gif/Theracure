@@ -278,18 +278,22 @@ model MedicalRecord {
 }
 
 model SmsQueue {
-  id        String    @id @default(cuid())
-  type      String
-  phone     String
-  variables Json?
-  status    SmsStatus @default(PENDING)
-  attempts  Int       @default(0)
-  error     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  type         String
+  phone        String
+  variables    Json?
+  status       SmsStatus @default(PENDING)
+  attempts     Int       @default(0)
+  error        String?
+  requestId    String?
+  deliveryDesc String?
+  deliveredAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([id])
   @@index([phone])
+  @@index([requestId])
   @@map("sms_queue")
 }
 
@@ -406,7 +410,8 @@ enum TransactionStatus {
 enum SmsStatus {
   PENDING
   PROCESSING
-  SENT
+  SENT // accepted by the gateway; delivery not yet confirmed
+  DELIVERED // confirmed delivered via MSG91 webhook
   FAILED
 }
 

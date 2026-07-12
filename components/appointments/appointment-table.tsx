@@ -346,26 +346,25 @@ export function AppointmentTable({
                           Reschedule
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        {appt.status === AppointmentStatus.CONFIRMED && (
-                          <DropdownMenuItem
-                            disabled={!apptPast}
-                            title={
-                              !apptPast
-                                ? "Cannot complete before appointment time"
-                                : undefined
-                            }
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusUpdate(
-                                appt.id,
-                                AppointmentStatus.COMPLETED,
-                              );
-                            }}
-                          >
-                            <Clock className="mr-2 h-4 w-4" />
-                            Mark as Completed
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem
+                          disabled={!apptPast}
+                          title={
+                            !apptPast
+                              ? "Cannot complete before appointment time"
+                              : undefined
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusUpdate(
+                              appt.id,
+                              AppointmentStatus.COMPLETED,
+                            );
+                          }}
+                        >
+                          <Clock className="mr-2 h-4 w-4" />
+                          Mark as Completed
+                        </DropdownMenuItem>
+
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={(e) => {

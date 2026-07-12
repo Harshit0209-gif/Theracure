@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { storageService } from "@/lib/services/storage-factory";
 import generateInvoicePDF from "@/lib/utils/InvoicePDFGenerator";
 import {
   InvoicePayload,
@@ -10,7 +11,7 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -42,7 +43,7 @@ export async function GET(
     if (!invoice) {
       return NextResponse.json(
         { success: false, error: "Invoice not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -52,6 +53,35 @@ export async function GET(
       .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 
     const balance = invoice.totalAmount - totalPaid;
+
+    const pdfKey = invoice.pdfUrl
+      ? invoice.pdfUrl.startsWith("http")
+        ? `invoices/${invoice.id}.pdf`
+        : invoice.pdfUrl
+      : null;
+
+    const hasStalePdf =
+      invoice.status !== "PAID" &&
+      invoice.transactions.some(
+        (t) =>
+          t.status === "SUCCESS" &&
+          t.createdAt.getTime() - invoice.createdAt.getTime() > 60_000,
+      );
+
+    if (pdfKey && !hasStalePdf) {
+      try {
+        const presignedUrl = await storageService.generatePresignedUrl(
+          pdfKey,
+          300,
+        );
+        return NextResponse.redirect(presignedUrl);
+      } catch (storageError) {
+        console.error(
+          "Stored PDF unavailable, regenerating:",
+          storageError instanceof Error ? storageError.message : storageError,
+        );
+      }
+    }
 
     // Prepare payload for PDF generation
     const invoicePayload: InvoicePayload = {
@@ -79,14 +109,23 @@ export async function GET(
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
-        date: invoice.date instanceof Date ? invoice.date.toISOString() : invoice.date,
+        date:
+          invoice.date instanceof Date
+            ? invoice.date.toISOString()
+            : invoice.date,
         status: invoice.status as unknown as AppInvoiceStatus,
         subTotal: invoice.subTotal,
         totalAmount: invoice.totalAmount,
         amountPaid: totalPaid,
         offer: invoice.offer || 0,
-        createdAt: invoice.createdAt instanceof Date ? invoice.createdAt.toISOString() : String(invoice.createdAt),
-        updatedAt: invoice.updatedAt instanceof Date ? invoice.updatedAt.toISOString() : String(invoice.updatedAt),
+        createdAt:
+          invoice.createdAt instanceof Date
+            ? invoice.createdAt.toISOString()
+            : String(invoice.createdAt),
+        updatedAt:
+          invoice.updatedAt instanceof Date
+            ? invoice.updatedAt.toISOString()
+            : String(invoice.updatedAt),
         createdBy: "",
         invoiceItems: invoice.invoiceItems.map((item) => ({
           invoiceId: item.invoiceId,
@@ -102,10 +141,19 @@ export async function GET(
           invoiceId: t.invoiceId,
           amount: t.amount,
           paymentMethod: t.paymentMethod,
-          transactionDate: t.transactionDate instanceof Date ? t.transactionDate.toISOString() : String(t.transactionDate),
+          transactionDate:
+            t.transactionDate instanceof Date
+              ? t.transactionDate.toISOString()
+              : String(t.transactionDate),
           status: t.status as unknown as AppTransactionStatus,
-          createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
-          updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt),
+          createdAt:
+            t.createdAt instanceof Date
+              ? t.createdAt.toISOString()
+              : String(t.createdAt),
+          updatedAt:
+            t.updatedAt instanceof Date
+              ? t.updatedAt.toISOString()
+              : String(t.updatedAt),
         })),
       },
       paymentDetails: {
@@ -124,6 +172,29 @@ export async function GET(
     // Generate PDF
     const pdfBuffer = await generateInvoicePDF(invoicePayload);
 
+    // Self-heal: store the fresh copy so the next print is served from R2
+    Promise.resolve().then(async () => {
+      try {
+        const fileName = `invoices/${invoice.id}.pdf`;
+        const uploadResult = await storageService.uploadFile(
+          fileName,
+          Buffer.from(pdfBuffer),
+          "application/pdf",
+        );
+        if (uploadResult.success) {
+          await prisma.invoice.update({
+            where: { id: invoice.id },
+            data: { pdfUrl: fileName },
+          });
+        }
+      } catch (uploadError) {
+        console.error(
+          "Background PDF re-upload failed:",
+          uploadError instanceof Error ? uploadError.message : uploadError,
+        );
+      }
+    });
+
     // Return PDF as response
     return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
@@ -140,7 +211,7 @@ export async function GET(
         success: false,
         error: "Failed to generate PDF",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

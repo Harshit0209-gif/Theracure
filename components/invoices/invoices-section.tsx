@@ -137,7 +137,18 @@ export function InvoicesSection() {
       setPatientInfo(defaultPatient);
     } else {
       setPatientFound(true);
-      setPatientInfo(patient);
+      setPatientInfo({
+        id: patient.id,
+        patientName: patient.patientName,
+        age: patient.age,
+        gender: patient.gender,
+        address: patient.address,
+        phone: patient.phone,
+        email: patient.email,
+        createdBy: patient.createdBy,
+        createdAt: patient.createdAt,
+        updatedAt: patient.updatedAt,
+      });
     }
   }, []);
 
@@ -182,7 +193,11 @@ export function InvoicesSection() {
     setPatientFound(false);
     setSelectedServices([]);
     setPaymentDetails(defaultPaymentDetails);
-    setInvoiceDetails({ ...defaultInvoice, id: "" });
+    setInvoiceDetails({
+      ...defaultInvoice,
+      id: "",
+      date: new Date().toISOString(),
+    });
     setDiscountPctInput("");
     setDiscountAmtInput("");
     setIsInvoiceDialogOpen(true);
@@ -907,7 +922,9 @@ export function InvoicesSection() {
 
         {/* Recent Invoices Section */}
         <div className="mt-8">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Invoices</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-4">
+            Recent Invoices
+          </h3>
 
           {/* Toolbar */}
           <div className="flex items-center justify-center bg-white border border-b-0 border-gray-200 rounded-t-xl px-4 py-1.5 shadow-sm">

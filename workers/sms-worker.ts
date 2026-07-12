@@ -76,11 +76,19 @@ async function processQueue(): Promise<void> {
         });
 
         if (response.type === "success" || response.message === "success") {
+          // On success MSG91 returns the request id in `message`; store it
+          // so delivery-report webhooks can be matched back to this row
+          const requestId =
+            response.type === "success" &&
+            typeof response.message === "string" &&
+            response.message !== "success"
+              ? response.message
+              : null;
           await prisma.smsQueue.update({
             where: { id: job.id },
-            data: { status: SmsStatus.SENT },
+            data: { status: SmsStatus.SENT, requestId },
           });
-          console.log(`✅ Sent ${job.id}`);
+          console.log(`✅ Accepted by gateway ${job.id} (requestId=${requestId})`);
           successCount++;
         } else {
           throw new Error(response.message || JSON.stringify(response));
@@ -121,7 +129,7 @@ process.on("uncaughtException", (error: Error) => {
   // Log but don't exit - let the worker continue
 });
 
-process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
+process.on("unhandledRejection", (reason: any) => {
   console.error("🚨 Unhandled Rejection in SMS Worker:", reason);
   // Log but don't exit - let the worker continue
 });
