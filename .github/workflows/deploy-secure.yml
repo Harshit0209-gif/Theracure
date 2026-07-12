@@ -25,7 +25,7 @@ jobs:
           node-version-file: ".nvmrc"
 
       - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
+        run: npm install -g corepack@latest && corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -101,6 +101,7 @@ jobs:
             echo "Using Node $(node --version)"
 
             echo "Enabling pnpm..."
+            npm install -g corepack@latest
             corepack enable
 
             echo "Installing dependencies..."
