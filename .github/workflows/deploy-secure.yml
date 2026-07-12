@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: ".nvmrc"
 
       - name: Enable pnpm
         run: corepack enable && corepack prepare pnpm@latest --activate
@@ -92,6 +92,13 @@ jobs:
             echo "Pulling latest code..."
             git fetch origin
             git reset --hard origin/main
+
+            echo "Activating Node version from .nvmrc..."
+            export NVM_DIR="$HOME/.nvm"
+            . "$NVM_DIR/nvm.sh"
+            nvm install
+            nvm use
+            echo "Using Node $(node --version)"
 
             echo "Enabling pnpm..."
             corepack enable
