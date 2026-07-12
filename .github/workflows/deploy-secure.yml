@@ -107,16 +107,23 @@ jobs:
             echo "Installing dependencies..."
             pnpm install --frozen-lockfile
 
+            echo "Applying database migrations..."
+            pnpm migrate:deploy
+
             echo "Building production bundle..."
             pnpm build
+
+            echo "Building SMS worker..."
+            pnpm build:worker
 
             echo "Preparing standalone runtime assets..."
             cp -r .next/static .next/standalone/.next/static
             cp -r public .next/standalone/public
 
-            echo "Restarting systemd service..."
+            echo "Restarting systemd services..."
             sudo systemctl daemon-reload
             sudo systemctl restart $SERVICE_NAME
+            sudo systemctl restart theracure-sms
 
             echo "Waiting for service startup..."
             sleep 10
