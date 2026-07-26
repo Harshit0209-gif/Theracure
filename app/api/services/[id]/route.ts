@@ -297,7 +297,7 @@ export async function GET(
       include: {
         _count: {
           select: {
-            therapistAppointments: true,
+            appointmentServices: true,
           },
         },
       },

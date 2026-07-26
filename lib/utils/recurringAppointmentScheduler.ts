@@ -3,7 +3,7 @@ import { getCubicleAvailabilityForSlot, hasTimeOverlap } from "@/lib/utils/appoi
 export type RawRecurringAppointment = {
   patientId: string;
   therapistId: string;
-  serviceId: string;
+  serviceIds: string[];
   createdById: string;
   notes?: string;
   appointmentDate: string;
@@ -75,7 +75,8 @@ export function normalizeAndValidateRecurringAppointments(
     const missingField =
       !appointment.patientId ||
       !appointment.therapistId ||
-      !appointment.serviceId ||
+      !appointment.serviceIds ||
+      appointment.serviceIds.length === 0 ||
       !appointment.createdById ||
       !appointment.appointmentDate ||
       !appointment.appointmentStartTime ||
@@ -92,7 +93,7 @@ export function normalizeAndValidateRecurringAppointments(
 
     const patientId = appointment.patientId!;
     const therapistId = appointment.therapistId!;
-    const serviceId = appointment.serviceId!;
+    const serviceIds = appointment.serviceIds!;
     const createdById = appointment.createdById!;
     const appointmentDate = appointment.appointmentDate!;
     const appointmentStartTime = appointment.appointmentStartTime!;
@@ -127,7 +128,7 @@ export function normalizeAndValidateRecurringAppointments(
     normalized.push({
       patientId,
       therapistId,
-      serviceId,
+      serviceIds,
       createdById,
       notes: appointment.notes ?? "",
       appointmentDate: normalizeDateOnly(appointmentDate),

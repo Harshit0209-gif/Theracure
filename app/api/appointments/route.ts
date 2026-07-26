@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     if (therapistId) where.therapistId = therapistId;
     if (category) {
-      where.service = { category };
+      where.services = { some: { service: { category } } };
     }
     if (search) {
       where.OR = [
@@ -91,8 +91,12 @@ export async function GET(req: NextRequest) {
         select: { id: true, name: true, email: true, phone: true },
       },
       createdBy: { select: { id: true, name: true, email: true } },
-      service: {
-        select: { id: true, name: true, category: true, price: true },
+      services: {
+        include: {
+          service: {
+            select: { id: true, name: true, category: true, price: true },
+          },
+        },
       },
       cubicle: {
         select: { id: true, name: true, roomNumber: true, location: true },
@@ -118,6 +122,7 @@ export async function GET(req: NextRequest) {
         phone: null,
         email: null,
       },
+      services: appt.services.map((s) => s.service),
     }));
 
     const totalPages = Math.max(1, Math.ceil(totalCount / limit));
@@ -160,7 +165,7 @@ export async function POST(req: NextRequest) {
       appointmentStartTime,
       appointmentEndTime,
       notes,
-      serviceId,
+      serviceIds,
       appointmentDate,
       cubicleId,
     } = body;
@@ -170,7 +175,8 @@ export async function POST(req: NextRequest) {
       !therapistId ||
       !appointmentStartTime ||
       !appointmentEndTime ||
-      !serviceId ||
+      !Array.isArray(serviceIds) ||
+      serviceIds.length === 0 ||
       !appointmentDate
     ) {
       return NextResponse.json(
@@ -215,7 +221,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const [patient, therapist, service] = await Promise.all([
+    const uniqueServiceIds = [...new Set(serviceIds as string[])];
+
+    const [patient, therapist, services] = await Promise.all([
       prisma.patient.findUnique({
         where: { id: patientId },
         select: { id: true },
@@ -224,8 +232,8 @@ export async function POST(req: NextRequest) {
         where: { id: therapistId },
         select: { id: true },
       }),
-      prisma.service.findUnique({
-        where: { id: serviceId },
+      prisma.service.findMany({
+        where: { id: { in: uniqueServiceIds } },
         select: { id: true },
       }),
     ]);
@@ -242,7 +250,7 @@ export async function POST(req: NextRequest) {
         { status: 404 },
       );
     }
-    if (!service) {
+    if (services.length !== uniqueServiceIds.length) {
       return NextResponse.json(
         { success: false, error: "Service not found" },
         { status: 404 },
@@ -300,7 +308,11 @@ export async function POST(req: NextRequest) {
                 therapist: { connect: { id: therapistId } },
                 therapistInfo: { connect: { id: therapistId } },
                 createdBy: { connect: { id: createdById } },
-                service: { connect: { id: serviceId } },
+                services: {
+                  create: uniqueServiceIds.map((id) => ({
+                    service: { connect: { id } },
+                  })),
+                },
                 cubicle: {
                   connect: { id: cubicleAvailability.selectedCubicle.id },
                 },
@@ -336,7 +348,7 @@ export async function POST(req: NextRequest) {
     const [patientDetails, therapistUser, serviceDetails] = await Promise.all([
       prisma.patient.findUnique({ where: { id: patientId } }),
       prisma.user.findUnique({ where: { id: therapistId } }),
-      prisma.service.findUnique({ where: { id: serviceId } }),
+      prisma.service.findMany({ where: { id: { in: uniqueServiceIds } } }),
     ]);
 
     if (patientDetails?.phone) {
@@ -345,7 +357,8 @@ export async function POST(req: NextRequest) {
           phone: patientDetails.phone,
           patientName: patientDetails.patientName,
           therapistName: therapistUser?.name || "Doctor",
-          serviceName: serviceDetails?.name || "Therapy",
+          serviceName:
+            serviceDetails.map((s) => s.name).join(", ") || "Therapy",
           date: appointment.appointmentStartTime,
           startTime: appointment.appointmentStartTime,
           endTime: appointment.appointmentEndTime,

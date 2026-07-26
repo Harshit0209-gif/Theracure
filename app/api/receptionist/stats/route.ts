@@ -64,7 +64,7 @@ export async function GET() {
         where: {
           ...todayWhere,
           status: { notIn: ["CANCELLED"] },
-          service: { category: "CONSULTATION" },
+          services: { some: { service: { category: "CONSULTATION" } } },
         },
       }),
 
@@ -72,7 +72,7 @@ export async function GET() {
         where: {
           appointmentStartTime: { gte: startOfWeek, lt: endOfWeek },
           status: { notIn: ["CANCELLED"] },
-          service: { category: "CONSULTATION" },
+          services: { some: { service: { category: "CONSULTATION" } } },
         },
       }),
 
@@ -80,7 +80,7 @@ export async function GET() {
         where: {
           appointmentStartTime: { gte: startOfLastWeek, lt: endOfLastWeek },
           status: { notIn: ["CANCELLED"] },
-          service: { category: "CONSULTATION" },
+          services: { some: { service: { category: "CONSULTATION" } } },
         },
       }),
 

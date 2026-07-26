@@ -60,7 +60,7 @@ model Service {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   category              ServiceCategory
-  therapistAppointments Appointment[]   @relation("ServiceTherapistAssignments")
+  appointmentServices   AppointmentService[] @relation("ServiceAppointmentAssignments")
 
   @@map("services")
 }
@@ -105,7 +105,6 @@ model Appointment {
   therapistId          String            @map("therapist_id")
   appointmentStartTime DateTime          @map("appointment_start_time")
   appointmentEndTime   DateTime          @map("appointment_end_time")
-  serviceId            String            @map("service_id")
   cubicleId            String?           @map("cubicle_id")
   assignedDate         DateTime          @map("assigned_date") @db.Date
   status               AppointmentStatus @default(CONFIRMED)
@@ -120,12 +119,12 @@ model Appointment {
   recurringEndDate     DateTime?         @map("recurring_end_date") @db.Date
 
   // Relations
-  createdBy            User              @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  patient              Patient?          @relation("PatientAssignments", fields: [patientId], references: [id], onDelete: SetNull)
-  service              Service?          @relation("ServiceTherapistAssignments", fields: [serviceId], references: [id])
-  therapist            User              @relation("TherapistAppointments", fields: [therapistId], references: [id], onDelete: Restrict, map: "appointments_user_fkey")
-  therapistInfo        Therapist         @relation("TherapistAppointments", fields: [therapistId], references: [id], map: "appointments_therapist_fkey")
-  cubicle              Cubicle?          @relation("AppointmentCubicle", fields: [cubicleId], references: [id], onDelete: SetNull)
+  createdBy            User                 @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  patient              Patient?             @relation("PatientAssignments", fields: [patientId], references: [id], onDelete: SetNull)
+  services             AppointmentService[]
+  therapist            User                 @relation("TherapistAppointments", fields: [therapistId], references: [id], onDelete: Restrict, map: "appointments_user_fkey")
+  therapistInfo        Therapist            @relation("TherapistAppointments", fields: [therapistId], references: [id], map: "appointments_therapist_fkey")
+  cubicle              Cubicle?             @relation("AppointmentCubicle", fields: [cubicleId], references: [id], onDelete: SetNull)
 
   @@index([therapistId, appointmentStartTime])
   @@index([patientId, appointmentStartTime])
@@ -133,6 +132,20 @@ model Appointment {
   @@index([status])
   @@index([cubicleId, appointmentStartTime])
   @@map("appointments")
+}
+
+model AppointmentService {
+  id            String      @id @default(cuid())
+  appointmentId String      @map("appointment_id")
+  serviceId     String      @map("service_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service       Service     @relation("ServiceAppointmentAssignments", fields: [serviceId], references: [id])
+
+  @@unique([appointmentId, serviceId])
+  @@index([serviceId])
+  @@map("appointment_services")
 }
 
 model Prescription {

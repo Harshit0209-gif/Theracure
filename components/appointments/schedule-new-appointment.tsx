@@ -35,7 +35,6 @@ import {
   Clock,
   User,
   Calendar,
-  Activity,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -43,7 +42,6 @@ import {
   CalendarDays,
   Info,
   Home,
-  Layers,
   BriefcaseMedical,
   PlusCircle,
   FileText,
@@ -72,6 +70,7 @@ import {
 } from "@/components/ui/date-picker-dialog";
 import { DatePickerButton } from "@/components/ui/date-picker-button";
 import { TimeInput } from "@/components/ui/time-input";
+import { MultiSelectServices } from "@/components/ui/multi-select-services";
 
 interface ScheduleNewDialogProps {
   open: boolean;
@@ -87,14 +86,10 @@ export function ScheduleNewDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [therapists, setTherapists] = useState([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
-    [],
-  );
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [therapistSchedule, setTherapistSchedule] = useState<
     TherapistAvailability[]
   >([]);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [recurringPreview, setRecurringPreview] = useState<RecurringPreview[]>(
@@ -123,7 +118,7 @@ export function ScheduleNewDialog({
       startTime: "",
       endTime: "",
       serviceCategory: undefined,
-      serviceId: "",
+      serviceIds: [],
       notes: "",
       isRecurring: false,
       recurringType: undefined,
@@ -191,32 +186,11 @@ export function ScheduleNewDialog({
     }
   }, [open]);
 
-  // Filter services when category changes
+  // Keep the selected-services summary in sync with the form's serviceIds
   useEffect(() => {
-    if (watchedValues.serviceCategory) {
-      const filtered = services.filter(
-        (service) => service.category === watchedValues.serviceCategory,
-      );
-      setFilteredServices(filtered);
-    } else {
-      setFilteredServices([]);
-    }
-    form.setValue("serviceId", "");
-    setSelectedService(null);
-  }, [watchedValues.serviceCategory, services]);
-
-  // Update selected service details
-  useEffect(() => {
-    if (watchedValues.serviceId) {
-      const serviceId = watchedValues.serviceId;
-
-      const service = services.find((s) => s.id === serviceId);
-
-      setSelectedService(service || null);
-    } else {
-      setSelectedService(null);
-    }
-  }, [watchedValues.serviceId, services]);
+    const ids = watchedValues.serviceIds || [];
+    setSelectedServices(services.filter((s) => ids.includes(s.id)));
+  }, [watchedValues.serviceIds, services]);
 
   // Check availability when therapist, date, or time changes
   useEffect(() => {
@@ -297,11 +271,6 @@ export function ScheduleNewDialog({
     try {
       const fetchedServices = await getServices();
       setServices(fetchedServices);
-
-      const categories: ServiceCategory[] = [
-        ...new Set(fetchedServices.map((s) => s.category)),
-      ];
-      setServiceCategories(categories);
     } catch (error) {
       console.error("Error fetching services:", error);
       toast({
@@ -533,7 +502,6 @@ export function ScheduleNewDialog({
             `${dateStr}T${baseData.endTime}`,
           ).toISOString(),
           createdById: user?.id,
-          service: selectedService,
           isRecurring: true,
         });
       });
@@ -598,7 +566,6 @@ export function ScheduleNewDialog({
           `${currentDate.toISOString().split("T")[0]}T${baseData.endTime}`,
         ).toISOString(),
         createdById: user?.id,
-        service: selectedService,
         isRecurring: true,
       });
 
@@ -732,7 +699,6 @@ export function ScheduleNewDialog({
             `${data.appointmentDate}T${data.endTime}`,
           ).toISOString(),
           createdById: user.id,
-          service: selectedService,
           cubicleId: selectedCubicleId || undefined,
         };
 
@@ -925,80 +891,28 @@ export function ScheduleNewDialog({
 
                   <div className="space-y-2">
                     <Label
-                      htmlFor="serviceCategory"
-                      className="text-sm font-bold text-slate-700"
+                      htmlFor="serviceIds"
+                      className="text-sm font-bold text-slate-700 flex items-center justify-between"
                     >
-                      Service Category
+                      Services
+                      <span className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">
+                        * Required
+                      </span>
                     </Label>
-                    <Select
-                      onValueChange={(value) =>
-                        form.setValue(
-                          "serviceCategory",
-                          value as ServiceCategory,
-                        )
-                      }
-                    >
-                      <SelectTrigger className="bg-slate-50 border-slate-200 h-10 hover:border-indigo-300 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <Layers className="h-4 w-4 text-slate-400" />
-                          <SelectValue placeholder="Filter by category" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {serviceCategories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {ServiceCategoryLabel[category]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectServices
+                      services={services}
+                      selectedIds={watchedValues.serviceIds || []}
+                      onChange={(ids) => form.setValue("serviceIds", ids)}
+                      placeholder="Search and select services..."
+                    />
+                    {form.formState.errors.serviceIds && (
+                      <p className="text-[11px] text-red-500 font-bold mt-1.5 flex items-center gap-1 uppercase tracking-tight">
+                        <AlertCircle className="h-3 w-3" />{" "}
+                        {form.formState.errors.serviceIds.message}
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                {watchedValues.serviceCategory && (
-                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <Label
-                      htmlFor="serviceId"
-                      className="text-sm font-bold text-slate-700"
-                    >
-                      Treatment Plan / Service
-                    </Label>
-                    <Select
-                      onValueChange={(value) =>
-                        form.setValue("serviceId", value)
-                      }
-                    >
-                      <SelectTrigger className="bg-slate-50 border-slate-200 h-11 hover:border-indigo-300 transition-colors shadow-sm">
-                        <div className="flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-indigo-500" />
-                          <SelectValue
-                            placeholder={`Select ${ServiceCategoryLabel[watchedValues.serviceCategory]} treatment plan`}
-                          />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredServices.map((service) => (
-                          <SelectItem
-                            key={service.id}
-                            value={service.id.toString()}
-                          >
-                            <div className="flex justify-between items-center w-full gap-8">
-                              <span className="font-medium">
-                                {service.name}
-                              </span>
-                              <Badge
-                                variant="secondary"
-                                className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-none px-2 font-bold"
-                              >
-                                ₹{service.price}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
               </div>
 
               {/* Section 2: Timing & Therapist */}
@@ -1323,43 +1237,49 @@ export function ScheduleNewDialog({
                   </h4>
                 </div>
 
-                {/* Selected Service Card */}
-                {selectedService ? (
+                {/* Selected Services Card */}
+                {selectedServices.length > 0 ? (
                   <Card className="border-none shadow-md overflow-hidden bg-white ring-1 ring-indigo-50 animate-in fade-in zoom-in-95 duration-300">
                     <div className="bg-indigo-600 px-4 py-2 flex items-center justify-between">
                       <p className="text-[10px] font-black text-white/80 uppercase tracking-widest">
                         Active Plan
                       </p>
                       <Badge className="bg-white/20 text-white border-none text-[9px] font-black">
-                        ID: #{selectedService.id.toString().slice(-4)}
+                        {selectedServices.length} Service
+                        {selectedServices.length > 1 ? "s" : ""}
                       </Badge>
                     </div>
-                    <CardContent className="p-5 space-y-4">
-                      <div className="space-y-1">
-                        <h5 className="text-xl font-black text-slate-900 leading-tight">
-                          {selectedService.name}
-                        </h5>
-                        <p className="text-xs font-bold text-indigo-600/70 uppercase tracking-tighter">
-                          {ServiceCategoryLabel[selectedService.category]}
-                        </p>
-                      </div>
-
-                      <div className="flex items-baseline gap-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <span className="text-xs font-bold text-slate-500 uppercase">
-                          Rate:
-                        </span>
-                        <span className="text-2xl font-black text-slate-900 ml-auto">
-                          ₹{selectedService.price}
-                        </span>
-                      </div>
-
-                      {selectedService.description && (
-                        <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/50">
-                          <p className="text-[11px] text-slate-600 font-medium italic leading-relaxed">
-                            "{selectedService.description}"
-                          </p>
+                    <CardContent className="p-5 space-y-3 max-h-[320px] overflow-y-auto">
+                      {selectedServices.map((service) => (
+                        <div
+                          key={service.id}
+                          className="flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-black text-slate-900 truncate">
+                              {service.name}
+                            </p>
+                            <p className="text-[10px] font-bold text-indigo-600/70 uppercase tracking-tighter">
+                              {ServiceCategoryLabel[service.category]}
+                            </p>
+                          </div>
+                          <span className="text-sm font-black text-slate-900 shrink-0">
+                            ₹{service.price}
+                          </span>
                         </div>
-                      )}
+                      ))}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <span className="text-xs font-bold text-slate-500 uppercase">
+                          Total:
+                        </span>
+                        <span className="text-lg font-black text-indigo-600">
+                          ₹
+                          {selectedServices.reduce(
+                            (sum, s) => sum + s.price,
+                            0,
+                          )}
+                        </span>
+                      </div>
                     </CardContent>
                   </Card>
                 ) : (

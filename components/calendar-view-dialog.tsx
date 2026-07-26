@@ -432,9 +432,14 @@ export function CalendarViewDialog({
                               ? `with ${appt.therapist.name}`
                               : "Therapist unassigned"}
                           </p>
-                          {appt.service?.name && (
-                            <p className="text-xs text-indigo-600 truncate mt-0.5">
-                              {appt.service.name}
+                          {appt.services && appt.services.length > 0 && (
+                            <p
+                              className="text-xs text-indigo-600 truncate mt-0.5"
+                              title={appt.services.map((s) => s.name).join(", ")}
+                            >
+                              {appt.services.length === 1
+                                ? appt.services[0].name
+                                : `${appt.services.length} Services`}
                             </p>
                           )}
                         </div>

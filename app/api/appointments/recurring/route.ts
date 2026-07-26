@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const patientIds = [...new Set(normalizedAppointments.map((a) => a.patientId))];
     const therapistIds = [...new Set(normalizedAppointments.map((a) => a.therapistId))];
-    const serviceIds = [...new Set(normalizedAppointments.map((a) => a.serviceId))];
+    const serviceIds = [...new Set(normalizedAppointments.flatMap((a) => a.serviceIds))];
     const createdByIds = [...new Set(normalizedAppointments.map((a) => a.createdById))];
 
     const [patients, therapists, services, creators] = await Promise.all([
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         conflicts.push({ date: appointment.appointmentDate, reason: "Therapist not found" });
         continue;
       }
-      if (!existingServiceIds.has(appointment.serviceId)) {
+      if (!appointment.serviceIds.every((sid) => existingServiceIds.has(sid))) {
         conflicts.push({ date: appointment.appointmentDate, reason: "Service not found" });
         continue;
       }
@@ -170,7 +170,11 @@ export async function POST(request: NextRequest) {
             data: {
               patientId: appointment.patientId,
               therapistId: appointment.therapistId,
-              serviceId: appointment.serviceId,
+              services: {
+                create: appointment.serviceIds.map((serviceId) => ({
+                  service: { connect: { id: serviceId } },
+                })),
+              },
               assignedDate: new Date(appointment.appointmentDate).toISOString(),
               appointmentStartTime: appointment.appointmentStartTime,
               appointmentEndTime: appointment.appointmentEndTime,
@@ -201,12 +205,16 @@ export async function POST(request: NextRequest) {
                   email: true,
                 },
               },
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-                  category: true,
+              services: {
+                include: {
+                  service: {
+                    select: {
+                      id: true,
+                      name: true,
+                      price: true,
+                      category: true,
+                    },
+                  },
                 },
               },
               cubicle: {
@@ -220,7 +228,10 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          results.push(createdAppointment);
+          results.push({
+            ...createdAppointment,
+            services: createdAppointment.services.map((s) => s.service),
+          });
         }
 
         return results;

@@ -223,16 +223,36 @@ export function AppointmentDetailsDialog({
               </p>
             </div>
 
-            {/* Service */}
+            {/* Services */}
             <div className="text-sm">
-              <p className="text-gray-500">Service</p>
-              <p className="font-medium">
-                {appointment.service?.name || "N/A"} (
-                {appointment.service?.category
-                  ? ServiceCategoryLabel[appointment.service.category]
-                  : "N/A"}
-                )
+              <p className="text-gray-500 mb-1">
+                {appointment.services && appointment.services.length > 1
+                  ? "Services"
+                  : "Service"}
               </p>
+              {appointment.services && appointment.services.length > 0 ? (
+                <div className="space-y-1.5">
+                  {appointment.services.map((service) => (
+                    <div
+                      key={service.id}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <p className="font-medium">
+                        {service.name} (
+                        {ServiceCategoryLabel[service.category]})
+                      </p>
+                      <Badge
+                        variant="secondary"
+                        className={statusStyles[appointment.status]}
+                      >
+                        {statusLabels[appointment.status]}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-medium">N/A</p>
+              )}
             </div>
 
             {/* Cubicle Information */}

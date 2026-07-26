@@ -24,8 +24,7 @@ import {
   EditAppointmentData,
 } from "@/types/appointments";
 import { formatDate, formatTime } from "@/lib/utils/utils";
-import { ServiceCategory } from "@/lib/generated/serviceEnums";
-import { AllServiceCatagory, ServiceCategoryLabel } from "@/lib/service";
+import { MultiSelectServices } from "@/components/ui/multi-select-services";
 import { Service } from "@prisma/client";
 
 interface Cubicle {
@@ -53,7 +52,6 @@ export function EditAppointmentDialog({
     DefaultEditAppointmentData
   );
   const [actionLoading, setActionLoading] = useState(false);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory>();
   const [services, setServices] = useState<Service[]>([]);
   const [cubicles, setCubicles] = useState<Cubicle[]>([]);
   const [loadingCubicles, setLoadingCubicles] = useState(false);
@@ -66,10 +64,6 @@ export function EditAppointmentDialog({
       if (!data.success) throw new Error("Failed to fetch services");
 
       setServices(data.data);
-      const categories = Array.from(
-        new Set(data.data.map((s: any) => s.category))
-      );
-      setServiceCategories(appointment?.service?.category);
     } catch (err) {
       console.error(err);
       toast({
@@ -108,9 +102,7 @@ export function EditAppointmentDialog({
   useEffect(() => {
     if (appointment && isOpen) {
       setEditData({
-        serviceCatagory:
-          appointment.service?.category || ServiceCategory.MANUAL_THERAPY,
-        serviceName: appointment.service?.name || "",
+        serviceIds: appointment.services?.map((s) => s.id) || [],
         notes: appointment.notes || "",
         cubicleId: appointment.cubicleId || "",
       });
@@ -131,7 +123,7 @@ export function EditAppointmentDialog({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          serviceId: services.find((s) => s.name === editData.serviceName)?.id,
+          serviceIds: editData.serviceIds,
           notes: editData.notes,
           cubicleId: editData.cubicleId || null,
         }),
@@ -193,55 +185,17 @@ export function EditAppointmentDialog({
               </p>
             </div>
 
-            {/* Therapy Category */}
+            {/* Services */}
             <div className="space-y-2">
-              <Label htmlFor="therapyCategory">Therapy Type</Label>
-              <Select
-                value={editData.serviceCatagory || ""}
-                onValueChange={(value: ServiceCategory) =>
-                  setEditData({
-                    ...editData,
-                    serviceCatagory: value,
-                    serviceName: "",
-                  })
+              <Label htmlFor="serviceIds">Services</Label>
+              <MultiSelectServices
+                services={services}
+                selectedIds={editData.serviceIds}
+                onChange={(ids) =>
+                  setEditData({ ...editData, serviceIds: ids })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AllServiceCatagory.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {ServiceCategoryLabel[cat]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Therapy Service */}
-            <div className="space-y-2">
-              <Label htmlFor="therapyType">Therapy Name</Label>
-              <Select
-                value={editData.serviceName || ""}
-                onValueChange={(value) =>
-                  setEditData({ ...editData, serviceName: value })
-                }
-                disabled={!editData.serviceCatagory}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Therapy" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services
-                    .filter((s) => s.category === editData.serviceCatagory)
-                    .map((s) => (
-                      <SelectItem key={s.name} value={s.name}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                placeholder="Search and select services..."
+              />
             </div>
 
             {/* Cubicle Selection */}

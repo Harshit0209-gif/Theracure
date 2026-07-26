@@ -24,9 +24,13 @@ export async function POST(
             name: true,
           },
         },
-        service: {
-          select: {
-            name: true,
+        services: {
+          include: {
+            service: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
         cubicle: {
@@ -62,7 +66,9 @@ export async function POST(
           phone: appointment.patient.phone,
           patientName: appointment.patient.patientName,
           therapistName: appointment.therapist.name,
-          serviceName: appointment.service?.name || "Therapy",
+          serviceName:
+            appointment.services.map((s) => s.service.name).join(", ") ||
+            "Therapy",
           date: appointment.appointmentStartTime,
           startTime: appointment.appointmentStartTime,
           endTime: appointment.appointmentEndTime,

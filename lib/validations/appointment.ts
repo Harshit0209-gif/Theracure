@@ -72,7 +72,9 @@ export const appointmentFields = {
     .uuid("Invalid recurring parent ID format")
     .optional(),
 
-  serviceId: z.string(),
+  serviceIds: z
+    .array(z.string())
+    .min(1, "At least one service is required"),
   serviceCategory: z.enum(ServiceCategory, {
     message:
       "Service category must be one of: manual_therapy, exercise_therapy, consultation, electrotherapy, combo_treatment",
@@ -214,7 +216,7 @@ export const createAppointmentSchema = z
     appointmentEndTime: appointmentFields.appointmentEndTime,
     notes: appointmentFields.notes,
     createdById: appointmentFields.createdById,
-    serviceId: appointmentFields.serviceId,
+    serviceIds: appointmentFields.serviceIds,
 
     isRecurring: appointmentFields.isRecurring,
     recurringType: appointmentFields.recurringType,
@@ -247,8 +249,8 @@ export const appointmentFormSchema = z
     appointmentDate: appointmentFields.appointmentDate,
     startTime: appointmentFields.startTime,
     endTime: appointmentFields.endTime,
-    serviceCategory: appointmentFields.serviceCategory,
-    serviceId: appointmentFields.serviceId,
+    serviceCategory: appointmentFields.serviceCategory.optional(),
+    serviceIds: appointmentFields.serviceIds,
     notes: appointmentFields.notes,
 
     isRecurring: appointmentFields.isRecurring,
@@ -312,7 +314,7 @@ export const updateAppointmentSchema = z
     appointmentEndTime: appointmentFields.appointmentEndTime.optional(),
     status: appointmentFields.status.optional(),
     notes: appointmentFields.notes,
-    serviceId: appointmentFields.serviceId,
+    serviceIds: appointmentFields.serviceIds.optional(),
 
     updateRecurringType: z
       .enum(["single", "this_and_future", "all"], {
@@ -453,7 +455,7 @@ export const recurringManagementSchema = z
         appointmentStartTime: appointmentFields.appointmentStartTime.optional(),
         appointmentEndTime: appointmentFields.appointmentEndTime.optional(),
         notes: appointmentFields.notes.optional(),
-        serviceId: appointmentFields.serviceId.optional(),
+        serviceIds: appointmentFields.serviceIds.optional(),
       })
       .optional(),
   })

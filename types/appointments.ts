@@ -23,7 +23,7 @@ export interface Appointment {
   notes?: string;
   cubicleId?: string;
 
-  service?: Service;
+  services?: Service[];
 
   patient?: {
     id: string;
@@ -73,15 +73,13 @@ export interface AppointmentTableProps {
 }
 
 export interface EditAppointmentData {
-  serviceCatagory: ServiceCategory;
-  serviceName: string;
+  serviceIds: string[];
   notes: string;
   cubicleId: string;
 }
 
 export const DefaultEditAppointmentData: EditAppointmentData = {
-  serviceCatagory: ServiceCategory.MANUAL_THERAPY,
-  serviceName: "",
+  serviceIds: [],
   notes: "",
   cubicleId: "",
 };

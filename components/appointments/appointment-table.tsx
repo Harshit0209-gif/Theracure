@@ -224,18 +224,32 @@ export function AppointmentTable({
     },
     {
       header: "Therapy",
-      cell: (appt) => (
-        <>
-          <div className="font-medium text-gray-800">
-            {appt.service?.name || <span className="text-gray-400">—</span>}
+      cell: (appt) => {
+        const services = appt.services || [];
+        if (services.length === 0) {
+          return <span className="text-gray-400">—</span>;
+        }
+        if (services.length === 1) {
+          return (
+            <>
+              <div className="font-medium text-gray-800">
+                {services[0].name}
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5">
+                {ServiceCategoryLabel[services[0].category]}
+              </div>
+            </>
+          );
+        }
+        return (
+          <div
+            className="font-medium text-gray-800"
+            title={services.map((s) => s.name).join(", ")}
+          >
+            {services.length} Services Selected
           </div>
-          {appt.service?.category && (
-            <div className="text-xs text-gray-400 mt-0.5">
-              {ServiceCategoryLabel[appt.service.category]}
-            </div>
-          )}
-        </>
-      ),
+        );
+      },
     },
     {
       header: "Cubicle",
