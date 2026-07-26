@@ -89,28 +89,28 @@ export async function fetchStatsQueries(
   ] = await Promise.all([
     prisma.invoice.groupBy({
       by: ["status"],
-      where: currentFilter,
+      where: { ...currentFilter, status: { not: "DRAFT" } },
       _count: { _all: true },
     }),
     prisma.invoice.groupBy({
       by: ["status"],
-      where: previousFilter,
+      where: { ...previousFilter, status: { not: "DRAFT" } },
       _count: { _all: true },
     }),
     prisma.invoice.aggregate({
-      where: { ...currentFilter, status: { not: "CANCELLED" } },
+      where: { ...currentFilter, status: { notIn: ["CANCELLED", "DRAFT"] } },
       _sum: { totalAmount: true },
     }),
     prisma.invoice.aggregate({
-      where: { ...previousFilter, status: { not: "CANCELLED" } },
+      where: { ...previousFilter, status: { notIn: ["CANCELLED", "DRAFT"] } },
       _sum: { totalAmount: true },
     }),
     prisma.invoice.aggregate({
-      where: { ...currentFilter, status: { not: "CANCELLED" } },
+      where: { ...currentFilter, status: { notIn: ["CANCELLED", "DRAFT"] } },
       _sum: { amountPaid: true },
     }),
     prisma.invoice.aggregate({
-      where: { ...previousFilter, status: { not: "CANCELLED" } },
+      where: { ...previousFilter, status: { notIn: ["CANCELLED", "DRAFT"] } },
       _sum: { amountPaid: true },
     }),
     prisma.invoice.aggregate({

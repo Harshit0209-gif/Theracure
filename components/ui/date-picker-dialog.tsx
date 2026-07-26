@@ -39,6 +39,12 @@ export function isPastDate(dateStr: string) {
   return new Date(dateStr) < today;
 }
 
+export function isFutureDate(dateStr: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dateStr) > today;
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface DatePickerDialogProps {
@@ -53,8 +59,20 @@ interface DatePickerDialogProps {
   title?: string;
   /** Whether to disable past dates (default: true) */
   disablePast?: boolean;
+  /** Whether to disable future dates (default: false) */
+  disableFuture?: boolean;
   /** Extra className on DialogContent for positioning overrides */
   contentClassName?: string;
+  /** Whether to show fast year navigation (prev/next year + clickable year list). Default: false — existing callers are unaffected. */
+  enableYearPicker?: boolean;
+  /** Earliest year shown in the year list (only used when enableYearPicker is true). Default: 1900 */
+  minYear?: number;
+  /** Latest year shown in the year list (only used when enableYearPicker is true). Default: current year */
+  maxYear?: number;
+  /** Map of YYYY-MM-DD -> reason text. Matching dates are disabled and show the reason as a tooltip. Default: none. */
+  disabledDateReasons?: Record<string, string>;
+  /** Weekdays (0=Sunday..6=Saturday) that are always disabled, e.g. clinic weekly-off days. Default: none. */
+  disabledWeekDays?: number[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -66,7 +84,13 @@ export function DatePickerDialog({
   onChange,
   title = "Select Date",
   disablePast = true,
+  disableFuture = false,
   contentClassName,
+  enableYearPicker = false,
+  minYear = 1900,
+  maxYear = new Date().getFullYear(),
+  disabledDateReasons,
+  disabledWeekDays,
 }: DatePickerDialogProps) {
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     if (value) {
@@ -75,13 +99,17 @@ export function DatePickerDialog({
     }
     return new Date();
   });
+  const [view, setView] = useState<"days" | "years">("days");
 
   // Keep month in sync when dialog opens with a pre-selected value
   const handleOpenChange = (next: boolean) => {
-    if (next && value) {
-      const d = new Date(value);
-      if (!isNaN(d.getTime())) {
-        setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    if (next) {
+      setView("days");
+      if (value) {
+        const d = new Date(value);
+        if (!isNaN(d.getTime())) {
+          setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+        }
       }
     }
     onOpenChange(next);
@@ -101,6 +129,27 @@ export function DatePickerDialog({
       d.setMonth(d.getMonth() + 1);
       return d;
     });
+  };
+
+  const prevYear = () => {
+    setCurrentMonth((m) => {
+      const d = new Date(m);
+      d.setFullYear(d.getFullYear() - 1);
+      return d;
+    });
+  };
+
+  const nextYear = () => {
+    setCurrentMonth((m) => {
+      const d = new Date(m);
+      d.setFullYear(d.getFullYear() + 1);
+      return d;
+    });
+  };
+
+  const handleSelectYear = (selectedYear: number) => {
+    setCurrentMonth((m) => new Date(selectedYear, m.getMonth(), 1));
+    setView("days");
   };
 
   const handleSelect = (dateStr: string) => {
@@ -129,24 +178,70 @@ export function DatePickerDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Month Navigation */}
-          <div className="flex items-center justify-between">
-            <Button type="button" variant="outline" size="sm" onClick={prevMonth}>
+          {/* Month/Year Navigation */}
+          <div className="flex items-center justify-between gap-1">
+            {enableYearPicker && view === "days" && (
+              <Button type="button" variant="outline" size="sm" onClick={prevYear} title="Previous year">
+                «
+              </Button>
+            )}
+            <Button type="button" variant="outline" size="sm" onClick={prevMonth} disabled={view === "years"}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Button>
-            <h3 className="text-base font-semibold text-slate-800">
-              {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-            </h3>
-            <Button type="button" variant="outline" size="sm" onClick={nextMonth}>
+            {enableYearPicker ? (
+              <button
+                type="button"
+                onClick={() => setView((v) => (v === "days" ? "years" : "days"))}
+                className="text-base font-semibold text-slate-800 hover:text-indigo-600 transition-colors px-2 rounded-md hover:bg-indigo-50"
+              >
+                {view === "years"
+                  ? "Select Year"
+                  : currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              </button>
+            ) : (
+              <h3 className="text-base font-semibold text-slate-800">
+                {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              </h3>
+            )}
+            <Button type="button" variant="outline" size="sm" onClick={nextMonth} disabled={view === "years"}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Button>
+            {enableYearPicker && view === "days" && (
+              <Button type="button" variant="outline" size="sm" onClick={nextYear} title="Next year">
+                »
+              </Button>
+            )}
           </div>
 
+          {enableYearPicker && view === "years" && (
+            <div className="grid grid-cols-4 gap-1.5 max-h-64 overflow-y-auto pr-1">
+              {Array.from(
+                { length: maxYear - minYear + 1 },
+                (_, i) => maxYear - i
+              ).map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => handleSelectYear(y)}
+                  className={[
+                    "h-9 rounded-md text-sm transition-colors",
+                    y === currentMonth.getFullYear()
+                      ? "bg-indigo-600 text-white font-semibold"
+                      : "hover:bg-indigo-100 text-slate-700",
+                  ].join(" ")}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Calendar Grid */}
+          {(!enableYearPicker || view === "days") && (
           <div className="grid grid-cols-1 md:grid-cols-7 gap-1 text-center text-sm">
             {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
               <div key={day} className="font-semibold text-gray-500 pb-1">
@@ -166,18 +261,29 @@ export function DatePickerDialog({
               const dateStr = formatDateToString(date);
               const isSelected = value === dateStr;
               const isPast = disablePast && isPastDate(dateStr);
+              const isFuture = disableFuture && isFutureDate(dateStr);
+              const closedReason = disabledDateReasons?.[dateStr];
+              const isClosed = !!closedReason;
+              const isWeeklyOff = !!disabledWeekDays?.includes(date.getDay());
+              const isDisabled = isPast || isFuture || isClosed || isWeeklyOff;
               const isToday = dateStr === todayStr;
+              const tooltip = closedReason || (isWeeklyOff ? "Clinic weekly off day" : undefined);
 
               return (
                 <div key={day} className="p-1">
                   <button
                     type="button"
-                    onClick={() => !isPast && handleSelect(dateStr)}
-                    disabled={isPast}
+                    onClick={() => !isDisabled && handleSelect(dateStr)}
+                    disabled={isDisabled}
+                    title={tooltip}
                     className={[
                       "w-full h-9 rounded-md transition-colors text-sm",
-                      isPast
-                        ? "text-gray-400 cursor-not-allowed"
+                      isDisabled
+                        ? isClosed
+                          ? "text-red-400 bg-red-50 cursor-not-allowed"
+                          : isWeeklyOff
+                          ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                          : "text-gray-400 cursor-not-allowed"
                         : isSelected
                         ? "bg-indigo-600 text-white font-semibold"
                         : "hover:bg-indigo-100 text-slate-700",
@@ -194,6 +300,7 @@ export function DatePickerDialog({
               );
             })}
           </div>
+          )}
         </div>
 
         <DialogFooter className="flex items-center justify-between sm:justify-between gap-2 pt-2 border-t border-gray-100">

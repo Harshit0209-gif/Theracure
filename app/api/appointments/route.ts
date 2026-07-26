@@ -10,6 +10,7 @@ import {
   isValidDate,
   isTherapistWorkingDuringSlot,
 } from "@/lib/utils/appointmentScheduling";
+import { createDraftInvoiceForAppointment } from "@/lib/services/appointment-invoice-service";
 
 function getTodayISTWindow(): { start: Date; end: Date } {
   const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
@@ -100,6 +101,9 @@ export async function GET(req: NextRequest) {
       },
       cubicle: {
         select: { id: true, name: true, roomNumber: true, location: true },
+      },
+      invoice: {
+        select: { id: true, status: true, totalAmount: true, amountPaid: true },
       },
     };
 
@@ -297,7 +301,7 @@ export async function POST(req: NextRequest) {
               throw new Error("NO_CUBICLE");
             }
 
-            return tx.appointment.create({
+            const createdAppointment = await tx.appointment.create({
               data: {
                 appointmentStartTime: startTime,
                 appointmentEndTime: endTime,
@@ -319,6 +323,15 @@ export async function POST(req: NextRequest) {
               },
               include: { cubicle: true },
             });
+
+            await createDraftInvoiceForAppointment(tx, {
+              appointmentId: createdAppointment.id,
+              patientId,
+              serviceIds: uniqueServiceIds,
+              createdById,
+            });
+
+            return createdAppointment;
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );

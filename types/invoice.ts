@@ -1,7 +1,7 @@
 import { PurchasedService, Service } from "@/types/service";
 import { defaultPatient, Patient } from "./patient";
 import { JSX } from "react";
-import { CheckCircle, Clock, LucideIcon } from "lucide-react";
+import { CheckCircle, Clock, FileEdit, LucideIcon } from "lucide-react";
 
 export enum PaymentStatus {
   PENDING = "Pending",
@@ -45,6 +45,11 @@ export const invoiceStatusStyles: Record<
   string,
   { color: string; icon: LucideIcon; className: string }
 > = {
+  DRAFT: {
+    color: "bg-amber-100 text-amber-700",
+    icon: FileEdit,
+    className: "h-3 w-3 mr-1",
+  },
   PAID: {
     color: "bg-green-100 text-green-700",
     icon: CheckCircle,

@@ -30,6 +30,7 @@ model Patient {
   id                    String           @id @default(dbgenerated("generate_patient_id()")) @map("patient_id") @db.VarChar(20)
   patientName           String           @map("patient_name")
   age                   Int
+  dateOfBirth           DateTime?        @map("date_of_birth") @db.Date
   height                Float?
   weight                Float?
   gender                String
@@ -125,6 +126,7 @@ model Appointment {
   therapist            User                 @relation("TherapistAppointments", fields: [therapistId], references: [id], onDelete: Restrict, map: "appointments_user_fkey")
   therapistInfo        Therapist            @relation("TherapistAppointments", fields: [therapistId], references: [id], map: "appointments_therapist_fkey")
   cubicle              Cubicle?             @relation("AppointmentCubicle", fields: [cubicleId], references: [id], onDelete: SetNull)
+  invoice              Invoice?
 
   @@index([therapistId, appointmentStartTime])
   @@index([patientId, appointmentStartTime])
@@ -181,8 +183,10 @@ model Invoice {
   updatedAt     DateTime      @updatedAt
   createdBy     String
   pdfUrl        String?       @map("pdf_url")
+  appointmentId String?       @unique @map("appointment_id")
   invoiceItems  InvoiceItem[] @relation("InvoiceToItems")
   patient       Patient?      @relation(fields: [patientId], references: [id])
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   transactions  Transaction[] @relation("InvoiceToTransactions")
 
   @@index([patientId])
@@ -316,11 +320,24 @@ model Holiday {
   name        String
   description String?
   isRecurring Boolean  @default(false) @map("is_recurring")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([date])
   @@map("holidays")
+}
+
+model WeeklyOffConfiguration {
+  id        String   @id @default(cuid())
+  weekDay   Int      @map("week_day")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([weekDay])
+  @@map("weekly_off_configurations")
 }
 
 enum UserRole {
@@ -365,6 +382,7 @@ enum AppointmentStatus {
 }
 
 enum InvoiceStatus {
+  DRAFT
   DUE
   PAID
   CANCELLED
@@ -445,6 +463,20 @@ model Cubicle {
   @@index([status])
   @@index([createdAt])
   @@map("cubicles")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String
+  userId     String?  @map("user_id")
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 enum CubicleStatus {

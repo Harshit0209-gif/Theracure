@@ -12,7 +12,10 @@ interface DatePickerButtonProps {
   onChange: (date: string) => void;
   title?: string;
   disablePast?: boolean;
+  disableFuture?: boolean;
   contentClassName?: string;
+  disabledDateReasons?: Record<string, string>;
+  disabledWeekDays?: number[];
 }
 
 export function DatePickerButton({
@@ -21,7 +24,10 @@ export function DatePickerButton({
   onChange,
   title = "Select Date",
   disablePast = true,
+  disableFuture = false,
   contentClassName,
+  disabledDateReasons,
+  disabledWeekDays,
 }: DatePickerButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -57,7 +63,10 @@ export function DatePickerButton({
         onChange={onChange}
         title={title}
         disablePast={disablePast}
+        disableFuture={disableFuture}
         contentClassName={contentClassName}
+        disabledDateReasons={disabledDateReasons}
+        disabledWeekDays={disabledWeekDays}
       />
     </>
   );

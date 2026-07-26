@@ -205,7 +205,14 @@ export function PatientManagementSection() {
       header: "Age",
       headerClassName: "w-16",
       cellClassName: "text-gray-600",
-      cell: (patient) => patient.age,
+      cell: (patient) =>
+        patient.calculatedAge ? (
+          <span title={patient.calculatedAge.formatted}>
+            {patient.calculatedAge.years}y
+          </span>
+        ) : (
+          patient.age
+        ),
     },
     {
       header: "Gender",

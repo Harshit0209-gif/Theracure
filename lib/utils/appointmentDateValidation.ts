@@ -1,13 +1,40 @@
 import { prisma } from "@/lib/prisma";
 
-export async function validateAppointmentDate(
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+export interface ClinicClosedResult {
+  closed: boolean;
+  reason: string | null;
+}
+
+/**
+ * Single reusable check for whether the clinic is closed on a given date —
+ * combines the admin-configurable weekly-off days and the holiday list
+ * (including holidays marked to recur every year on the same month/day).
+ * Every module that needs to know "is this date bookable" should call this.
+ */
+export async function isClinicClosed(
   date: Date | string,
-): Promise<string | null> {
+): Promise<ClinicClosedResult> {
   const d = new Date(date);
   const dayOfWeek = d.getDay();
 
-  if (dayOfWeek === 0) {
-    return "Appointments cannot be booked on Sundays.";
+  const weeklyOff = await prisma.weeklyOffConfiguration.findFirst({
+    where: { weekDay: dayOfWeek, isActive: true },
+  });
+  if (weeklyOff) {
+    return {
+      closed: true,
+      reason: `Clinic is closed on ${DAY_NAMES[dayOfWeek]}s.`,
+    };
   }
 
   const year = d.getFullYear();
@@ -15,14 +42,38 @@ export async function validateAppointmentDate(
   const day = String(d.getDate()).padStart(2, "0");
   const dateStr = `${year}-${month}-${day}`;
 
-  const holidays = await (prisma as any).$queryRaw`
-    SELECT name FROM holidays WHERE date = ${dateStr}::date LIMIT 1
-  `;
-
-  if (holidays && (holidays as any[]).length > 0) {
-    const holidayName = (holidays as any[])[0].name;
-    return `${holidayName} is a holiday. Appointments cannot be booked on this day.`;
+  const exactHoliday = await prisma.holiday.findFirst({
+    where: { isActive: true, date: new Date(dateStr) },
+  });
+  if (exactHoliday) {
+    return {
+      closed: true,
+      reason: `${exactHoliday.name} is a holiday. Appointments cannot be booked on this day.`,
+    };
   }
 
-  return null;
+  const recurringHolidays = await prisma.holiday.findMany({
+    where: { isActive: true, isRecurring: true },
+  });
+  const recurringMatch = recurringHolidays.find((holiday) => {
+    const hd = new Date(holiday.date);
+    return (
+      hd.getUTCMonth() === d.getMonth() && hd.getUTCDate() === d.getDate()
+    );
+  });
+  if (recurringMatch) {
+    return {
+      closed: true,
+      reason: `${recurringMatch.name} is a holiday. Appointments cannot be booked on this day.`,
+    };
+  }
+
+  return { closed: false, reason: null };
+}
+
+export async function validateAppointmentDate(
+  date: Date | string,
+): Promise<string | null> {
+  const result = await isClinicClosed(date);
+  return result.reason;
 }

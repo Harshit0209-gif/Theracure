@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import { createPatientSchema } from "@/lib/validations/patient";
 import { getSession } from "@/lib/auth/session-provider";
+import { calculateAge } from "@/lib/utils/age-calculator";
 
 export async function GET(req: NextRequest) {
   try {
@@ -63,9 +64,14 @@ export async function GET(req: NextRequest) {
 
     const totalPages = Math.ceil(totalCount / limit);
 
+    const patientsWithCalculatedAge = patients.map((patient) => ({
+      ...patient,
+      calculatedAge: calculateAge(patient.dateOfBirth),
+    }));
+
     return NextResponse.json({
       success: true,
-      patients,
+      patients: patientsWithCalculatedAge,
       pagination: {
         currentPage,
         totalPages,
@@ -114,13 +120,16 @@ export async function POST(req: NextRequest) {
 
     const { data } = result;
 
+    const calculatedAge = calculateAge(data.dateOfBirth);
+
     const patient = await prisma.patient.create({
       data: {
         patientName: data.patientName,
         email: data.email,
         phone: data.phone,
         address: data.address,
-        age: data.age ?? 0,
+        age: calculatedAge?.years ?? data.age ?? 0,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
         gender: data.gender,
         height: data.height,
         weight: data.weight,
@@ -129,7 +138,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(patient, { status: 201 });
+    return NextResponse.json(
+      { ...patient, calculatedAge: calculateAge(patient.dateOfBirth) },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Patient creation error:", error);
     return NextResponse.json(

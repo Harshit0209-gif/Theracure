@@ -25,6 +25,7 @@ import {
   formatTimeString,
   getDayName,
 } from "@/lib/utils/utils";
+import { Holiday, WeeklyOffDay } from "@/types/holiday";
 
 interface RescheduleAppointmentDialogProps {
   isOpen: boolean;
@@ -46,7 +47,59 @@ export function RescheduleAppointmentDialog({
   const [availablePeriods, setAvailablePeriods] = useState<AvailablePeriod[]>(
     [],
   );
+  const [disabledDateReasons, setDisabledDateReasons] = useState<
+    Record<string, string>
+  >({});
+  const [disabledWeekDays, setDisabledWeekDays] = useState<number[]>([]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchHolidaysAndWeeklyOff = async () => {
+      try {
+        const [holidaysRes, weeklyOffRes] = await Promise.all([
+          fetch("/api/holidays"),
+          fetch("/api/weekly-off"),
+        ]);
+        const holidaysData = await holidaysRes.json();
+        const weeklyOffData = await weeklyOffRes.json();
+
+        if (holidaysData.success) {
+          const reasons: Record<string, string> = {};
+          (holidaysData.data as Holiday[])
+            .filter((h) => h.isActive)
+            .forEach((h) => {
+              if (h.isRecurring) {
+                const d = new Date(h.date);
+                const month = d.getUTCMonth();
+                const day = d.getUTCDate();
+                const thisYear = new Date().getFullYear();
+                [thisYear, thisYear + 1].forEach((year) => {
+                  const occurrence = new Date(Date.UTC(year, month, day));
+                  const key = occurrence.toISOString().slice(0, 10);
+                  reasons[key] = h.name;
+                });
+              } else {
+                reasons[h.date.slice(0, 10)] = h.name;
+              }
+            });
+          setDisabledDateReasons(reasons);
+        }
+
+        if (weeklyOffData.success) {
+          setDisabledWeekDays(
+            (weeklyOffData.data as WeeklyOffDay[])
+              .filter((d) => d.isActive)
+              .map((d) => d.weekDay),
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching holidays/weekly-off:", error);
+      }
+    };
+
+    fetchHolidaysAndWeeklyOff();
+  }, [isOpen]);
 
   const validateTimeRange = (startTime: string, endTime: string) => {
     if (!startTime || !endTime) return false;
@@ -208,6 +261,8 @@ export function RescheduleAppointmentDialog({
             value={rescheduleData.date}
             onChange={(date) => setRescheduleData({ ...rescheduleData, date })}
             title="Select Appointment Date"
+            disabledDateReasons={disabledDateReasons}
+            disabledWeekDays={disabledWeekDays}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

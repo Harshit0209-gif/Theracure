@@ -18,6 +18,7 @@ import {
   Bed,
   Home,
   ChevronRight,
+  CalendarOff,
 } from "lucide-react";
 import { AllRoles, RoleRoutes } from "@/lib/userRoles";
 import { UserRole } from "@/lib/generated/userRoles";
@@ -116,6 +117,12 @@ export function Sidebar({
       title: "Cubicles",
       icon: <Home className="h-6 w-6" />,
       href: "/cubicles",
+      roles: [UserRole.ADMIN],
+    },
+    {
+      title: "Holidays",
+      icon: <CalendarOff className="h-6 w-6" />,
+      href: "/holidays",
       roles: [UserRole.ADMIN],
     },
     {

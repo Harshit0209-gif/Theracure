@@ -71,6 +71,7 @@ import {
 import { DatePickerButton } from "@/components/ui/date-picker-button";
 import { TimeInput } from "@/components/ui/time-input";
 import { MultiSelectServices } from "@/components/ui/multi-select-services";
+import { Holiday, WeeklyOffDay } from "@/types/holiday";
 
 interface ScheduleNewDialogProps {
   open: boolean;
@@ -101,6 +102,10 @@ export function ScheduleNewDialog({
   const [customDates, setCustomDates] = useState<string[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isEndDateCalendarOpen, setIsEndDateCalendarOpen] = useState(false);
+  const [disabledDateReasons, setDisabledDateReasons] = useState<
+    Record<string, string>
+  >({});
+  const [disabledWeekDays, setDisabledWeekDays] = useState<number[]>([]);
 
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [cubicleAvailability, setCubicleAvailability] = useState<any>(null);
@@ -182,6 +187,7 @@ export function ScheduleNewDialog({
     if (open) {
       fetchTherapists();
       fetchData();
+      fetchHolidaysAndWeeklyOff();
       handlePatientSearch(""); // Load initial patient list
     }
   }, [open]);
@@ -278,6 +284,52 @@ export function ScheduleNewDialog({
         description: "Failed to fetch services. Please try again later.",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchHolidaysAndWeeklyOff = async () => {
+    try {
+      const [holidaysRes, weeklyOffRes] = await Promise.all([
+        fetch("/api/holidays"),
+        fetch("/api/weekly-off"),
+      ]);
+      const holidaysData = await holidaysRes.json();
+      const weeklyOffData = await weeklyOffRes.json();
+
+      if (holidaysData.success) {
+        const reasons: Record<string, string> = {};
+        (holidaysData.data as Holiday[])
+          .filter((h) => h.isActive)
+          .forEach((h) => {
+            if (h.isRecurring) {
+              // Recurring holidays repeat every year on the same month/day;
+              // map onto the current and next year so the picker (which only
+              // ever shows near-future months) reflects the closure.
+              const d = new Date(h.date);
+              const month = d.getUTCMonth();
+              const day = d.getUTCDate();
+              const thisYear = new Date().getFullYear();
+              [thisYear, thisYear + 1].forEach((year) => {
+                const occurrence = new Date(Date.UTC(year, month, day));
+                const key = formatDateToString(occurrence);
+                reasons[key] = h.name;
+              });
+            } else {
+              reasons[h.date.slice(0, 10)] = h.name;
+            }
+          });
+        setDisabledDateReasons(reasons);
+      }
+
+      if (weeklyOffData.success) {
+        setDisabledWeekDays(
+          (weeklyOffData.data as WeeklyOffDay[])
+            .filter((d) => d.isActive)
+            .map((d) => d.weekDay),
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching holidays/weekly-off:", error);
     }
   };
 
@@ -933,6 +985,8 @@ export function ScheduleNewDialog({
                       value={watchedValues.appointmentDate}
                       onChange={(date) => form.setValue("appointmentDate", date)}
                       title={watchedValues.isRecurring ? "Select First Appointment Date" : "Select Appointment Date"}
+                      disabledDateReasons={disabledDateReasons}
+                      disabledWeekDays={disabledWeekDays}
                     />
                   </div>
 

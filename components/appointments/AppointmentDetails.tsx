@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +20,13 @@ import {
   Clock,
   MapPin,
   FileText,
+  FileEdit,
+  IndianRupee,
+  Printer,
   Save,
   Home,
+  Loader2,
+  Receipt,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Appointment } from "@/types/appointments";
@@ -31,6 +37,16 @@ import { RescheduleAppointmentDialog } from "@/components/appointments/Reschedul
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/lib/generated/userRoles";
 import { AppointmentStatus } from "@/lib/generated/bookingEnums";
+import { InvoiceDetailsModal } from "@/components/invoices/InvoiceModel";
+import { PaymentDialog } from "@/components/invoices/PaymentDialog";
+import { DraftInvoiceEditDialog } from "@/components/invoices/DraftInvoiceEditDialog";
+import { mapInvoiceToPrintPayload } from "@/lib/utils/invoiceUtils";
+import {
+  InvoicePayload,
+  PaymentStatus,
+  invoiceStatusLabelMap,
+  invoiceStatusStyles,
+} from "@/types/invoice";
 
 interface AppointmentDetailsDialogProps {
   isOpen: boolean;
@@ -56,6 +72,55 @@ export function AppointmentDetailsDialog({
   const { user } = useAuth();
   const hasFullControl =
     user?.role === UserRole.ADMIN || user?.role === UserRole.RECEPTIONIST;
+
+  const [invoiceDetail, setInvoiceDetail] = useState<any>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceViewOpen, setInvoiceViewOpen] = useState(false);
+  const [invoicePrintPayload, setInvoicePrintPayload] =
+    useState<InvoicePayload | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [draftEditOpen, setDraftEditOpen] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && appointment?.invoice) {
+      setInvoiceLoading(true);
+      fetch(`/api/invoices/${appointment.invoice.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setInvoiceDetail(data.data);
+        })
+        .catch(() => {})
+        .finally(() => setInvoiceLoading(false));
+    } else {
+      setInvoiceDetail(null);
+    }
+  }, [isOpen, appointment?.invoice?.id]);
+
+  const refreshInvoiceDetail = () => {
+    if (!appointment?.invoice) return;
+    fetch(`/api/invoices/${appointment.invoice.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setInvoiceDetail(data.data);
+      })
+      .catch(() => {});
+    onAppointmentUpdated();
+  };
+
+  const handleViewInvoice = () => {
+    if (!invoiceDetail) return;
+    const payload = mapInvoiceToPrintPayload(invoiceDetail, {
+      totalAmount: invoiceDetail.totalAmount,
+      amountPaid: invoiceDetail.amountPaid,
+      subTotal: invoiceDetail.subTotal,
+      offer: invoiceDetail.offer || 0,
+      discount: 0,
+      balance: invoiceDetail.totalAmount - invoiceDetail.amountPaid,
+      status: PaymentStatus.PENDING,
+    });
+    setInvoicePrintPayload(payload);
+    setInvoiceViewOpen(true);
+  };
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString("en-US", {
@@ -185,6 +250,13 @@ export function AppointmentDetailsDialog({
               )}
           </DialogHeader>
 
+          <Tabs defaultValue="details" className="mt-4">
+            <TabsList>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="billing">Billing & Invoice</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details">
           <div className="space-y-6 mt-4">
             {/* Status */}
             <div className="flex items-center justify-between">
@@ -298,6 +370,137 @@ export function AppointmentDetailsDialog({
               Appointment ID: {appointment.id}
             </p>
           </div>
+            </TabsContent>
+
+            <TabsContent value="billing">
+              <div className="space-y-4 mt-4">
+                {invoiceLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                  </div>
+                ) : invoiceDetail ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500">Invoice Number</p>
+                        <p className="font-medium">{invoiceDetail.id}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Invoice Status</p>
+                        <Badge
+                          className={
+                            invoiceStatusStyles[invoiceDetail.status]?.color
+                          }
+                        >
+                          {invoiceStatusLabelMap[invoiceDetail.status] ||
+                            invoiceDetail.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Amount</p>
+                        <p className="font-medium">
+                          ₹{invoiceDetail.totalAmount.toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Balance Due</p>
+                        <p className="font-medium">
+                          ₹
+                          {(
+                            invoiceDetail.totalAmount - invoiceDetail.amountPaid
+                          ).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Receipt className="h-4 w-4 text-green-600" />
+                        Payment History
+                      </h3>
+                      {invoiceDetail.transactions?.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {invoiceDetail.transactions.map((txn: any) => (
+                            <div
+                              key={txn.id}
+                              className="flex items-center justify-between text-xs border rounded-md p-2 bg-gray-50"
+                            >
+                              <span className="text-gray-500">
+                                {new Date(
+                                  txn.transactionDate,
+                                ).toLocaleDateString("en-IN")}
+                              </span>
+                              <span className="text-gray-600">
+                                {txn.paymentMethod}
+                              </span>
+                              <span className="font-medium">
+                                ₹{txn.amount.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">
+                          No payments recorded
+                        </p>
+                      )}
+                    </div>
+
+                    {hasFullControl && (
+                      <div className="flex gap-2 flex-wrap pt-3 border-t">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleViewInvoice}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        {invoiceDetail.status === "DRAFT" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDraftEditOpen(true)}
+                          >
+                            <FileEdit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                        )}
+                        {invoiceDetail.status !== "PAID" &&
+                          invoiceDetail.status !== "CANCELLED" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPaymentDialogOpen(true)}
+                            >
+                              <IndianRupee className="h-4 w-4 mr-1" />
+                              Collect Payment
+                            </Button>
+                          )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            window.open(
+                              `/api/invoices/${invoiceDetail.id}/pdf`,
+                              "_blank",
+                            )
+                          }
+                        >
+                          <Printer className="h-4 w-4 mr-1" />
+                          Print
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400 italic text-center py-8">
+                    No invoice linked to this appointment
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>
@@ -321,6 +524,42 @@ export function AppointmentDetailsDialog({
         onClose={() => setRescheduleDialogOpen(false)}
         appointment={appointment}
         onAppointmentUpdated={onAppointmentUpdated}
+      />
+
+      {/* Billing & Invoice dialogs */}
+      <InvoiceDetailsModal
+        printPayload={invoicePrintPayload}
+        isDetailsModalOpen={invoiceViewOpen}
+        setIsDetailsModalOpen={setInvoiceViewOpen}
+        handlePrintInvoice={() =>
+          invoiceDetail &&
+          window.open(`/api/invoices/${invoiceDetail.id}/pdf`, "_blank")
+        }
+        onPaymentSuccess={refreshInvoiceDetail}
+      />
+      {invoiceDetail && (
+        <PaymentDialog
+          isOpen={paymentDialogOpen}
+          onClose={() => setPaymentDialogOpen(false)}
+          invoice={{
+            id: invoiceDetail.id,
+            totalAmount: invoiceDetail.totalAmount,
+            amountPaid: invoiceDetail.amountPaid,
+            patient: {
+              patientName: appointment.patient?.patientName || "",
+            },
+          }}
+          onPaymentSuccess={() => {
+            setPaymentDialogOpen(false);
+            refreshInvoiceDetail();
+          }}
+        />
+      )}
+      <DraftInvoiceEditDialog
+        isOpen={draftEditOpen}
+        onClose={() => setDraftEditOpen(false)}
+        invoiceId={invoiceDetail?.id ?? null}
+        onUpdated={refreshInvoiceDetail}
       />
     </>
   );

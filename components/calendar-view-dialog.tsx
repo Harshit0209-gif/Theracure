@@ -18,6 +18,7 @@ import { Appointment } from "@/types/appointments";
 import { AppointmentStatus } from "@/lib/generated/bookingEnums";
 import { statusLabels } from "@/lib/appointment";
 import { toISTDateKey } from "@/lib/utils/utils";
+import { Holiday, WeeklyOffDay } from "@/types/holiday";
 
 interface CalendarViewDialogProps {
   open: boolean;
@@ -41,7 +42,6 @@ const MONTHS = [
   "December",
 ];
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const OFF_DAY_COL = 0;
 
 const STATUS_DOT: Record<string, string> = {
   [AppointmentStatus.CONFIRMED]: "bg-blue-500",
@@ -102,6 +102,8 @@ export function CalendarViewDialog({
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [weeklyOffDays, setWeeklyOffDays] = useState<WeeklyOffDay[]>([]);
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -130,11 +132,59 @@ export function CalendarViewDialog({
     }
   }, []);
 
+  const fetchHolidaysAndWeeklyOff = useCallback(async () => {
+    try {
+      const [holidaysRes, weeklyOffRes] = await Promise.all([
+        fetch("/api/holidays"),
+        fetch("/api/weekly-off"),
+      ]);
+      const holidaysData = await holidaysRes.json();
+      const weeklyOffData = await weeklyOffRes.json();
+      if (holidaysData.success) setHolidays(holidaysData.data ?? []);
+      if (weeklyOffData.success) setWeeklyOffDays(weeklyOffData.data ?? []);
+    } catch {
+      // Non-fatal: calendar still works, just without holiday/off-day highlighting.
+    }
+  }, []);
+
   useEffect(() => {
     if (open) {
       fetchAllAppointments();
+      fetchHolidaysAndWeeklyOff();
     }
-  }, [open, fetchAllAppointments]);
+  }, [open, fetchAllAppointments, fetchHolidaysAndWeeklyOff]);
+
+  const offWeekDays = useMemo(
+    () => new Set(weeklyOffDays.filter((d) => d.isActive).map((d) => d.weekDay)),
+    [weeklyOffDays],
+  );
+
+  const activeHolidays = useMemo(
+    () => holidays.filter((h) => h.isActive),
+    [holidays],
+  );
+
+  const getHolidayForDay = useCallback(
+    (day: number): Holiday | null => {
+      const target = new Date(currentYear, currentMonth, day);
+      for (const holiday of activeHolidays) {
+        const hd = new Date(holiday.date);
+        if (holiday.isRecurring) {
+          if (hd.getUTCMonth() === target.getMonth() && hd.getUTCDate() === target.getDate()) {
+            return holiday;
+          }
+        } else if (
+          hd.getUTCFullYear() === target.getFullYear() &&
+          hd.getUTCMonth() === target.getMonth() &&
+          hd.getUTCDate() === target.getDate()
+        ) {
+          return holiday;
+        }
+      }
+      return null;
+    },
+    [activeHolidays, currentMonth, currentYear],
+  );
 
   const days = useMemo(() => {
     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
@@ -189,8 +239,8 @@ export function CalendarViewDialog({
     currentMonth === today.getMonth() &&
     currentYear === today.getFullYear();
 
-  const isSunday = (day: number) =>
-    new Date(currentYear, currentMonth, day).getDay() === OFF_DAY_COL;
+  const isOffDay = (day: number) =>
+    offWeekDays.has(new Date(currentYear, currentMonth, day).getDay());
 
   const isSelected = (day: number) => getDayKey(day) === selectedDateKey;
 
@@ -205,6 +255,24 @@ export function CalendarViewDialog({
     () => (selectedDateKey ? (appointmentsByDate[selectedDateKey] ?? []) : []),
     [selectedDateKey, appointmentsByDate],
   );
+
+  const selectedHoliday = useMemo(() => {
+    if (!selectedDateKey) return null;
+    const [y, m, dd] = selectedDateKey.split("-").map(Number);
+    for (const holiday of activeHolidays) {
+      const hd = new Date(holiday.date);
+      if (holiday.isRecurring) {
+        if (hd.getUTCMonth() + 1 === m && hd.getUTCDate() === dd) return holiday;
+      } else if (
+        hd.getUTCFullYear() === y &&
+        hd.getUTCMonth() + 1 === m &&
+        hd.getUTCDate() === dd
+      ) {
+        return holiday;
+      }
+    }
+    return null;
+  }, [selectedDateKey, activeHolidays]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -270,11 +338,7 @@ export function CalendarViewDialog({
             <div className="grid grid-cols-7 mb-1">
               {DAYS_OF_WEEK.map((d, i) => (
                 <div key={d} className="text-center">
-                  <span
-                    className={`text-[10px] font-medium uppercase tracking-wide ${
-                      i === OFF_DAY_COL ? "text-red-400" : "text-gray-400"
-                    }`}
-                  >
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
                     {d}
                   </span>
                 </div>
@@ -291,7 +355,10 @@ export function CalendarViewDialog({
                 const hasAppt = !!status;
                 const todayCell = isToday(day);
                 const selectedCell = isSelected(day);
-                const sundayCell = isSunday(day);
+                const offDayCell = isOffDay(day);
+                const holiday = getHolidayForDay(day);
+                const holidayCell = !!holiday;
+                const blockedCell = offDayCell || holidayCell;
 
                 let cellClass =
                   "w-full aspect-square flex flex-col items-center justify-center rounded-lg text-sm font-medium cursor-pointer transition-all select-none ";
@@ -301,8 +368,10 @@ export function CalendarViewDialog({
                 }
                 if (todayCell) {
                   cellClass += "bg-indigo-600 text-white shadow-sm ";
-                } else if (sundayCell) {
-                  cellClass += "text-red-300 bg-red-50/60 cursor-default ";
+                } else if (holidayCell) {
+                  cellClass += "text-red-600 bg-red-50 border border-red-200 cursor-default ";
+                } else if (offDayCell) {
+                  cellClass += "text-gray-400 bg-gray-100 cursor-default ";
                 } else if (hasAppt && status) {
                   cellClass +=
                     (DAY_BG[status] ??
@@ -317,17 +386,23 @@ export function CalendarViewDialog({
                   <div key={i} className="p-0.5">
                     <div
                       className={cellClass}
+                      title={holiday ? holiday.name : undefined}
                       onClick={() =>
-                        !sundayCell && setSelectedDateKey(getDayKey(day))
+                        !blockedCell && setSelectedDateKey(getDayKey(day))
                       }
                     >
                       <span className="leading-none">{day}</span>
-                      {sundayCell && (
-                        <span className="text-[8px] text-red-300 leading-none mt-0.5">
+                      {holidayCell && (
+                        <span className="text-[8px] text-red-500 leading-none mt-0.5">
+                          holiday
+                        </span>
+                      )}
+                      {!holidayCell && offDayCell && (
+                        <span className="text-[8px] text-gray-400 leading-none mt-0.5">
                           off
                         </span>
                       )}
-                      {!sundayCell && hasAppt && (
+                      {!blockedCell && hasAppt && (
                         <div className="flex gap-0.5 mt-0.5">
                           {[...new Set(dayAppts.map((a) => a.status))]
                             .slice(0, 3)
@@ -356,7 +431,8 @@ export function CalendarViewDialog({
                 { label: "Completed", dot: "bg-emerald-500" },
                 { label: "Cancelled", dot: "bg-red-400" },
                 { label: "Rescheduled", dot: "bg-amber-400" },
-                { label: "Sunday (off)", dot: "bg-red-200" },
+                { label: "Holiday", dot: "bg-red-400" },
+                { label: "Weekly Off", dot: "bg-gray-300" },
               ].map(({ label, dot }) => (
                 <div key={label} className="flex items-center gap-1">
                   <div className={`w-2 h-2 rounded-full ${dot}`} />
@@ -392,6 +468,14 @@ export function CalendarViewDialog({
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2.5">
+              {selectedHoliday && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 mb-2">
+                  <CalendarDays className="h-4 w-4 flex-shrink-0" />
+                  <span>
+                    Clinic Closed — <strong>{selectedHoliday.name}</strong>
+                  </span>
+                </div>
+              )}
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-full py-10 text-center">
                   <RefreshCw className="h-7 w-7 text-indigo-300 animate-spin mb-2" />

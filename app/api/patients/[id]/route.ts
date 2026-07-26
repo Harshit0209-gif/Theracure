@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { patientUpdateSchema } from "@/lib/validations/patient";
 import { NextRequest, NextResponse } from "next/server";
+import { calculateAge } from "@/lib/utils/age-calculator";
 
 export async function GET(
   req: NextRequest,
@@ -20,7 +21,10 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ success: true, patient });
+    return NextResponse.json({
+      success: true,
+      patient: { ...patient, calculatedAge: calculateAge(patient.dateOfBirth) },
+    });
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch patient" },
@@ -60,12 +64,26 @@ export async function PUT(
 
     const { therapistAppointments, ...safeData } = result.data;
 
+    const updateData: any = { ...safeData };
+
+    if (safeData.dateOfBirth !== undefined) {
+      const dob = safeData.dateOfBirth ? new Date(safeData.dateOfBirth) : null;
+      updateData.dateOfBirth = dob;
+      const calculatedAge = calculateAge(dob);
+      if (calculatedAge) {
+        updateData.age = calculatedAge.years;
+      }
+    }
+
     const patient = await prisma.patient.update({
       where: { id },
-      data: safeData,
+      data: updateData,
     });
 
-    return NextResponse.json(patient);
+    return NextResponse.json({
+      ...patient,
+      calculatedAge: calculateAge(patient.dateOfBirth),
+    });
   } catch {
     return NextResponse.json(
       { error: "Failed to update patient" },

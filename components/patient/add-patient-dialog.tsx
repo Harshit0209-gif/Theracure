@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
+import { DobInput } from "@/components/ui/dob-input";
+import { calculateAge } from "@/lib/utils/age-calculator";
 
 type AddPatientDialogProps = {
   fetchPatients: () => void;
@@ -41,11 +43,14 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
     reset,
   } = useForm<PatientFormData>({
     resolver: zodResolver(createPatientSchema),
   });
+
+  const computedAge = calculateAge(watch("dateOfBirth"));
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -252,21 +257,35 @@ export const AddPatientDialog = ({ fetchPatients }: AddPatientDialogProps) => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="age">Age</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    min="0"
-                    max="120"
-                    {...register("age", {
-                      setValueAs: (v) => (v === "" ? undefined : Number(v)),
-                    })}
-                    placeholder="Enter age"
-                    className="w-full"
+                  <Controller
+                    name="dateOfBirth"
+                    control={control}
+                    render={({ field }) => (
+                      <DobInput
+                        id="dateOfBirth"
+                        label="Date of Birth"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                      />
+                    )}
                   />
-                  {errors.age && (
-                    <p className="text-xs text-red-500">{errors.age.message}</p>
+                  {errors.dateOfBirth && (
+                    <p className="text-xs text-red-500">
+                      {errors.dateOfBirth.message}
+                    </p>
                   )}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500">
+                      Calculated Age
+                    </Label>
+                    <Input
+                      readOnly
+                      disabled
+                      value={computedAge?.formatted ?? ""}
+                      placeholder="Select date of birth to calculate age"
+                      className="w-full bg-gray-100"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">

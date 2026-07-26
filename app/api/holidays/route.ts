@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session-provider";
+import { UserRole } from "@prisma/client";
+import { createHolidaySchema } from "@/lib/validations/holiday";
 
 export async function GET() {
   try {
@@ -26,14 +28,33 @@ export async function POST(request: NextRequest) {
         { status: 401 },
       );
     }
+    if (session.user.role !== UserRole.ADMIN) {
+      return NextResponse.json(
+        { success: false, error: "Only admins can create holidays" },
+        { status: 403 },
+      );
+    }
 
     const body = await request.json();
-    const { date, name, description, isRecurring } = body;
-
-    if (!date || !name) {
+    const result = createHolidaySchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { success: false, error: "Date and name are required" },
+        { success: false, error: "Invalid input", details: result.error.issues },
         { status: 400 },
+      );
+    }
+    const { date, name, description, isRecurring, isActive } = result.data;
+
+    const duplicate = await prisma.holiday.findFirst({
+      where: { date: new Date(date), name },
+    });
+    if (duplicate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "A holiday with this name already exists on this date",
+        },
+        { status: 409 },
       );
     }
 
@@ -42,7 +63,9 @@ export async function POST(request: NextRequest) {
         date: new Date(date),
         name,
         description: description || null,
-        isRecurring: isRecurring || false,
+        isRecurring: isRecurring ?? false,
+        isActive: isActive ?? true,
+        createdBy: session.user.id,
       },
     });
 

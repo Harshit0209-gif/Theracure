@@ -3,6 +3,7 @@
 
 
 export enum InvoiceStatus {
+  DRAFT = "DRAFT",
   DUE = "DUE",
   PAID = "PAID",
   CANCELLED = "CANCELLED",

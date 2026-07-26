@@ -116,7 +116,14 @@ export async function PATCH(
       where: { id: invoiceId },
       data: {
         amountPaid: newTotalPaid,
-        status: newBalance <= 0 ? InvoiceStatus.PAID : InvoiceStatus.DUE,
+        // Draft invoices only leave Draft via the explicit finalize endpoint —
+        // recording a payment while still Draft must not silently promote it.
+        status:
+          invoice.status === InvoiceStatus.DRAFT
+            ? InvoiceStatus.DRAFT
+            : newBalance <= 0
+              ? InvoiceStatus.PAID
+              : InvoiceStatus.DUE,
         paymentMethod: validatedData.paymentMethod,
         notes: validatedData.notes
           ? `${invoice.notes || ""}\n${validatedData.notes}`.trim()

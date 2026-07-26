@@ -19,6 +19,8 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { Patient } from "@/types/patient";
 import { Save, X } from "lucide-react";
+import { DobInput } from "@/components/ui/dob-input";
+import { calculateAge } from "@/lib/utils/age-calculator";
 
 // Edit Patient Dialog Component
 export const EditPatientDialog = ({
@@ -104,6 +106,8 @@ export const EditPatientDialog = ({
 
   if (!patient) return null;
 
+  const computedAge = calculateAge(formData.dateOfBirth);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -128,15 +132,25 @@ export const EditPatientDialog = ({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="age">Age</Label>
+                <DobInput
+                  id="dateOfBirth"
+                  label="Date of Birth"
+                  value={formData.dateOfBirth || ""}
+                  onChange={(date) => handleInputChange("dateOfBirth", date)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-500">
+                  Calculated Age
+                </Label>
                 <Input
-                  id="age"
-                  type="number"
-                  value={formData.age || ""}
-                  onChange={(e) =>
-                    handleInputChange("age", parseInt(e.target.value))
+                  readOnly
+                  disabled
+                  value={
+                    computedAge?.formatted ??
+                    (patient.age ? `${patient.age} years (on file)` : "")
                   }
-                  required
+                  className="w-full bg-gray-100"
                 />
               </div>
               <div className="space-y-2">

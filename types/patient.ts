@@ -1,7 +1,11 @@
+import { CalculatedAge } from "@/lib/utils/age-calculator";
+
 export interface Patient {
   id: string;
   patientName: string;
   age: number;
+  dateOfBirth?: string;
+  calculatedAge?: CalculatedAge | null;
   gender: string;
   height?: number;
   weight?: number;

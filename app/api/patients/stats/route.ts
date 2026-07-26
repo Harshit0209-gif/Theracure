@@ -151,10 +151,10 @@ export async function GET(req: NextRequest) {
         [{ count: BigInt(0) }],
       ),
 
-      // Patients with at least one invoice
+      // Patients with at least one invoice (excluding unreviewed drafts)
       withTimeout(
         prisma.$queryRaw<{ count: bigint }[]>`
-          SELECT COUNT(DISTINCT patient_id) AS count FROM invoices
+          SELECT COUNT(DISTINCT patient_id) AS count FROM invoices WHERE status != 'DRAFT'
         `,
         8000,
         [{ count: BigInt(0) }],

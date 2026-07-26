@@ -15,6 +15,7 @@ import {
   RecurringConflict,
   validateRecurringInfo,
 } from "@/lib/utils/recurringAppointmentScheduler";
+import { createDraftInvoiceForAppointment } from "@/lib/services/appointment-invoice-service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -226,6 +227,13 @@ export async function POST(request: NextRequest) {
                 },
               },
             },
+          });
+
+          await createDraftInvoiceForAppointment(tx, {
+            appointmentId: createdAppointment.id,
+            patientId: appointment.patientId,
+            serviceIds: appointment.serviceIds,
+            createdById: appointment.createdById,
           });
 
           results.push({

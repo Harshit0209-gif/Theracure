@@ -7,6 +7,7 @@ import {
   getClinicDayBounds,
   getClinicWeekDayFromDate,
 } from "@/lib/utils/clinicDateTime";
+import { isClinicClosed } from "@/lib/utils/appointmentDateValidation";
 
 export async function GET(
   req: NextRequest,
@@ -25,6 +26,17 @@ export async function GET(
         },
         { status: 400 }
       );
+    }
+
+    const closed = await isClinicClosed(date);
+    if (closed.closed) {
+      return NextResponse.json({
+        success: true,
+        availablePeriods: [],
+        closed: true,
+        closedReason: closed.reason,
+        message: closed.reason,
+      });
     }
 
     const weekDay = getClinicWeekDayFromDate(date);

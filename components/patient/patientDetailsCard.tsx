@@ -162,7 +162,18 @@ export const PatientDetailsCard = ({
                 Basic Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <InfoDisplay label="Age" value={`${patient.age} years`} />
+                {patient.dateOfBirth && (
+                  <InfoDisplay
+                    label="Date of Birth"
+                    value={formatDate(patient.dateOfBirth)}
+                  />
+                )}
+                <InfoDisplay
+                  label="Age"
+                  value={
+                    patient.calculatedAge?.formatted ?? `${patient.age} years`
+                  }
+                />
                 <InfoDisplay
                   label="Gender"
                   value={

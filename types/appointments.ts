@@ -25,6 +25,13 @@ export interface Appointment {
 
   services?: Service[];
 
+  invoice?: {
+    id: string;
+    status: string;
+    totalAmount: number;
+    amountPaid: number;
+  } | null;
+
   patient?: {
     id: string;
     patientName: string;

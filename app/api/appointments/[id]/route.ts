@@ -28,6 +28,9 @@ export async function GET(
             },
           },
         },
+        invoice: {
+          select: { id: true, status: true, totalAmount: true, amountPaid: true },
+        },
       },
     });
 

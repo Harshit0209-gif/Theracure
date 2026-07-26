@@ -28,6 +28,10 @@ import {
   MessageCircle,
   Search,
   Filter,
+  FileText,
+  FileEdit,
+  IndianRupee,
+  Printer,
 } from "lucide-react";
 import { AllServiceCatagory } from "@/lib/service";
 import { toast } from "@/components/ui/use-toast";
@@ -44,6 +48,11 @@ import { CancelAppointmentDialog } from "@/components/appointments/CancelAppoint
 import { AppointmentDetailsDialog } from "@/components/appointments/AppointmentDetails";
 import { formatDate, formatTime } from "@/lib/utils/utils";
 import { DatePickerDialog } from "@/components/ui/date-picker-dialog";
+import { InvoiceDetailsModal } from "@/components/invoices/InvoiceModel";
+import { PaymentDialog } from "@/components/invoices/PaymentDialog";
+import { DraftInvoiceEditDialog } from "@/components/invoices/DraftInvoiceEditDialog";
+import { mapInvoiceToPrintPayload } from "@/lib/utils/invoiceUtils";
+import { InvoicePayload, PaymentStatus } from "@/types/invoice";
 
 const VIEW_TABS = [
   { label: "Today", value: "today", title: "Current day only" },
@@ -77,6 +86,20 @@ export function AppointmentTable({
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [invoiceViewOpen, setInvoiceViewOpen] = useState(false);
+  const [invoicePrintPayload, setInvoicePrintPayload] =
+    useState<InvoicePayload | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentInvoice, setPaymentInvoice] = useState<{
+    id: string;
+    totalAmount: number;
+    amountPaid: number;
+    patient: { patientName: string };
+  } | null>(null);
+  const [draftEditOpen, setDraftEditOpen] = useState(false);
+  const [draftEditInvoiceId, setDraftEditInvoiceId] = useState<string | null>(
+    null,
+  );
 
   const { user } = useAuth();
   const isTherapist = user?.role === UserRole.THERAPIST;
@@ -101,6 +124,55 @@ export function AppointmentTable({
   const openDetailsDialog = useCallback((appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setDetailsDialogOpen(true);
+  }, []);
+
+  const printInvoiceById = useCallback((invoiceId: string) => {
+    window.open(`/api/invoices/${invoiceId}/pdf`, "_blank");
+  }, []);
+
+  const openViewInvoice = useCallback(async (appointment: Appointment) => {
+    if (!appointment.invoice) return;
+    try {
+      const res = await fetch(`/api/invoices/${appointment.invoice.id}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Failed to load invoice");
+
+      const payload = mapInvoiceToPrintPayload(data.data, {
+        totalAmount: data.data.totalAmount,
+        amountPaid: data.data.amountPaid,
+        subTotal: data.data.subTotal,
+        offer: data.data.offer || 0,
+        discount: 0,
+        balance: data.data.totalAmount - data.data.amountPaid,
+        status: PaymentStatus.PENDING,
+      });
+      setInvoicePrintPayload(payload);
+      setInvoiceViewOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to load invoice",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
+  const openCollectPayment = useCallback((appointment: Appointment) => {
+    if (!appointment.invoice) return;
+    setPaymentInvoice({
+      id: appointment.invoice.id,
+      totalAmount: appointment.invoice.totalAmount,
+      amountPaid: appointment.invoice.amountPaid,
+      patient: { patientName: appointment.patient?.patientName || "" },
+    });
+    setPaymentDialogOpen(true);
+  }, []);
+
+  const openDraftEdit = useCallback((appointment: Appointment) => {
+    if (!appointment.invoice) return;
+    setDraftEditInvoiceId(appointment.invoice.id);
+    setDraftEditOpen(true);
   }, []);
 
   const handleStatusUpdate = async (
@@ -303,6 +375,54 @@ export function AppointmentTable({
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
+
+            {hasFullControl && appt.invoice && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openViewInvoice(appt);
+                  }}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  View Invoice
+                </DropdownMenuItem>
+                {appt.invoice.status === "DRAFT" && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDraftEdit(appt);
+                    }}
+                  >
+                    <FileEdit className="mr-2 h-4 w-4" />
+                    Edit Invoice
+                  </DropdownMenuItem>
+                )}
+                {appt.invoice.status !== "PAID" &&
+                  appt.invoice.status !== "CANCELLED" && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCollectPayment(appt);
+                      }}
+                    >
+                      <IndianRupee className="mr-2 h-4 w-4" />
+                      Collect Payment
+                    </DropdownMenuItem>
+                  )}
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    printInvoiceById(appt.invoice!.id);
+                  }}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print Invoice
+                </DropdownMenuItem>
+              </>
+            )}
+
             {appt.status === AppointmentStatus.COMPLETED && (
               <>
                 <DropdownMenuSeparator />
@@ -623,6 +743,33 @@ export function AppointmentTable({
         onClose={() => setCancelDialogOpen(false)}
         appointment={selectedAppointment}
         onAppointmentUpdated={onAppointmentUpdated}
+      />
+      <InvoiceDetailsModal
+        printPayload={invoicePrintPayload}
+        isDetailsModalOpen={invoiceViewOpen}
+        setIsDetailsModalOpen={setInvoiceViewOpen}
+        handlePrintInvoice={() =>
+          invoicePrintPayload &&
+          printInvoiceById(invoicePrintPayload.invoiceDetails.id)
+        }
+        onPaymentSuccess={onAppointmentUpdated}
+      />
+      {paymentInvoice && (
+        <PaymentDialog
+          isOpen={paymentDialogOpen}
+          onClose={() => setPaymentDialogOpen(false)}
+          invoice={paymentInvoice}
+          onPaymentSuccess={() => {
+            setPaymentDialogOpen(false);
+            onAppointmentUpdated();
+          }}
+        />
+      )}
+      <DraftInvoiceEditDialog
+        isOpen={draftEditOpen}
+        onClose={() => setDraftEditOpen(false)}
+        invoiceId={draftEditInvoiceId}
+        onUpdated={onAppointmentUpdated}
       />
     </>
   );

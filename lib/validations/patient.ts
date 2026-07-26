@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const createPatientSchema = z
+const isValidNotFutureDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return !isNaN(date.getTime()) && date.getTime() <= Date.now();
+};
+
+const patientBaseSchema = z
   .object({
     id: z.string().optional(),
     patientName: z.string().min(3, "Name is required"),
@@ -19,6 +24,12 @@ export const createPatientSchema = z
       .nullable(),
     address: z.string().min(1, "Address is required"),
     age: z.number().min(0, "Age must be a positive number").optional().nullable(),
+    dateOfBirth: z
+      .string()
+      .regex(
+        /^\d{4}-\d{2}-\d{2}$/,
+        "Date of birth must be in YYYY-MM-DD format",
+      ),
     gender: z.enum(["Male", "Female", "Other"]),
     height: z
       .number()
@@ -34,9 +45,31 @@ export const createPatientSchema = z
   })
   .passthrough();
 
-export const updatePatientSchema = createPatientSchema.partial();
+export const createPatientSchema = patientBaseSchema.refine(
+  (data) => isValidNotFutureDate(data.dateOfBirth),
+  {
+    message: "Date of birth must be a valid date and cannot be in the future",
+    path: ["dateOfBirth"],
+  },
+);
+
+export const updatePatientSchema = patientBaseSchema.partial().refine(
+  (data) =>
+    data.dateOfBirth === undefined || isValidNotFutureDate(data.dateOfBirth),
+  {
+    message: "Date of birth must be a valid date and cannot be in the future",
+    path: ["dateOfBirth"],
+  },
+);
 
 export type PatientFormData = z.infer<typeof createPatientSchema>;
 
-export const patientUpdateSchema = createPatientSchema.partial();
+export const patientUpdateSchema = patientBaseSchema.partial().refine(
+  (data) =>
+    data.dateOfBirth === undefined || isValidNotFutureDate(data.dateOfBirth),
+  {
+    message: "Date of birth must be a valid date and cannot be in the future",
+    path: ["dateOfBirth"],
+  },
+);
 export type PatientUpdateInput = z.infer<typeof patientUpdateSchema>;
